@@ -1,0 +1,73 @@
+{
+  "prescriptions": {
+    "title": "Medication Oversight",
+    "subtitle": "Prescription register and clinical oversight of administered medications",
+    "actions": {
+      "new": "New prescription",
+      "ledger": "Controlled Substances Ledger",
+      "view": "Prescription details",
+      "stop": "Stop prescription"
+    },
+    "kpi": {
+      "active": "Active prescriptions",
+      "ending": "Ending within {days} days",
+      "overdue": "Overdue",
+      "guardian": "Medication Guardian",
+      "guardianCritical": "{count} critical alerts"
+    },
+    "tabs": {
+      "ariaLabel": "Prescription list scope",
+      "active": "Active",
+      "ending": "Ending soon",
+      "overdue": "Overdue",
+      "controlled": "Controlled (OPL)",
+      "alerts": "Alerts",
+      "all": "All"
+    },
+    "search": {
+      "placeholder": "Search medication, patient, owner or Rx no…",
+      "clear": "Clear filter"
+    },
+    "results": "Results: {count}",
+    "table": {
+      "medication": "Medication",
+      "rx": "Rx No.",
+      "dosage": "Dosage",
+      "frequency": "Frequency",
+      "withdrawal": "Withdrawal period",
+      "period": "Period",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "ending": "Ending soon",
+      "overdue": "Overdue",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "opl": {
+      "badge": "OPL",
+      "tooltip": "Controlled substance under Act No. 139/1998 Coll. — recorded in the Controlled Substances Ledger"
+    },
+    "alert": {
+      "critical": "critical alert",
+      "warning": "warning"
+    },
+    "withdrawal": {
+      "none": "—",
+      "value": "{days} days"
+    },
+    "empty": {
+      "title": "No prescriptions",
+      "description": "There are no prescriptions in this scope yet.",
+      "search": {
+        "title": "No search results",
+        "description": "No prescription found for “{query}”."
+      }
+    },
+    "legal": {
+      "note": "Narcotic and psychotropic substances are recorded in the Controlled Substances Ledger under Act No. 139/1998 Coll."
+    }
+  }
+}

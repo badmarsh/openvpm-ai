@@ -1,0 +1,275 @@
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  varchar,
+  date,
+  timestamp,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { baseColumns } from "./common";
+import { practices } from "./practices";
+import { patients } from "./patients";
+import { clients } from "./clients";
+import { users } from "./users";
+import { vaccinationRecords } from "./clinical";
+
+// ---------------------------------------------------------------------------
+// Enums (Slovak CRSZ & PetPass Legislation - Law 39/2007 Z. z.)
+// ---------------------------------------------------------------------------
+export const crszRegistrationStatusEnum = pgEnum("crsz_registration_status", [
+  "NOT_REGISTERED",
+  "PENDING_SUBMISSION",
+  "REGISTERED",
+  "REJECTED",
+]);
+
+export const microchipLocationEnum = pgEnum("microchip_location", [
+  "LEFT_NECK",        // Ľavá strana krku (štandard v SR a EÚ)
+  "INTERSCAPULAR",    // Medzilopatkový priestor
+  "RIGHT_NECK",       // Pravá strana krku
+  "OTHER",            // Iné miesto
+]);
+
+// ---------------------------------------------------------------------------
+// Evidencia označenia zvieraťa transpondérom a registrácie do CRSZ
+// ---------------------------------------------------------------------------
+export const microchipRegistrations = pgTable(
+  "microchip_registrations",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    veterinarianId: uuid("veterinarian_id")
+      .notNull()
+      .references(() => users.id),
+
+    // 15-miestny kód transpondéra podľa ISO 11784/11785
+    microchipNumber: varchar("microchip_number", { length: 32 }).notNull(),
+    location: microchipLocationEnum("location").notNull().default("LEFT_NECK"),
+    customLocation: text("custom_location"),
+    implantedAt: date("implanted_at").notNull(),
+
+    // Overenie odčítania čipu pred a po aplikácii (požiadavka KVL SR)
+    verifiedBeforeImplant: varchar("verified_before_implant", { length: 8 }).default("YES"),
+    verifiedAfterImplant: varchar("verified_after_implant", { length: 8 }).default("YES"),
+
+    // Veterinárna komora / KVL registrácia lekára
+    vetKvlNumber: varchar("vet_kvl_number", { length: 64 }),
+
+    // Registrácia v Centrálnom registri spoločenských zvierat (CRSZ)
+    crszStatus: crszRegistrationStatusEnum("crsz_status").notNull().default("NOT_REGISTERED"),
+    crszRegisteredAt: timestamp("crsz_registered_at", { withTimezone: true }),
+    crszRecordId: varchar("crsz_record_id", { length: 128 }),
+    notes: text("notes"),
+  },
+  (table) => ({
+    practiceIdx: index("microchip_registrations_practice_idx").on(
+      table.practiceId,
+      table.deletedAt
+    ),
+    patientIdx: index("microchip_registrations_patient_idx").on(
+      table.practiceId,
+      table.patientId,
+      table.deletedAt
+    ),
+    clientIdx: index("microchip_registrations_client_idx").on(table.clientId),
+    veterinarianIdx: index("microchip_registrations_vet_idx").on(table.veterinarianId),
+    microchipIdx: index("microchip_registrations_chip_idx").on(
+      table.microchipNumber
+    ),
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Evidencia pasov spoločenských zvierat (PetPass EÚ)
+// ---------------------------------------------------------------------------
+export const petPassports = pgTable(
+  "pet_passports",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    issuedBy: uuid("issued_by")
+      .notNull()
+      .references(() => users.id),
+
+    // Číslo pasu v tvare napr. "SK 0123456"
+    passportNumber: varchar("passport_number", { length: 32 }).notNull(),
+    issuedAt: date("issued_at").notNull(),
+    issuingClinicName: text("issuing_clinic_name"),
+    issuingVetName: text("issuing_vet_name"),
+    issuingVetKvl: varchar("issuing_vet_kvl", { length: 64 }),
+
+    // Aktuálna platnosť očkovania proti besnote pre cestovanie
+    rabiesVaccineName: varchar("rabies_vaccine_name", { length: 128 }),
+    rabiesBatchNumber: varchar("rabies_batch_number", { length: 64 }),
+    rabiesAdministeredAt: date("rabies_administered_at"),
+    rabiesValidUntil: date("rabies_valid_until"),
+    // Dátum, od kedy je zviera spôsobilé na cestovanie (21 dní po primovakcinácii)
+    travelEligibleFrom: date("travel_eligible_from"),
+
+    vaccinationRecordId: uuid("vaccination_record_id").references(() => vaccinationRecords.id),
+
+    notes: text("notes"),
+  },
+  (table) => ({
+    practiceIdx: index("pet_passports_practice_idx").on(
+      table.practiceId,
+      table.deletedAt
+    ),
+    patientIdx: index("pet_passports_patient_idx").on(
+      table.practiceId,
+      table.patientId,
+      table.deletedAt
+    ),
+    clientIdx: index("pet_passports_client_idx").on(table.clientId),
+    issuedByIdx: index("pet_passports_issued_by_idx").on(table.issuedBy),
+    vaccinationRecordIdx: index("pet_passports_vaccination_record_idx").on(
+      table.vaccinationRecordId
+    ),
+    passportNumberIdx: uniqueIndex("pet_passports_number_uq").on(
+      table.passportNumber
+    ),
+  })
+);
+
+export const microchipRegistrationsRelations = relations(
+  microchipRegistrations,
+  ({ one }) => ({
+    practice: one(practices, {
+      fields: [microchipRegistrations.practiceId],
+      references: [practices.id],
+    }),
+    patient: one(patients, {
+      fields: [microchipRegistrations.patientId],
+      references: [patients.id],
+    }),
+    client: one(clients, {
+      fields: [microchipRegistrations.clientId],
+      references: [clients.id],
+    }),
+    veterinarian: one(users, {
+      fields: [microchipRegistrations.veterinarianId],
+      references: [users.id],
+    }),
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Evidencia pasov KVL ČR (Komora veterinárních lékařů České republiky)
+// České pasy spoločenských zvierat pre cestovanie (ekvivalent PetPass v ČR).
+// ---------------------------------------------------------------------------
+export const kvlCrPassports = pgTable(
+  "kvl_cr_passports",
+  {
+    ...baseColumns(),
+    practiceId: uuid("practice_id")
+      .notNull()
+      .references(() => practices.id),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patients.id),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id),
+    issuedBy: uuid("issued_by")
+      .notNull()
+      .references(() => users.id),
+
+    // Číslo pasu v tvare napr. "CZ 0123456"
+    passportNumber: varchar("passport_number", { length: 32 }).notNull(),
+    issuedAt: date("issued_at").notNull(),
+    issuingClinicName: text("issuing_clinic_name"),
+    issuingVetName: text("issuing_vet_name"),
+    // Registračné číslo veterinára v KVL ČR
+    issuingVetKvlCr: varchar("issuing_vet_kvl_cr", { length: 64 }),
+
+    // Mikročip (ISO 11784/11785) — povinný pre pasy KVL ČR
+    microchipNumber: varchar("microchip_number", { length: 32 }),
+
+    // Aktuálna platnosť očkovania proti besnote pre cestovanie
+    rabiesVaccineName: varchar("rabies_vaccine_name", { length: 128 }),
+    rabiesBatchNumber: varchar("rabies_batch_number", { length: 64 }),
+    rabiesAdministeredAt: date("rabies_administered_at"),
+    rabiesValidUntil: date("rabies_valid_until"),
+    travelEligibleFrom: date("travel_eligible_from"),
+
+    notes: text("notes"),
+  },
+  (table) => ({
+    practiceIdx: index("kvl_cr_passports_practice_idx").on(
+      table.practiceId,
+      table.deletedAt
+    ),
+    patientIdx: index("kvl_cr_passports_patient_idx").on(
+      table.practiceId,
+      table.patientId,
+      table.deletedAt
+    ),
+    clientIdx: index("kvl_cr_passports_client_idx").on(table.clientId),
+    issuedByIdx: index("kvl_cr_passports_issued_by_idx").on(table.issuedBy),
+    passportNumberIdx: uniqueIndex("kvl_cr_passports_number_uq").on(
+      table.passportNumber
+    ),
+  })
+);
+
+export const kvlCrPassportsRelations = relations(kvlCrPassports, ({ one }) => ({
+  practice: one(practices, {
+    fields: [kvlCrPassports.practiceId],
+    references: [practices.id],
+  }),
+  patient: one(patients, {
+    fields: [kvlCrPassports.patientId],
+    references: [patients.id],
+  }),
+  client: one(clients, {
+    fields: [kvlCrPassports.clientId],
+    references: [clients.id],
+  }),
+  issuer: one(users, {
+    fields: [kvlCrPassports.issuedBy],
+    references: [users.id],
+  }),
+}));
+
+export const petPassportsRelations = relations(petPassports, ({ one }) => ({
+  practice: one(practices, {
+    fields: [petPassports.practiceId],
+    references: [practices.id],
+  }),
+  patient: one(patients, {
+    fields: [petPassports.patientId],
+    references: [patients.id],
+  }),
+  client: one(clients, {
+    fields: [petPassports.clientId],
+    references: [clients.id],
+  }),
+  issuer: one(users, {
+    fields: [petPassports.issuedBy],
+    references: [users.id],
+  }),
+  vaccinationRecord: one(vaccinationRecords, {
+    fields: [petPassports.vaccinationRecordId],
+    references: [vaccinationRecords.id],
+  }),
+}));

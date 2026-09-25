@@ -1,0 +1,1397 @@
+diff --git a/apps/web/app/(dashboard)/billing/page.tsx b/apps/web/app/(dashboard)/billing/page.tsx
+index b81dedd..9f1f066 100644
+--- a/apps/web/app/(dashboard)/billing/page.tsx
++++ b/apps/web/app/(dashboard)/billing/page.tsx
+@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
+ import { useSession } from "next-auth/react";
+ import {
+   FileText,
++  AlertTriangle,
+   ChevronDown,
+   ChevronRight,
+   Send,
+@@ -21,6 +22,7 @@ import {
+   CalendarClock,
+   Pill,
+   Undo2,
++  RefreshCw,
+   ReceiptText,
+   ReceiptEuro,
+   Lock,
+@@ -34,6 +36,21 @@ import { Badge } from "@/components/ui/badge";
+ import { Input } from "@/components/ui/input";
+ import { EmptyState } from "@/components/common/empty-state";
+ import { PageHeader } from "@/components/layout/page-header";
++import {
++  DataTableFrame,
++  KpiCard,
++  KpiGrid,
++  PageToolbar,
++  filterControlClass,
++  pageShellClass,
++  tableCellClass,
++  tableHeadClass,
++  tableRowClass,
++  underlineTabsListClass,
++  underlineTabsTriggerClass,
++} from "@/components/layout/page-kit";
++import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
++import { cn } from "@/lib/utils";
+ import { ActionConfirmationDialog } from "@/components/common/action-confirmation-dialog";
+ import {
+   EkasaReceiptDialog,
+@@ -41,7 +58,6 @@ import {
+ } from "@/components/ekasa/ekasa-receipt-dialog";
+ import { AccountingExportDialog } from "@/components/accounting/accounting-export-dialog";
+ import { TableSkeleton } from "@/components/common/loading";
+-import { TableScroll } from "@/components/common/table-scroll";
+ import {
+   BILLING_ADJUSTMENT_REASON_MAX_LENGTH,
+   BILLING_NOTES_MAX_LENGTH,
+@@ -177,7 +193,7 @@ export default function BillingPage() {
+   } | null>(null);
+   const [invoiceVoidReason, setInvoiceVoidReason] = useState("");
+   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+-  const limit = 25;
++  const [limit, setLimit] = useState(25);
+ 
+   // Deep link: /billing?expand=<invoiceId> opens that invoice's detail (the
+   // welcome tour uses this to walk into a real invoice). After mount so the
+@@ -194,17 +210,20 @@ export default function BillingPage() {
+   const billingConfig = trpc.billing.getTaxConfig.useQuery(undefined, {
+     staleTime: 5 * 60 * 1000,
+   });
+-  const { data, isLoading, error } = trpc.billing.listInvoices.useQuery({
+-    status: statusFilter,
+-    isEstimate: isEstimateFilter,
+-    limit,
+-    offset,
+-  });
++  const { data, isLoading, error, isFetching } =
++    trpc.billing.listInvoices.useQuery({
++      status: statusFilter,
++      isEstimate: isEstimateFilter,
++      limit,
++      offset,
++    });
+   const arSummary = trpc.billing.arSummary.useQuery(undefined, {
+     staleTime: 60 * 1000,
+   });
+   const listError = billingConfig.error ?? error;
+   const isListLoading = billingConfig.isLoading || isLoading;
++  const isRefreshing =
++    billingConfig.isFetching || isFetching || arSummary.isFetching;
+   const billingConfigMissing =
+     !billingConfig.isLoading && !billingConfig.error && !billingConfig.data;
+   const verifiedBillingConfig =
+@@ -218,6 +237,12 @@ export default function BillingPage() {
+ 
+   const utils = trpc.useUtils();
+ 
++  const handleRefresh = () => {
++    void utils.billing.getTaxConfig.invalidate();
++    void utils.billing.listInvoices.invalidate();
++    void utils.billing.arSummary.invalidate();
++  };
++
+   const updateStatus = trpc.billing.updateInvoiceStatus.useMutation({
+     onSuccess: () => {
+       toast.success(t("billing.page.toastStatusUpdated", "Invoice status updated"));
+@@ -347,7 +372,7 @@ export default function BillingPage() {
+   };
+ 
+   return (
+-    <div className="space-y-6">
++    <div className={pageShellClass}>
+       <PageHeader
+         icon={ReceiptEuro}
+         title={t("billing.page.title", "Billing")}
+@@ -355,40 +380,44 @@ export default function BillingPage() {
+         actions={
+           canManageBilling ? (
+             <div className="flex flex-wrap items-center gap-2">
+-              <Button variant="outline" asChild>
++              <Button variant="outline" size="sm" asChild>
+                 <Link href="/billing/ekasa">
+                   <ReceiptText className="mr-1 h-4 w-4" />
+                   {t("billing.page.ekasaReceipts", "Doklady (e-Kasa)")}
+                 </Link>
+               </Button>
+-              <Button variant="outline" asChild>
++              <Button variant="outline" size="sm" asChild>
+                 <Link href="/billing/ekasa?tab=closures">
+                   <Lock className="mr-1 h-4 w-4" />
+-                  {t("billing.page.ekasaClosures", "Denné uzávierky (Z-report)")}
++                  {t(
++                    "billing.page.ekasaClosures",
++                    "Denné uzávierky (Z-report)"
++                  )}
+                 </Link>
+               </Button>
+               <Button
+                 variant="outline"
++                size="sm"
+                 onClick={() => setExportDialogOpen(true)}
+-            >
+-              <Download className="mr-1 h-4 w-4" />
+-              {t("billing.page.accountingExport", "Účtovný export")}
+-            </Button>
+-            <Button variant="outline" asChild>
+-              <Link href="/billing/pos">
+-                <ReceiptEuro className="mr-1 h-4 w-4" />
+-                {t("billing.page.fastPos", "Fast Checkout (POS)")}
+-              </Link>
+-            </Button>
+-            <Button asChild>
+-              <Link href="/billing/new">
+-                <Plus className="mr-1 h-4 w-4" />
+-                {t("billing.page.newInvoice", "New Invoice")}
+-              </Link>
+-            </Button>
+-          </div>
+-        ) : undefined
+-      }
++              >
++                <Download className="mr-1 h-4 w-4" />
++                {t("billing.page.accountingExport", "Účtovný export")}
++              </Button>
++              <Button variant="outline" size="sm" asChild>
++                <Link href="/billing/pos">
++                  <ReceiptEuro className="mr-1 h-4 w-4" />
++                  {t("billing.page.fastPos", "Fast Checkout (POS)")}
++                </Link>
++              </Button>
++              <Button size="sm" asChild>
++                <Link href="/billing/new">
++                  <Plus className="mr-1 h-4 w-4" />
++                  {t("billing.page.newInvoice", "New Invoice")}
++                </Link>
++              </Button>
++            </div>
++          ) : undefined
++        }
+       />
+ 
+       <DispenseChargeQueuePanel
+@@ -405,107 +434,192 @@ export default function BillingPage() {
+       />
+ 
+       {/* Accounts receivable at a glance */}
+-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+-        <div className="rounded-lg border border-border bg-card p-4">
+-          <p className="text-sm text-muted-foreground">
+-            {t("billing.page.kpiOutstanding", "Outstanding")}
+-          </p>
+-          <p className="mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px]">
+-            {arSummary.isError
+-              ? "—"
+-              : arSummary.data
+-                ? formatCurrency(arSummary.data.outstanding)
+-                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
+-          </p>
+-        </div>
+-        <div className="rounded-lg border border-border bg-card p-4">
+-          <p className="text-sm text-muted-foreground">
+-            {t("billing.page.kpiOverdue", "Overdue")}
+-          </p>
+-          <p
+-            className={`mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px] ${
+-              arSummary.data && Number(arSummary.data.overdue) > 0
+-                ? "text-destructive"
+-                : ""
+-            }`}
+-          >
+-            {arSummary.isError
+-              ? "—"
+-              : arSummary.data
+-                ? formatCurrency(arSummary.data.overdue)
+-                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
+-          </p>
+-        </div>
+-        <div className="rounded-lg border border-border bg-card p-4">
+-          <p className="text-sm text-muted-foreground">
+-            {t("billing.page.kpiCollectedMtd", "Collected this month")}
+-          </p>
+-          <p className="mt-1 font-heading text-2xl font-semibold flex items-center min-h-[32px]">
+-            {arSummary.isError
+-              ? "—"
+-              : arSummary.data
+-                ? formatCurrency(arSummary.data.collectedThisMonth)
+-                : <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />}
+-          </p>
+-        </div>
+-      </div>
++      <KpiGrid className="sm:grid-cols-3">
++        <KpiCard
++          label={t("billing.page.kpiOutstanding", "Outstanding")}
++          value={
++            arSummary.isError ? (
++              "—"
++            ) : arSummary.data ? (
++              formatCurrency(arSummary.data.outstanding)
++            ) : (
++              <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />
++            )
++          }
++          icon={<Euro className="h-4 w-4 text-primary/70" />}
++        />
++        <KpiCard
++          label={t("billing.page.kpiOverdue", "Overdue")}
++          value={
++            arSummary.isError ? (
++              "—"
++            ) : arSummary.data ? (
++              <span
++                className={
++                  Number(arSummary.data.overdue) > 0
++                    ? "text-destructive"
++                    : undefined
++                }
++              >
++                {formatCurrency(arSummary.data.overdue)}
++              </span>
++            ) : (
++              <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />
++            )
++          }
++          icon={<AlertTriangle className="h-4 w-4 text-primary/70" />}
++        />
++        <KpiCard
++          label={t("billing.page.kpiCollectedMtd", "Collected this month")}
++          value={
++            arSummary.isError ? (
++              "—"
++            ) : arSummary.data ? (
++              formatCurrency(arSummary.data.collectedThisMonth)
++            ) : (
++              <span className="inline-block h-7 w-24 rounded bg-muted/60 animate-pulse" />
++            )
++          }
++          icon={<CheckCircle className="h-4 w-4 text-primary/70" />}
++        />
++      </KpiGrid>
+ 
+       {/* Status filter tabs */}
+-      <div className="mt-6 flex items-center gap-1 border-b border-border">
+-        {STATUS_TABS.map((tTab, idx) => (
+-          <button
+-            key={tTab.label}
+-            onClick={() => {
+-              setActiveTab(idx);
++      <Tabs
++        value={STATUS_TABS[activeTab].key}
++        onValueChange={(value) => {
++          const nextTab = STATUS_TABS.findIndex(
++            (candidate) => candidate.key === value
++          );
++          if (nextTab >= 0) {
++            setActiveTab(nextTab);
++            setOffset(0);
++          }
++        }}
++      >
++        <TabsList className={cn(underlineTabsListClass, "max-w-none")}>
++          {STATUS_TABS.map((tTab) => (
++            <TabsTrigger
++              key={tTab.label}
++              value={tTab.key}
++              className={underlineTabsTriggerClass}
++            >
++              {t(`billing.status_${tTab.key}`, tTab.label)}
++            </TabsTrigger>
++          ))}
++        </TabsList>
++      </Tabs>
++
++      {/* List controls: result count, page size, refresh */}
++      <PageToolbar>
++        <span className="text-xs text-muted-foreground">
++          {data
++            ? t(
++                "billing.page.showingPagination",
++                `Showing ${offset + 1}--${Math.min(offset + limit, data.total)} of ${data.total}`,
++                {
++                  from: offset + 1,
++                  to: Math.min(offset + limit, data.total),
++                  total: data.total,
++                }
++              )
++            : null}
++        </span>
++        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
++          <label
++            htmlFor="billing-page-size"
++            className="text-xs text-muted-foreground"
++          >
++            {t("billing.page.pageSizeLabel", "Rows per page")}
++          </label>
++          <select
++            id="billing-page-size"
++            value={limit}
++            onChange={(event) => {
++              setLimit(Number(event.target.value));
+               setOffset(0);
+             }}
+-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+-              activeTab === idx
+-                ? "border-primary text-foreground"
+-                : "border-transparent text-muted-foreground hover:text-foreground"
+-            }`}
++            className={cn(filterControlClass, "w-20")}
+           >
+-            {t(`billing.status_${tTab.key}`, tTab.label)}
+-          </button>
+-        ))}
+-      </div>
+-
+-      {listError || billingListMissing ? (
+-        <div className="mt-6 rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+-          {listError?.message ??
+-            t("billing.page.loadInvoicesError", "Unable to load invoices. Please retry.")}
++            {[10, 25, 50, 100].map((size) => (
++              <option key={size} value={size}>
++                {size}
++              </option>
++            ))}
++          </select>
++          <Button
++            variant="outline"
++            size="sm"
++            onClick={handleRefresh}
++            disabled={isRefreshing}
++          >
++            <RefreshCw
++              className={cn("mr-1 h-3.5 w-3.5", isRefreshing && "animate-spin")}
++            />
++            {t("common.refresh", "Refresh")}
++          </Button>
++          <Button
++            variant="outline"
++            size="sm"
++            disabled={offset === 0 || isListLoading}
++            onClick={() => setOffset(Math.max(0, offset - limit))}
++          >
++            {t("billing.page.previous", "Previous")}
++          </Button>
++          <Button
++            variant="outline"
++            size="sm"
++            disabled={isListLoading || !data || offset + limit >= data.total}
++            onClick={() => setOffset(offset + limit)}
++          >
++            {t("billing.page.next", "Next")}
++          </Button>
+         </div>
+-      ) : isListLoading ? (
+-        <TableSkeleton rows={8} cols={7} className="mt-6" />
+-      ) : data && verifiedBillingConfig && data.items.length > 0 ? (
+-        <>
+-          <TableScroll className="mt-6 rounded-lg border border-border">
+-            <table className="w-full text-sm">
+-              <thead>
+-                <tr className="border-b border-border bg-muted/50">
+-                  <th className="w-8 px-2 py-3" />
+-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++      </PageToolbar>
++
++      <DataTableFrame>
++        {listError || billingListMissing ? (
++          <div className="p-4 text-sm text-destructive">
++            {listError?.message ??
++              t(
++                "billing.page.loadInvoicesError",
++                "Unable to load invoices. Please retry."
++              )}
++          </div>
++        ) : isListLoading ? (
++          <TableSkeleton
++            rows={8}
++            cols={9}
++            className="rounded-none border-0 shadow-none"
++          />
++        ) : data && verifiedBillingConfig && data.items.length > 0 ? (
++          <div className="overflow-x-auto">
++            <table className="w-full text-xs">
++              <thead className="border-b border-border bg-muted/30">
++                <tr>
++                  <th className={cn(tableHeadClass, "w-8")} />
++                  <th className={tableHeadClass}>
+                     {t("billing.page.tableClient", "Client")}
+                   </th>
+-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                  <th className={tableHeadClass}>
+                     {t("billing.page.tablePatient", "Patient")}
+                   </th>
+-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                  <th className={tableHeadClass}>
+                     {t("billing.page.tableStatus", "Status")}
+                   </th>
+-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
++                  <th className={cn(tableHeadClass, "text-right")}>
+                     {t("billing.page.tableTotal", "Total")}
+                   </th>
+-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
++                  <th className={cn(tableHeadClass, "text-right")}>
+                     {t("billing.page.tablePaid", "Paid")}
+                   </th>
+-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                  <th className={tableHeadClass}>
+                     {t("billing.page.tableDueDate", "Due Date")}
+                   </th>
+-                  <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                  <th className={tableHeadClass}>
+                     {t("billing.page.tableCreated", "Created")}
+                   </th>
+-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
++                  <th className={cn(tableHeadClass, "text-right")}>
+                     {t("billing.page.tableActions", "Actions")}
+                   </th>
+                 </tr>
+@@ -536,81 +650,48 @@ export default function BillingPage() {
+                 ))}
+               </tbody>
+             </table>
+-          </TableScroll>
+-
+-          {/* Pagination */}
+-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+-            <p>
+-              {t(
+-                "billing.page.showingPagination",
+-                `Showing ${offset + 1}--${Math.min(offset + limit, data.total)} of ${data.total}`,
+-                {
+-                  from: offset + 1,
+-                  to: Math.min(offset + limit, data.total),
+-                  total: data.total,
+-                }
+-              )}
+-            </p>
+-            <div className="flex gap-2">
+-              <Button
+-                variant="outline"
+-                size="sm"
+-                disabled={offset === 0}
+-                onClick={() => setOffset(Math.max(0, offset - limit))}
+-              >
+-                {t("billing.page.previous", "Previous")}
+-              </Button>
+-              <Button
+-                variant="outline"
+-                size="sm"
+-                disabled={offset + limit >= data.total}
+-                onClick={() => setOffset(offset + limit)}
+-              >
+-                {t("billing.page.next", "Next")}
+-              </Button>
+-            </div>
+           </div>
+-        </>
+-      ) : (
+-        <EmptyState
+-          className="mt-6"
+-          icon={FileText}
+-          title={
+-            tab.isEstimate
+-              ? t("billing.page.emptyEstimatesTitle", "No estimates yet")
+-              : statusFilter
+-                ? t("billing.page.emptyStatusTitle", "No invoices with this status")
+-                : t("billing.page.emptyInvoicesTitle", "No invoices yet")
+-          }
+-          description={
+-            tab.isEstimate
+-              ? t(
+-                  "billing.page.emptyEstimatesDesc",
+-                  "Create an estimate when a client needs approval before services are performed."
+-                )
+-              : statusFilter
++        ) : (
++          <EmptyState
++            className="rounded-none border-0"
++            icon={FileText}
++            title={
++              tab.isEstimate
++                ? t("billing.page.emptyEstimatesTitle", "No estimates yet")
++                : statusFilter
++                  ? t("billing.page.emptyStatusTitle", "No invoices with this status")
++                  : t("billing.page.emptyInvoicesTitle", "No invoices yet")
++            }
++            description={
++              tab.isEstimate
+                 ? t(
+-                    "billing.page.emptyStatusDesc",
+-                    "Choose another status tab or create a new invoice."
++                    "billing.page.emptyEstimatesDesc",
++                    "Create an estimate when a client needs approval before services are performed."
+                   )
+-                : t(
+-                    "billing.page.emptyInvoicesDesc",
+-                    "Create invoices from services, products, or treatment templates before recording payments."
+-                  )
+-          }
+-          action={
+-            canManageBilling
+-              ? {
+-                  label: tab.isEstimate
+-                    ? t("billing.page.actionCreateEstimate", "Create estimate")
+-                    : t("billing.page.actionCreateInvoice", "Create invoice"),
+-                  onClick: () => router.push("/billing/new"),
+-                  icon: Plus,
+-                }
+-              : undefined
+-          }
+-        />
+-      )}
++                : statusFilter
++                  ? t(
++                      "billing.page.emptyStatusDesc",
++                      "Choose another status tab or create a new invoice."
++                    )
++                  : t(
++                      "billing.page.emptyInvoicesDesc",
++                      "Create invoices from services, products, or treatment templates before recording payments."
++                    )
++            }
++            action={
++              canManageBilling
++                ? {
++                    label: tab.isEstimate
++                      ? t("billing.page.actionCreateEstimate", "Create estimate")
++                      : t("billing.page.actionCreateInvoice", "Create invoice"),
++                    onClick: () => router.push("/billing/new"),
++                    icon: Plus,
++                  }
++                : undefined
++            }
++          />
++        )}
++      </DataTableFrame>
+ 
+       <ActionConfirmationDialog
+         open={pendingEstimateConversion !== null}
+@@ -792,7 +873,7 @@ function DispenseChargeQueuePanel({
+   }
+ 
+   return (
+-    <section className="mt-6 rounded-lg border border-border bg-card">
++    <section className="rounded-lg border border-border bg-card">
+       <div className="flex items-start justify-between gap-4 border-b border-border p-4">
+         <div>
+           <div className="flex items-center gap-2">
+@@ -1047,13 +1128,7 @@ function WellnessBillingPanel({
+   }
+ 
+   return (
+-    <div
+-      className={`mt-6 rounded-lg border ${
+-        dueMembershipsUnavailable
+-          ? "border-destructive bg-destructive/5"
+-          : "border-border bg-card"
+-      }`}
+-    >
++    <div className="rounded-lg border border-border bg-card">
+       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+         <div className="flex items-start gap-3">
+           <CalendarClock className="mt-0.5 h-5 w-5 text-primary" />
+@@ -1142,48 +1217,45 @@ function WellnessBillingPanel({
+       </div>
+       {dueMemberships.length > 0 && (
+         <div className="overflow-x-auto">
+-          <table className="w-full text-sm">
+-            <thead>
+-              <tr className="border-b border-border bg-muted/40">
+-                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++          <table className="w-full text-xs">
++            <thead className="border-b border-border bg-muted/30">
++              <tr>
++                <th className={tableHeadClass}>
+                   {t("billing.wellness.tableClient", "Client")}
+                 </th>
+-                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                <th className={tableHeadClass}>
+                   {t("billing.wellness.tablePatient", "Patient")}
+                 </th>
+-                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                <th className={tableHeadClass}>
+                   {t("billing.wellness.tablePlan", "Plan")}
+                 </th>
+-                <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
++                <th className={tableHeadClass}>
+                   {t("billing.wellness.tableDue", "Due")}
+                 </th>
+-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
++                <th className={cn(tableHeadClass, "text-right")}>
+                   {t("billing.wellness.tableAmount", "Amount")}
+                 </th>
+               </tr>
+             </thead>
+             <tbody>
+               {dueMemberships.map((row) => (
+-                <tr
+-                  key={row.enrollmentId}
+-                  className="border-b border-border last:border-0"
+-                >
+-                  <td className="px-4 py-3 font-medium">
++                <tr key={row.enrollmentId} className={tableRowClass}>
++                  <td className={cn(tableCellClass, "font-medium")}>
+                     {row.clientFirstName} {row.clientLastName}
+                   </td>
+-                  <td className="px-4 py-3 text-muted-foreground">
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                     {row.patientName || "\u2014"}
+                   </td>
+-                  <td className="px-4 py-3 text-muted-foreground">
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                     {row.planName}
+                   </td>
+-                  <td className="px-4 py-3 text-muted-foreground">
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
+                     {formatBillingDateInput(
+                       row.nextBillingDate,
+                       billingTimeZone
+                     )}
+                   </td>
+-                  <td className="px-4 py-3 text-right tabular-nums">
++                  <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
+                     {formatCurrency(row.price)}
+                   </td>
+                 </tr>
+@@ -1258,59 +1330,57 @@ function InvoiceRow({
+ 
+   return (
+     <>
+-      <tr
+-        onClick={onToggle}
+-        className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+-      >
+-        <td className="px-2 py-3 text-muted-foreground">
++      <tr onClick={onToggle} className={cn(tableRowClass, "cursor-pointer")}>
++        <td className={cn(tableCellClass, "w-8 text-muted-foreground")}>
+           {isExpanded ? (
+             <ChevronDown className="h-4 w-4" />
+           ) : (
+             <ChevronRight className="h-4 w-4" />
+           )}
+         </td>
+-        <td className="px-4 py-3 font-medium">
++        <td className={cn(tableCellClass, "font-medium")}>
+           {invoice.clientFirstName} {invoice.clientLastName}
+         </td>
+-        <td className="px-4 py-3 text-muted-foreground">
++        <td className={cn(tableCellClass, "text-muted-foreground")}>
+           {invoice.patientName || "\u2014"}
+         </td>
+-        <td className="px-4 py-3">
++        <td className={tableCellClass}>
+           <span
+             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${displayStatus.style}`}
+           >
+             {t(`billing.status_${displayStatus.label}`, displayStatus.label)}
+           </span>
+         </td>
+-        <td className="px-4 py-3 text-right tabular-nums">
++        <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
+           {formatCurrency(invoice.total)}
+         </td>
+-        <td className="px-4 py-3 text-right tabular-nums">
++        <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
+           <span>{formatCurrency(invoice.paidAmount)}</span>
+           {adjustedAmount > 0 && (
+-            <span className="block text-xs text-muted-foreground">
++            <span className="block text-[11px] text-muted-foreground">
+               {t("billing.row.adjPrefix", `Adj ${formatCurrency(adjustedAmount)}`, {
+                 amount: formatCurrency(adjustedAmount),
+               })}
+             </span>
+           )}
+         </td>
+-        <td className="px-4 py-3 text-muted-foreground">
++        <td className={cn(tableCellClass, "text-muted-foreground")}>
+           {invoice.dueDate
+             ? formatBillingDateInput(invoice.dueDate, billingTimeZone)
+             : "\u2014"}
+         </td>
+-        <td className="px-4 py-3 text-muted-foreground">
++        <td className={cn(tableCellClass, "text-muted-foreground")}>
+           {invoice.createdAt
+             ? formatBillingInstantDate(invoice.createdAt, billingTimeZone)
+             : "\u2014"}
+         </td>
+-        <td className="px-4 py-3 text-right">
++        <td className={cn(tableCellClass, "text-right")}>
+           <div className="flex items-center justify-end gap-1">
+             {canManageBilling && invoice.isEstimate && (
+               <Button
+                 variant="ghost"
+                 size="sm"
++                className="h-7 w-7 p-0"
+                 disabled={isMutating}
+                 onClick={(e) => onConvertEstimate(e, invoice)}
+                 title={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}
+@@ -1321,16 +1391,17 @@ function InvoiceRow({
+             {canManageBilling &&
+               !invoice.isEstimate &&
+               invoice.status === "draft" && (
+-              <Button
+-                variant="ghost"
+-                size="sm"
+-                disabled={isMutating}
+-                onClick={(e) => onStatusChange(e, invoice.id, "sent")}
+-                title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
+-              >
+-                <Send className="h-3.5 w-3.5" />
+-              </Button>
+-            )}
++                <Button
++                  variant="ghost"
++                  size="sm"
++                  className="h-7 w-7 p-0"
++                  disabled={isMutating}
++                  onClick={(e) => onStatusChange(e, invoice.id, "sent")}
++                  title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
++                >
++                  <Send className="h-3.5 w-3.5" />
++                </Button>
++              )}
+             {canManageBilling &&
+               !invoice.isEstimate &&
+               (invoice.status === "sent" || invoice.status === "overdue") && (
+@@ -1339,6 +1410,7 @@ function InvoiceRow({
+                     <Button
+                       variant="ghost"
+                       size="sm"
++                      className="h-7 w-7 p-0"
+                       disabled={isMutating}
+                       onClick={(e) => onStatusChange(e, invoice.id, "sent")}
+                       title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
+@@ -1354,6 +1426,7 @@ function InvoiceRow({
+                 <Button
+                   variant="ghost"
+                   size="sm"
++                  className="h-7 w-7 p-0"
+                   disabled={isMutating}
+                   onClick={(e) => onVoidInvoice(e, invoice.id)}
+                   title={t("billing.row.tooltipVoidInvoice", "Void Invoice")}
+@@ -1366,7 +1439,7 @@ function InvoiceRow({
+       </tr>
+       {isExpanded && (
+         <tr className="border-b border-border last:border-0">
+-          <td colSpan={9} className="bg-muted/20 px-8 py-4" data-tour="invoice-detail">
++          <td colSpan={9} className="bg-muted/20 px-4 py-3" data-tour="invoice-detail">
+             {detail.isLoading ? (
+               <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                 <Loader2 className="h-4 w-4 animate-spin" />
+@@ -1386,10 +1459,10 @@ function InvoiceRow({
+ 
+                 {/* Estimate Approval Card */}
+                 {invoice.isEstimate && (
+-                  <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
++                  <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary-muted p-4">
+                     <div className="flex items-center gap-2">
+-                      <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+-                      <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
++                      <FileText className="h-5 w-5 text-primary" />
++                      <span className="text-sm font-medium text-primary">
+                         {t("billing.row.estimateBannerTitle", "This is an estimate")}
+                       </span>
+                     </div>
+@@ -1472,84 +1545,81 @@ function InvoiceRow({
+                 </div>
+                 {detail.data.items.length > 0 ? (
+                   <div className="overflow-x-auto">
+-                    <table className="w-full text-sm">
+-                    <thead>
+-                      <tr className="border-b border-border">
+-                        <th className="py-2 text-left font-medium text-muted-foreground">
+-                          {t("billing.row.colDescription", "Description")}
+-                        </th>
+-                        <th className="py-2 text-left font-medium text-muted-foreground">
+-                          {t("billing.row.colType", "Type")}
+-                        </th>
+-                        <th className="py-2 text-right font-medium text-muted-foreground">
+-                          {t("billing.row.colQty", "Qty")}
+-                        </th>
+-                        <th className="py-2 text-right font-medium text-muted-foreground">
+-                          {t("billing.row.colUnitPrice", "Unit Price")}
+-                        </th>
+-                        <th className="py-2 text-right font-medium text-muted-foreground">
+-                          {t("billing.row.colTotal", "Total")}
+-                        </th>
+-                      </tr>
+-                    </thead>
+-                    <tbody>
+-                      {detail.data.items.map((item) => (
+-                        <tr
+-                          key={item.id}
+-                          className="border-b border-border/50 last:border-0"
+-                        >
+-                          <td className="py-2">{item.description}</td>
+-                          <td className="py-2 text-muted-foreground">
+-                            <span className="capitalize">
+-                              {item.itemType === "service"
+-                                ? t("billing.row.typeService", "service")
+-                                : item.itemType === "product"
+-                                ? t("billing.row.typeProduct", "product")
+-                                : item.itemType}
+-                            </span>{" "}
+-                            ·{" "}
+-                            {item.taxable
+-                              ? t("billing.row.taxable", "taxable")
+-                              : t("billing.row.notTaxable", "not taxable")}
++                    <table className="w-full text-xs">
++                      <thead className="border-b border-border bg-muted/30">
++                        <tr>
++                          <th className={tableHeadClass}>
++                            {t("billing.row.colDescription", "Description")}
++                          </th>
++                          <th className={tableHeadClass}>
++                            {t("billing.row.colType", "Type")}
++                          </th>
++                          <th className={cn(tableHeadClass, "text-right")}>
++                            {t("billing.row.colQty", "Qty")}
++                          </th>
++                          <th className={cn(tableHeadClass, "text-right")}>
++                            {t("billing.row.colUnitPrice", "Unit Price")}
++                          </th>
++                          <th className={cn(tableHeadClass, "text-right")}>
++                            {t("billing.row.colTotal", "Total")}
++                          </th>
++                        </tr>
++                      </thead>
++                      <tbody>
++                        {detail.data.items.map((item) => (
++                          <tr key={item.id} className={tableRowClass}>
++                            <td className={tableCellClass}>{item.description}</td>
++                            <td className={cn(tableCellClass, "text-muted-foreground")}>
++                              <span className="capitalize">
++                                {item.itemType === "service"
++                                  ? t("billing.row.typeService", "service")
++                                  : item.itemType === "product"
++                                  ? t("billing.row.typeProduct", "product")
++                                  : item.itemType}
++                              </span>{" "}
++                              ·{" "}
++                              {item.taxable
++                                ? t("billing.row.taxable", "taxable")
++                                : t("billing.row.notTaxable", "not taxable")}
++                            </td>
++                            <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                              {item.quantity}
++                            </td>
++                            <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                              {formatCurrency(item.unitPrice)}
++                            </td>
++                            <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                              {formatCurrency(item.total)}
++                            </td>
++                          </tr>
++                        ))}
++                      </tbody>
++                      <tfoot>
++                        <tr className="border-t border-border">
++                          <td colSpan={4} className={cn(tableCellClass, "text-right font-medium")}>
++                            {t("billing.row.subtotal", "Subtotal")}
++                          </td>
++                          <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                            {formatCurrency(detail.data.subtotal)}
+                           </td>
+-                          <td className="py-2 text-right tabular-nums">
+-                            {item.quantity}
++                        </tr>
++                        <tr>
++                          <td colSpan={4} className={cn(tableCellClass, "text-right text-muted-foreground")}>
++                            {t("billing.row.tax", "Tax")}
++                          </td>
++                          <td className={cn(tableCellClass, "text-right tabular-nums font-mono text-muted-foreground")}>
++                            {formatCurrency(detail.data.tax)}
+                           </td>
+-                          <td className="py-2 text-right tabular-nums">
+-                            {formatCurrency(item.unitPrice)}
++                        </tr>
++                        <tr className="font-semibold">
++                          <td colSpan={4} className={cn(tableCellClass, "text-right")}>
++                            {t("billing.row.total", "Total")}
+                           </td>
+-                          <td className="py-2 text-right tabular-nums">
+-                            {formatCurrency(item.total)}
++                          <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                            {formatCurrency(detail.data.total)}
+                           </td>
+                         </tr>
+-                      ))}
+-                    </tbody>
+-                    <tfoot>
+-                      <tr className="border-t border-border">
+-                        <td colSpan={4} className="py-2 text-right font-medium">
+-                          {t("billing.row.subtotal", "Subtotal")}
+-                        </td>
+-                        <td className="py-2 text-right tabular-nums">
+-                          {formatCurrency(detail.data.subtotal)}
+-                        </td>
+-                      </tr>
+-                      <tr>
+-                        <td colSpan={4} className="py-1 text-right text-muted-foreground">
+-                          {t("billing.row.tax", "Tax")}
+-                        </td>
+-                        <td className="py-1 text-right tabular-nums text-muted-foreground">
+-                          {formatCurrency(detail.data.tax)}
+-                        </td>
+-                      </tr>
+-                      <tr className="font-semibold">
+-                        <td colSpan={4} className="py-2 text-right">
+-                          {t("billing.row.total", "Total")}
+-                        </td>
+-                        <td className="py-2 text-right tabular-nums">
+-                          {formatCurrency(detail.data.total)}
+-                        </td>
+-                      </tr>
+-                    </tfoot>
++                      </tfoot>
+                     </table>
+                   </div>
+                 ) : (
+@@ -2260,90 +2330,89 @@ function PaymentSection({
+         </p>
+       ) : paymentsQuery.data && paymentsQuery.data.length > 0 ? (
+         <div className="overflow-x-auto">
+-          <table className="w-full text-sm">
+-          <thead>
+-            <tr className="border-b border-border">
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colDate", "Date")}
+-              </th>
+-              <th className="py-2 text-right font-medium text-muted-foreground">
+-                {t("billing.payments.colAmount", "Amount")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colMethod", "Method")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colReceivedBy", "Received By")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colNotes", "Notes")}
+-              </th>
+-              {canRefund && <th className="py-2" />}
+-            </tr>
+-          </thead>
+-          <tbody>
+-            {paymentsQuery.data.map((payment) => (
+-              <tr
+-                key={payment.id}
+-                className="border-b border-border/50 last:border-0"
+-              >
+-                <td className="py-2 text-muted-foreground">
+-                  {payment.receivedAt
+-                    ? formatBillingInstantDate(
+-                        payment.receivedAt,
+-                        billingTimeZone
+-                      )
+-                    : "\u2014"}
+-                </td>
+-                <td
+-                  className={`py-2 text-right tabular-nums font-medium ${
+-                    Number(payment.amount) < 0
+-                      ? "text-destructive"
+-                      : "text-success"
+-                  }`}
+-                >
+-                  {formatCurrency(payment.amount)}
+-                </td>
+-                <td className="py-2 capitalize text-muted-foreground">
+-                  {payment.method?.replace(/_/g, " ") ?? "\u2014"}
+-                </td>
+-                <td className="py-2 text-muted-foreground">
+-                  {payment.receivedByName ?? "\u2014"}
+-                </td>
+-                <td className="py-2 text-muted-foreground">
+-                  <div className="flex items-center gap-2">
+-                    <span>{payment.notes || "\u2014"}</span>
+-                    <PaymentEkasaBadge
+-                      paymentId={payment.id}
+-                      invoiceId={invoiceId}
+-                    />
+-                  </div>
+-                </td>
+-                {canRefund && (
+-                  <td className="py-2 text-right">
+-                    {Number(payment.amount) > 0 && (
+-                      <Button
+-                        variant="ghost"
+-                        size="sm"
+-                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+-                        disabled={refundPayment.isPending}
+-                        onClick={() => {
+-                          setRefundReason("");
+-                          setRefundDueDate(invoiceDueDate ?? "");
+-                          setRefundTarget({
+-                            paymentId: payment.id,
+-                            amount: payment.amount,
+-                          });
+-                        }}
+-                      >
+-                        {t("billing.payments.btnRefund", "Refund")}
+-                      </Button>
++          <table className="w-full text-xs">
++            <thead className="border-b border-border bg-muted/30">
++              <tr>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colDate", "Date")}
++                </th>
++                <th className={cn(tableHeadClass, "text-right")}>
++                  {t("billing.payments.colAmount", "Amount")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colMethod", "Method")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colReceivedBy", "Received By")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colNotes", "Notes")}
++                </th>
++                {canRefund && <th className={tableHeadClass} />}
++              </tr>
++            </thead>
++            <tbody>
++              {paymentsQuery.data.map((payment) => (
++                <tr key={payment.id} className={tableRowClass}>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    {payment.receivedAt
++                      ? formatBillingInstantDate(
++                          payment.receivedAt,
++                          billingTimeZone
++                        )
++                      : "\u2014"}
++                  </td>
++                  <td
++                    className={cn(
++                      tableCellClass,
++                      "text-right tabular-nums font-mono",
++                      Number(payment.amount) < 0
++                        ? "text-destructive"
++                        : "text-success"
+                     )}
++                  >
++                    {formatCurrency(payment.amount)}
+                   </td>
+-                )}
+-              </tr>
+-            ))}
+-          </tbody>
++                  <td className={cn(tableCellClass, "capitalize text-muted-foreground")}>
++                    {payment.method?.replace(/_/g, " ") ?? "\u2014"}
++                  </td>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    {payment.receivedByName ?? "\u2014"}
++                  </td>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    <div className="flex items-center gap-2">
++                      <span>{payment.notes || "\u2014"}</span>
++                      <PaymentEkasaBadge
++                        paymentId={payment.id}
++                        invoiceId={invoiceId}
++                      />
++                    </div>
++                  </td>
++                  {canRefund && (
++                    <td className={cn(tableCellClass, "text-right")}>
++                      {Number(payment.amount) > 0 && (
++                        <Button
++                          variant="ghost"
++                          size="sm"
++                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
++                          disabled={refundPayment.isPending}
++                          onClick={() => {
++                            setRefundReason("");
++                            setRefundDueDate(invoiceDueDate ?? "");
++                            setRefundTarget({
++                              paymentId: payment.id,
++                              amount: payment.amount,
++                            });
++                          }}
++                        >
++                          {t("billing.payments.btnRefund", "Refund")}
++                        </Button>
++                      )}
++                    </td>
++                  )}
++                </tr>
++              ))}
++            </tbody>
+           </table>
+         </div>
+       ) : (
+@@ -2351,62 +2420,58 @@ function PaymentSection({
+           {t("billing.payments.noPaymentsRecorded", "No payments recorded.")}
+         </p>
+       )}
+-
+       {adjustmentsQuery.isLoading ? (
+         <p className="text-xs text-muted-foreground">
+           {t("billing.payments.loadingAdjustments", "Loading adjustments...")}
+         </p>
+       ) : adjustmentsQuery.data && adjustmentsQuery.data.length > 0 ? (
+         <div className="overflow-x-auto">
+-          <table className="w-full text-sm">
+-          <thead>
+-            <tr className="border-b border-border">
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colDate", "Date")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colTypeHeader", "Type")}
+-              </th>
+-              <th className="py-2 text-right font-medium text-muted-foreground">
+-                {t("billing.payments.colAmount", "Amount")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colCreatedBy", "Created By")}
+-              </th>
+-              <th className="py-2 text-left font-medium text-muted-foreground">
+-                {t("billing.payments.colReason", "Reason")}
+-              </th>
+-            </tr>
+-          </thead>
+-          <tbody>
+-            {adjustmentsQuery.data.map((adjustment) => (
+-              <tr
+-                key={adjustment.id}
+-                className="border-b border-border/50 last:border-0"
+-              >
+-                <td className="py-2 text-muted-foreground">
+-                  {adjustment.createdAt
+-                    ? formatBillingInstantDate(
+-                        adjustment.createdAt,
+-                        billingTimeZone
+-                      )
+-                    : "\u2014"}
+-                </td>
+-                <td className="py-2 capitalize text-muted-foreground">
+-                  {adjustment.type.replace(/_/g, " ")}
+-                </td>
+-                <td className="py-2 text-right tabular-nums font-medium text-foreground">
+-                  {formatCurrency(adjustment.amount)}
+-                </td>
+-                <td className="py-2 text-muted-foreground">
+-                  {adjustment.createdByName ?? "\u2014"}
+-                </td>
+-                <td className="py-2 text-muted-foreground">
+-                  {adjustment.reason || "\u2014"}
+-                </td>
++          <table className="w-full text-xs">
++            <thead className="border-b border-border bg-muted/30">
++              <tr>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colDate", "Date")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colTypeHeader", "Type")}
++                </th>
++                <th className={cn(tableHeadClass, "text-right")}>
++                  {t("billing.payments.colAmount", "Amount")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colCreatedBy", "Created By")}
++                </th>
++                <th className={tableHeadClass}>
++                  {t("billing.payments.colReason", "Reason")}
++                </th>
+               </tr>
+-            ))}
+-          </tbody>
++            </thead>
++            <tbody>
++              {adjustmentsQuery.data.map((adjustment) => (
++                <tr key={adjustment.id} className={tableRowClass}>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    {adjustment.createdAt
++                      ? formatBillingInstantDate(
++                          adjustment.createdAt,
++                          billingTimeZone
++                        )
++                      : "\u2014"}
++                  </td>
++                  <td className={cn(tableCellClass, "capitalize text-muted-foreground")}>
++                    {adjustment.type.replace(/_/g, " ")}
++                  </td>
++                  <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
++                    {formatCurrency(adjustment.amount)}
++                  </td>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    {adjustment.createdByName ?? "\u2014"}
++                  </td>
++                  <td className={cn(tableCellClass, "text-muted-foreground")}>
++                    {adjustment.reason || "\u2014"}
++                  </td>
++                </tr>
++              ))}
++            </tbody>
+           </table>
+         </div>
+       ) : (
+diff --git a/apps/web/lib/__tests__/billing-list-ui.test.ts b/apps/web/lib/__tests__/billing-list-ui.test.ts
+new file mode 100644
+index 0000000..c7ed3c4
+--- /dev/null
++++ b/apps/web/lib/__tests__/billing-list-ui.test.ts
+@@ -0,0 +1,136 @@
++import { readFileSync } from "node:fs";
++import { describe, expect, it } from "vitest";
++
++const page = readFileSync("app/(dashboard)/billing/page.tsx", "utf8");
++
++function pageKitImports(source: string): string {
++  const match = source.match(
++    /import\s*\{([\s\S]*?)\}\s*from "@\/components\/layout\/page-kit"/,
++  );
++  return match?.[1] ?? "";
++}
++
++describe("billing ledger page kit contract", () => {
++  it("consumes the dashboard page kit primitives", () => {
++    const imports = pageKitImports(page);
++    expect(page).toContain('from "@/components/layout/page-kit"');
++    for (const name of [
++      "PageToolbar",
++      "DataTableFrame",
++      "KpiGrid",
++      "KpiCard",
++      "pageShellClass",
++      "tableHeadClass",
++      "tableCellClass",
++      "tableRowClass",
++      "underlineTabsListClass",
++      "underlineTabsTriggerClass",
++      "filterControlClass",
++    ]) {
++      expect(imports).toContain(name);
++    }
++    expect(page).toContain("className={pageShellClass}");
++  });
++
++  it("keeps one vertical rhythm: no local mt-4/mt-6 against the shell", () => {
++    expect(page).not.toMatch(/\bmt-[46]\b/);
++  });
++
++  it("renders the AR KPIs through KpiGrid/KpiCard", () => {
++    expect(page).toContain('<KpiGrid className="sm:grid-cols-3">');
++    expect(page).not.toContain("font-heading text-2xl");
++    expect(page.match(/<KpiCard/g)).toHaveLength(3);
++    expect(page).toContain('"—"'); // error fallback
++    expect(page).toContain("animate-pulse"); // loading placeholder
++    expect(page).toContain('Number(arSummary.data.overdue) > 0'); // overdue guard
++  });
++
++  it("uses underline status tabs with the shared tokens", () => {
++    expect(page).toContain("underlineTabsListClass");
++    expect(page).toContain("underlineTabsTriggerClass");
++    expect(page).toContain("t(`billing.status_${tTab.key}`, tTab.label)");
++  });
++
++  it("keeps the toolbar search-free and drives the list controls", () => {
++    const start = page.indexOf("<PageToolbar>");
++    const end = page.indexOf("</PageToolbar>");
++    expect(start).toBeGreaterThanOrEqual(0);
++    expect(end).toBeGreaterThan(start);
++    const body = page.slice(start, end);
++    // No text search input: billing.listInvoices has no search parameter.
++    expect(body).not.toContain("<Input");
++    expect(body).not.toContain("SearchField");
++    expect(body).not.toContain("placeholder=");
++    // Result count + page size + refresh.
++    expect(body).toContain("billing.page.showingPagination");
++    expect(body).toContain("billing.page.pageSizeLabel");
++    expect(body).toContain("filterControlClass");
++    expect(body).toContain('t("common.refresh", "Refresh")');
++  });
++
++  it("frames the dense invoice table and keeps states inside the frame", () => {
++    const start = page.indexOf("<DataTableFrame>");
++    const end = page.indexOf("</DataTableFrame>");
++    expect(start).toBeGreaterThanOrEqual(0);
++    expect(end).toBeGreaterThan(start);
++    const frameBody = page.slice(start, end);
++    expect(frameBody).toContain("<TableSkeleton");
++    expect(frameBody).toContain("<EmptyState");
++    expect(frameBody).toContain("data.items.map");
++    expect(page).toContain('<table className="w-full text-xs">');
++    expect(page).not.toMatch(/<table[^>]*text-sm/);
++  });
++
++  it("uses dense table tokens with mono numeric columns", () => {
++    expect(page).toContain("tableHeadClass");
++    expect(page).toContain("tableCellClass");
++    expect(page).toContain("tableRowClass");
++    expect(page).toContain("text-right tabular-nums font-mono");
++  });
++
++  it("uses semantic status tokens instead of raw palette colours", () => {
++    expect(page).not.toMatch(
++      /(?:bg|text|border)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d/,
++    );
++    expect(page).toContain("border-primary/40 bg-primary-muted");
++  });
++
++  it("never sticks headers", () => {
++    expect(page).not.toContain("sticky");
++    expect(page).not.toContain("top-0");
++  });
++
++  it("keeps the invoice-detail tour anchor on the expanded invoice row", () => {
++    expect(page).toMatch(/<td[^>]*data-tour="invoice-detail"/);
++  });
++
++  it("keeps the list error ternary exclusive and before the empty state", () => {
++    expect(page.indexOf("listError || billingListMissing")).toBeLessThan(
++      page.indexOf("No invoices yet"),
++    );
++    expect(page).toContain("{listError || billingListMissing ? (");
++    expect(page).toContain(") : isListLoading ? (");
++  });
++
++  it("unifies the side panels on the section card chrome", () => {
++    expect(page).toContain(
++      '<section className="rounded-lg border border-border bg-card">',
++    );
++    expect(page).toContain(
++      '<div className="rounded-lg border border-border bg-card">',
++    );
++  });
++
++  it("gives every header action the unified sm size", () => {
++    const start = page.indexOf("<PageHeader");
++    const end = page.indexOf("<DispenseChargeQueuePanel");
++    expect(start).toBeGreaterThanOrEqual(0);
++    expect(end).toBeGreaterThan(start);
++    const header = page.slice(start, end);
++    const buttons = header.match(/<Button[\s\S]*?<\/Button>/g) ?? [];
++    expect(buttons.length).toBeGreaterThanOrEqual(5);
++    for (const button of buttons) {
++      expect(button).toContain('size="sm"');
++    }
++  });
++});
+diff --git a/apps/web/messages/en.json b/apps/web/messages/en.json
+index 9b214bf..c76746d 100644
+--- a/apps/web/messages/en.json
++++ b/apps/web/messages/en.json
+@@ -931,6 +931,7 @@
+       "showingPagination": "Showing {from}--{to} of {total}",
+       "previous": "Previous",
+       "next": "Next",
++      "pageSizeLabel": "Rows per page",
+       "emptyEstimatesTitle": "No estimates yet",
+       "emptyEstimatesDesc": "Create an estimate when a client needs approval before services are performed.",
+       "emptyStatusTitle": "No invoices with this status",
+diff --git a/apps/web/messages/sk.json b/apps/web/messages/sk.json
+index 4cebc51..03e86d9 100644
+--- a/apps/web/messages/sk.json
++++ b/apps/web/messages/sk.json
+@@ -931,6 +931,7 @@
+       "showingPagination": "Zobrazuje sa {from}–{to} z {total}",
+       "previous": "Predchádzajúca",
+       "next": "Ďalšia",
++      "pageSizeLabel": "Riadkov na stránku",
+       "emptyEstimatesTitle": "Zatiaľ žiadne cenové ponuky",
+       "emptyEstimatesDesc": "Vytvorte cenovú ponuku, ak klient potrebuje schválenie pred vykonaním služieb.",
+       "emptyStatusTitle": "Žiadne faktúry s týmto stavom",

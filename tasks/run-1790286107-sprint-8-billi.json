@@ -1,0 +1,18 @@
+{
+  "task_id": "arena-1790286107-arena-sprint-8-billing-ledger-",
+  "state": "IMPLEMENTING",
+  "title": "Arena Sprint 8: Billing Ledger Harmonization",
+  "allowed_paths": [
+    "apps/web/app/(dashboard)/billing/page.tsx",
+    "apps/web/lib/__tests__/billing-list-ui.test.ts",
+    "apps/web/messages/en.json",
+    "apps/web/messages/sk.json"
+  ],
+  "declared_risk": "low",
+  "created_at": "2026-09-24 23:41:47",
+  "updated_at": "2026-09-24 23:41:47",
+  "verification_results": [],
+  "failure_reason": "",
+  "repair_attempts": 0,
+  "review_report": null
+}

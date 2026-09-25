@@ -1,0 +1,812 @@
+import type { Database } from "@openpims/db/client";
+import { and, eq, isNull } from "drizzle-orm";
+import {
+  appointmentTypes,
+  rooms,
+  services,
+  clients,
+  patients,
+  appointments,
+  users,
+  soapNotes,
+  vaccinationRecords,
+  problemList,
+  invoices,
+  invoiceItems,
+  payments,
+  careReminders,
+  communications,
+  products,
+} from "@openpims/db";
+import { centsToMoney, moneyToCents } from "@/lib/billing/invoice-balance";
+import { calculateInvoiceTaxTotals } from "@/lib/billing/invoice-tax";
+import { finalizedSoapInsertValues } from "@/lib/records/soap-lifecycle";
+import { seedMarketingDemoData, type MarketingDemoIds } from "./marketing-demo-data";
+
+/**
+ * Sensible defaults seeded for a brand-new practice so it's usable immediately
+ * instead of landing in a blank dashboard. Data is plain/pure (easy to test);
+ * `seedPractice` inserts it scoped to the new practice.
+ */
+
+export interface DefaultAppointmentType {
+  name: string;
+  durationMinutes: number;
+  color: string;
+  requiresDoctor: 0 | 1;
+  defaultRoomType: "exam" | "surgery" | "treatment" | "boarding";
+}
+
+export const DEFAULT_APPOINTMENT_TYPES: DefaultAppointmentType[] = [
+  { name: "Wellness Exam", durationMinutes: 30, color: "#0d9488", requiresDoctor: 1, defaultRoomType: "exam" },
+  { name: "Sick Visit", durationMinutes: 30, color: "#dc2626", requiresDoctor: 1, defaultRoomType: "exam" },
+  { name: "Vaccination", durationMinutes: 15, color: "#2563eb", requiresDoctor: 0, defaultRoomType: "exam" },
+  { name: "Surgery", durationMinutes: 120, color: "#7c3aed", requiresDoctor: 1, defaultRoomType: "surgery" },
+  { name: "Dental Cleaning", durationMinutes: 90, color: "#0891b2", requiresDoctor: 1, defaultRoomType: "surgery" },
+  { name: "Recheck / Follow-up", durationMinutes: 15, color: "#65a30d", requiresDoctor: 1, defaultRoomType: "exam" },
+];
+
+export interface DefaultRoom {
+  name: string;
+  type: "exam" | "surgery" | "treatment" | "boarding";
+}
+
+export const DEFAULT_ROOMS: DefaultRoom[] = [
+  { name: "Exam Room 1", type: "exam" },
+  { name: "Exam Room 2", type: "exam" },
+  { name: "Surgery Suite", type: "surgery" },
+  { name: "Treatment Area", type: "treatment" },
+];
+
+export interface DefaultService {
+  name: string;
+  category: string;
+  defaultPrice: string; // numeric column stores as string
+  taxable: boolean;
+}
+
+export const DEFAULT_SERVICES: DefaultService[] = [
+  { name: "Wellness Exam", category: "Exam", defaultPrice: "65.00", taxable: false },
+  { name: "Sick / Problem Exam", category: "Exam", defaultPrice: "75.00", taxable: false },
+  { name: "Recheck Exam", category: "Exam", defaultPrice: "45.00", taxable: false },
+  { name: "Rabies Vaccine", category: "Vaccination", defaultPrice: "35.00", taxable: true },
+  { name: "DHPP Vaccine", category: "Vaccination", defaultPrice: "40.00", taxable: true },
+  { name: "Bordetella Vaccine", category: "Vaccination", defaultPrice: "38.00", taxable: true },
+  { name: "FVRCP Vaccine", category: "Vaccination", defaultPrice: "40.00", taxable: true },
+  { name: "Microchip", category: "Procedure", defaultPrice: "55.00", taxable: true },
+  { name: "Nail Trim", category: "Procedure", defaultPrice: "20.00", taxable: true },
+  { name: "Dental Cleaning", category: "Surgery", defaultPrice: "450.00", taxable: false },
+  { name: "Spay / Neuter", category: "Surgery", defaultPrice: "350.00", taxable: false },
+  { name: "Heartworm Test", category: "Diagnostics", defaultPrice: "45.00", taxable: false },
+];
+
+/**
+ * Insert the default catalog for a freshly created practice. Idempotency is the
+ * caller's responsibility (only call once, at registration).
+ */
+export async function seedPractice(
+  db: Database,
+  opts: { practiceId: string; locationId: string }
+): Promise<void> {
+  await db.insert(appointmentTypes).values(
+    DEFAULT_APPOINTMENT_TYPES.map((t) => ({
+      practiceId: opts.practiceId,
+      name: t.name,
+      durationMinutes: t.durationMinutes,
+      color: t.color,
+      requiresDoctor: t.requiresDoctor,
+      defaultRoomType: t.defaultRoomType,
+    }))
+  );
+
+  await db.insert(rooms).values(
+    DEFAULT_ROOMS.map((r) => ({
+      practiceId: opts.practiceId,
+      locationId: opts.locationId,
+      name: r.name,
+      type: r.type,
+    }))
+  );
+
+  await db.insert(services).values(
+    DEFAULT_SERVICES.map((s) => ({
+      practiceId: opts.practiceId,
+      name: s.name,
+      category: s.category,
+      defaultPrice: s.defaultPrice,
+      taxable: s.taxable,
+    }))
+  );
+}
+
+export interface DemoDataIds extends MarketingDemoIds {
+  clientIds: string[];
+  patientIds: string[];
+  appointmentIds: string[];
+  soapNoteIds: string[];
+  vaccinationIds: string[];
+  problemIds: string[];
+  invoiceIds: string[];
+  invoiceItemIds: string[];
+  paymentIds: string[];
+  careReminderIds: string[];
+  communicationIds: string[];
+  productIds: string[];
+}
+
+/**
+ * Seed a small set of demo clients/patients/appointments so a hosted trial
+ * lands on a lively dashboard instead of empty states. The returned IDs are
+ * stored on the practice so the onboarding wizard can clear them with one click.
+ * Call only on hosted trials; non-fatal.
+ */
+export async function seedDemoData(
+  db: Database,
+  opts: { practiceId: string }
+): Promise<DemoDataIds> {
+  const insertedClients = await db
+    .insert(clients)
+    .values([
+      { practiceId: opts.practiceId, firstName: "Jordan", lastName: "Avery", email: "jordan.avery@example.com", phone: "(555) 200-1001" },
+      { practiceId: opts.practiceId, firstName: "Sam", lastName: "Rivera", email: "sam.rivera@example.com", phone: "(555) 200-1002" },
+      { practiceId: opts.practiceId, firstName: "Taylor", lastName: "Brooks", email: "taylor.brooks@example.com", phone: "(555) 200-1003" },
+      { practiceId: opts.practiceId, firstName: "Zuzana", lastName: "Kováčová", email: "zuzana.kovacova@priklad.sk", phone: "+421 905 123 456" },
+      { practiceId: opts.practiceId, firstName: "Michal", lastName: "Horváth", email: "michal.horvath@priklad.sk", phone: "+421 911 789 012" },
+    ])
+    .returning({ id: clients.id });
+
+  const insertedPatients = await db
+    .insert(patients)
+    .values([
+      { practiceId: opts.practiceId, clientId: insertedClients[0]!.id, name: "Biscuit", species: "canine" as const, sex: "male_neutered" as const, breed: "Golden Retriever" },
+      { practiceId: opts.practiceId, clientId: insertedClients[1]!.id, name: "Luna", species: "feline" as const, sex: "female_spayed" as const, breed: "Domestic Shorthair" },
+      { practiceId: opts.practiceId, clientId: insertedClients[2]!.id, name: "Mango", species: "avian" as const, breed: "Sun Conure" },
+      { practiceId: opts.practiceId, clientId: insertedClients[3]!.id, name: "Blesk", species: "canine" as const, sex: "male_neutered" as const, breed: "Nemecký ovčiak" },
+      { practiceId: opts.practiceId, clientId: insertedClients[4]!.id, name: "Micka", species: "feline" as const, sex: "female_spayed" as const, breed: "Európska mačka" },
+    ])
+    .returning({ id: patients.id });
+
+  // Look up the catalog that seedPractice already created. These are optional:
+  // if a lookup comes back empty we just leave that link null and keep going.
+  const seededTypes = await db
+    .select({ id: appointmentTypes.id, name: appointmentTypes.name })
+    .from(appointmentTypes)
+    .where(eq(appointmentTypes.practiceId, opts.practiceId));
+  const seededRooms = await db
+    .select({ id: rooms.id, locationId: rooms.locationId })
+    .from(rooms)
+    .where(eq(rooms.practiceId, opts.practiceId));
+  const seededServices = await db
+    .select({
+      id: services.id,
+      name: services.name,
+      defaultPrice: services.defaultPrice,
+      taxable: services.taxable,
+    })
+    .from(services)
+    .where(eq(services.practiceId, opts.practiceId));
+  // The owner is the admin user for this practice.
+  const [owner] = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(
+      and(
+        eq(users.practiceId, opts.practiceId),
+        eq(users.role, "admin"),
+        isNull(users.deletedAt)
+      )
+    )
+    .limit(1);
+
+  const typeByName = (name: string) =>
+    seededTypes.find((t) => t.name === name)?.id ?? null;
+  const wellnessTypeId = typeByName("Wellness Exam");
+  const vaccineTypeId = typeByName("Vaccination");
+  const sickTypeId = typeByName("Sick Visit");
+  const recheckTypeId = typeByName("Recheck / Follow-up");
+  const doctorId = owner?.id ?? null;
+  const room1 = seededRooms[0]?.id ?? null;
+  const room2 = seededRooms[1]?.id ?? room1;
+  const locationId = seededRooms[0]?.locationId;
+  if (!locationId) {
+    throw new Error("Demo data requires a location-bound starter room.");
+  }
+
+  // Build a day of appointments inside business hours (clinic local time),
+  // plus one in the future. Hours render 8-18 on the Schedule. The shape
+  // follows how a real clinic day is staggered: morning wellness anchors, a same-day sick
+  // visit, short vaccine/recheck slots, one doctor-less tech appointment
+  // (nail trims and boosters run without a doctor, and it shows the Team
+  // lane), and one deliberate mid-afternoon overlap so the side-by-side
+  // rendering is visible. A mix of statuses makes the day look real.
+  const todayAt = (hour: number, minute: number) => {
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+  const mkAppt = (opts2: {
+    clientIdx: number;
+    patientIdx: number;
+    start: Date;
+    durationMin: number;
+    status: "scheduled" | "confirmed" | "checked_in" | "in_exam" | "checked_out" | "no_show" | "cancelled";
+    typeId: string | null;
+    roomId: string | null;
+    /** Omit for the owner; pass null for tech work with no doctor. */
+    doctor?: string | null;
+    notes?: string;
+  }) => ({
+    practiceId: opts.practiceId,
+    locationId,
+    clientId: insertedClients[opts2.clientIdx]!.id,
+    patientId: insertedPatients[opts2.patientIdx]!.id,
+    startTime: opts2.start,
+    endTime: new Date(opts2.start.getTime() + opts2.durationMin * 60 * 1000),
+    status: opts2.status,
+    typeId: opts2.typeId,
+    doctorId: opts2.doctor === undefined ? doctorId : opts2.doctor,
+    roomId: opts2.roomId,
+    notes: opts2.notes,
+  });
+
+  const pastDayAt = (daysAgo: number, hour: number, minute: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+
+  const futureStart = new Date(Date.now() + 26 * 60 * 60 * 1000);
+  const insertedAppts = await db
+    .insert(appointments)
+    .values([
+      // Keep this first: the wellness SOAP note below links to it.
+      mkAppt({
+        clientIdx: 0,
+        patientIdx: 0,
+        start: todayAt(9, 0),
+        durationMin: 30,
+        status: "checked_in",
+        typeId: wellnessTypeId,
+        roomId: room1,
+      }),
+      mkAppt({
+        clientIdx: 1,
+        patientIdx: 1,
+        start: todayAt(10, 0),
+        durationMin: 30,
+        status: "in_exam",
+        typeId: sickTypeId,
+        roomId: room2,
+        notes: "Less active this week. Owner worried.",
+      }),
+      // Tech work runs without a doctor: this renders in the Team lane.
+      mkAppt({
+        clientIdx: 2,
+        patientIdx: 2,
+        start: todayAt(10, 0),
+        durationMin: 15,
+        status: "confirmed",
+        typeId: vaccineTypeId,
+        roomId: room1,
+        doctor: null,
+        notes: "Booster with the tech. Nail trim if time allows.",
+      }),
+      mkAppt({
+        clientIdx: 1,
+        patientIdx: 1,
+        start: todayAt(11, 30),
+        durationMin: 15,
+        status: "confirmed",
+        typeId: vaccineTypeId,
+        roomId: room2,
+      }),
+      mkAppt({
+        clientIdx: 2,
+        patientIdx: 2,
+        start: todayAt(14, 0),
+        durationMin: 30,
+        status: "scheduled",
+        typeId: sickTypeId,
+        roomId: room1,
+      }),
+      // Deliberate overlap with the 2:00: concurrent blocks render side by
+      // side, never stacked.
+      mkAppt({
+        clientIdx: 0,
+        patientIdx: 0,
+        start: todayAt(14, 15),
+        durationMin: 15,
+        status: "scheduled",
+        typeId: vaccineTypeId,
+        roomId: room2,
+      }),
+      mkAppt({
+        clientIdx: 1,
+        patientIdx: 1,
+        start: todayAt(15, 30),
+        durationMin: 15,
+        status: "scheduled",
+        typeId: recheckTypeId,
+        roomId: room1,
+        notes: "Quick look at the teeth after starting dental care.",
+      }),
+      mkAppt({
+        clientIdx: 0,
+        patientIdx: 0,
+        start: futureStart,
+        durationMin: 30,
+        status: "confirmed",
+        typeId: wellnessTypeId,
+        roomId: room1,
+      }),
+
+      // Historical appointments spanning the past 4 weeks (populates Prehľady / Reports)
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(28, 9, 0), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Ukončená preventívna prehliadka" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(24, 10, 30), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Vyšetrenie krívania" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(21, 14, 0), durationMin: 15, status: "checked_out", typeId: vaccineTypeId, roomId: room1, notes: "[DEMO] Očkovanie" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(18, 11, 0), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room1, notes: "[DEMO] USG brucha" }),
+      mkAppt({ clientIdx: 2, patientIdx: 2, start: pastDayAt(15, 15, 0), durationMin: 15, status: "no_show", typeId: recheckTypeId, roomId: room2, notes: "[DEMO] Klient sa nedostavil" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(14, 9, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Kontrola a očkovanie" }),
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(12, 13, 30), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Dermatologické vyšetrenie" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(9, 10, 0), durationMin: 15, status: "checked_out", typeId: vaccineTypeId, roomId: room1, notes: "[DEMO] Odčervenie" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(8, 14, 30), durationMin: 30, status: "cancelled", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Zrušené majiteľom vopred" }),
+      mkAppt({ clientIdx: 3, patientIdx: 3, start: pastDayAt(6, 11, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Vstupné vyšetrenie" }),
+      mkAppt({ clientIdx: 0, patientIdx: 0, start: pastDayAt(4, 9, 0), durationMin: 15, status: "checked_out", typeId: recheckTypeId, roomId: room1, notes: "[DEMO] Kontrola uší" }),
+      mkAppt({ clientIdx: 1, patientIdx: 1, start: pastDayAt(2, 16, 0), durationMin: 30, status: "checked_out", typeId: sickTypeId, roomId: room2, notes: "[DEMO] Stomatologická konzultácia" }),
+      mkAppt({ clientIdx: 4, patientIdx: 4, start: pastDayAt(1, 10, 30), durationMin: 30, status: "checked_out", typeId: wellnessTypeId, roomId: room1, notes: "[DEMO] Vakcinácia a čipovanie" }),
+    ])
+    .returning({ id: appointments.id });
+
+  // Clinical records so the Records page tabs are not empty. authorId is required
+  // on soap_notes, so only add them when we found the owner.
+  let soapNoteIds: string[] = [];
+  if (owner) {
+    const insertedSoap = await db
+      .insert(soapNotes)
+      .values([
+        {
+          practiceId: opts.practiceId,
+          patientId: insertedPatients[0]!.id,
+          appointmentId: insertedAppts[0]?.id ?? null,
+          ...finalizedSoapInsertValues({
+            actor: owner,
+            sections: {
+              subjective:
+                "Owner reports Biscuit is bright and eating well. Here for a yearly wellness check.",
+              objective:
+                "Weight 31 kg. Temp normal. Heart and lungs sound clear. Coat looks healthy.",
+              assessment: "Healthy adult dog. No problems found today.",
+              plan: "Keep up the current diet. Give the Rabies booster. Recheck in one year.",
+            },
+          }),
+        },
+        {
+          practiceId: opts.practiceId,
+          patientId: insertedPatients[1]!.id,
+          appointmentId: null,
+          ...finalizedSoapInsertValues({
+            actor: owner,
+            sections: {
+              subjective: "Luna is a bit less active this week per owner.",
+              objective:
+                "Weight 4.2 kg. Mild tartar on back teeth. Rest of exam is normal.",
+              assessment: "Early dental tartar. Otherwise healthy cat.",
+              plan: "Start at-home dental care. Plan a dental cleaning in the next few months.",
+            },
+          }),
+        },
+      ])
+      .returning({ id: soapNotes.id });
+    soapNoteIds = insertedSoap.map((s) => s.id);
+  }
+
+  // A couple of vaccine records (recent Rabies, recent DHPP) with next-due dates.
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const daysFromNow = (n: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+  const insertedVax = await db
+    .insert(vaccinationRecords)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        vaccineName: "Rabies",
+        manufacturer: "Sample Labs",
+        lotNumber: "RB-1042",
+        administeredBy: doctorId,
+        administeredAt: daysFromNow(-30),
+        nextDueDate: ymd(daysFromNow(335)),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        vaccineName: "DHPP",
+        manufacturer: "Sample Labs",
+        lotNumber: "DH-2087",
+        administeredBy: doctorId,
+        administeredAt: daysFromNow(-30),
+        nextDueDate: ymd(daysFromNow(-5)),
+      },
+    ])
+    .returning({ id: vaccinationRecords.id });
+
+  // A tiny medication shelf makes the prescription and inventory workflows
+  // usable on a first visit instead of presenting an empty product selector.
+  const insertedProducts = await db
+    .insert(products)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        name: "Carprofen 75 mg tablets",
+        sku: "SAMPLE-CARP-75",
+        category: "Medication",
+        unitPrice: "1.25",
+        taxable: true,
+        costPrice: "0.52",
+        stockQuantity: 100,
+        reorderPoint: 20,
+      },
+      {
+        practiceId: opts.practiceId,
+        name: "Amoxicillin 250 mg capsules",
+        sku: "SAMPLE-AMOX-250",
+        category: "Medication",
+        unitPrice: "0.85",
+        taxable: true,
+        costPrice: "0.31",
+        stockQuantity: 60,
+        reorderPoint: 15,
+      },
+    ])
+    .returning({ id: products.id });
+
+  // One problem-list entry so that tab shows content too.
+  const insertedProblems = await db
+    .insert(problemList)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[1]!.id,
+        description: "Mild dental tartar",
+        status: "active",
+        onsetDate: ymd(daysFromNow(-14)),
+      },
+    ])
+    .returning({ id: problemList.id });
+
+  // Invoices and payments with line items from the seeded services.
+  const serviceByName = (name: string) =>
+    seededServices.find((s) => s.name === name) ?? null;
+  const invoiceIds: string[] = [];
+  const invoiceItemIds: string[] = [];
+  const paymentIds: string[] = [];
+
+  const buildInvoice = async (cfg: {
+    clientIdx: number;
+    patientIdx: number;
+    status: "paid" | "sent";
+    serviceNames: string[];
+    daysAgo?: number;
+    paymentMethod?: "cash" | "credit_card" | "debit_card" | "check" | "online" | "other";
+  }) => {
+    const daysAgo = cfg.daysAgo ?? 0;
+    const invDate = daysFromNow(-daysAgo);
+
+    // Resolve line items from the catalog; fall back to a simple line if a name
+    // is missing so we never end up with a blank invoice.
+    const lines = cfg.serviceNames
+      .map((name) => serviceByName(name))
+      .filter((s): s is NonNullable<typeof s> => s != null);
+    const safeLines =
+      lines.length > 0
+        ? lines
+        : [{ id: null, name: "Office Visit", defaultPrice: "65.00", taxable: false }];
+
+    const totals = calculateInvoiceTaxTotals(
+      safeLines.map((line) => ({
+        lineTotalCents: moneyToCents(line.defaultPrice),
+        taxable: line.taxable,
+      })),
+      "7.00",
+    );
+
+    const [inv] = await db
+      .insert(invoices)
+      .values({
+        practiceId: opts.practiceId,
+        clientId: insertedClients[cfg.clientIdx]!.id,
+        patientId: insertedPatients[cfg.patientIdx]!.id,
+        status: cfg.status,
+        subtotal: centsToMoney(totals.subtotalCents),
+        tax: centsToMoney(totals.taxCents),
+        total: centsToMoney(totals.totalCents),
+        paidAmount:
+          cfg.status === "paid" ? centsToMoney(totals.totalCents) : "0",
+        dueDate: ymd(daysFromNow(cfg.status === "paid" ? -daysAgo : 14 - daysAgo)),
+        createdAt: invDate,
+        updatedAt: invDate,
+      })
+      .returning({ id: invoices.id });
+    invoiceIds.push(inv!.id);
+
+    const itemRows = safeLines.map((line) => ({
+      invoiceId: inv!.id,
+      description: line.name,
+      quantity: 1,
+      unitPrice: line.defaultPrice,
+      total: line.defaultPrice,
+      taxable: line.taxable,
+      itemType: "service" as const,
+      itemId: line.id,
+      createdAt: invDate,
+      updatedAt: invDate,
+    }));
+    const insertedItems = await db
+      .insert(invoiceItems)
+      .values(itemRows)
+      .returning({ id: invoiceItems.id });
+    invoiceItemIds.push(...insertedItems.map((i) => i.id));
+
+    // When invoice is paid, create a matching payment record in the ledger
+    if (cfg.status === "paid") {
+      const [pay] = await db
+        .insert(payments)
+        .values({
+          invoiceId: inv!.id,
+          amount: centsToMoney(totals.totalCents),
+          method: cfg.paymentMethod ?? "credit_card",
+          receivedBy: doctorId,
+          receivedAt: invDate,
+          notes: `[DEMO] Platba za veterinárne úkony (${cfg.paymentMethod ?? "credit_card"})`,
+          externalId: `demo-pay-${inv!.id}`,
+        } as any)
+        .returning({ id: payments.id });
+      if (pay) paymentIds.push(pay.id);
+    }
+  };
+
+  // 1. Dnes: preventívna prehliadka + besnota + DHPP
+  await buildInvoice({
+    clientIdx: 0,
+    patientIdx: 0,
+    status: "paid",
+    serviceNames: ["Wellness Exam", "Rabies Vaccine", "DHPP Vaccine"],
+    daysAgo: 0,
+    paymentMethod: "credit_card",
+  });
+
+  // 2. Pred 3 dňami: vyšetrenie + diagnostika
+  await buildInvoice({
+    clientIdx: 1,
+    patientIdx: 1,
+    status: "paid",
+    serviceNames: ["Sick / Problem Exam", "Heartworm Test"],
+    daysAgo: 3,
+    paymentMethod: "credit_card",
+  });
+
+  // 3. Pred 7 dňami: stomatológia + čipovanie
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "paid",
+    serviceNames: ["Dental Cleaning", "Microchip"],
+    daysAgo: 7,
+    paymentMethod: "online",
+  });
+
+  // 4. Pred 12 dňami: kastrácia
+  await buildInvoice({
+    clientIdx: 4,
+    patientIdx: 4,
+    status: "paid",
+    serviceNames: ["Spay / Neuter"],
+    daysAgo: 12,
+    paymentMethod: "credit_card",
+  });
+
+  // 5. Pred 18 dňami: preventívka + DHPP
+  await buildInvoice({
+    clientIdx: 0,
+    patientIdx: 0,
+    status: "paid",
+    serviceNames: ["Wellness Exam", "DHPP Vaccine"],
+    daysAgo: 18,
+    paymentMethod: "cash",
+  });
+
+  // 6. Pred 24 dňami: vyšetrenie + pazúriky
+  await buildInvoice({
+    clientIdx: 1,
+    patientIdx: 1,
+    status: "paid",
+    serviceNames: ["Sick / Problem Exam", "Nail Trim"],
+    daysAgo: 24,
+    paymentMethod: "credit_card",
+  });
+
+  // 7. Pred 38 dňami (predchádzajúce obdobie do Prehľadov)
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "paid",
+    serviceNames: ["Dental Cleaning", "Sick / Problem Exam"],
+    daysAgo: 38,
+    paymentMethod: "credit_card",
+  });
+
+  // 8. Pred 45 dňami (predchádzajúce obdobie do Prehľadov)
+  await buildInvoice({
+    clientIdx: 4,
+    patientIdx: 4,
+    status: "paid",
+    serviceNames: ["Spay / Neuter"],
+    daysAgo: 45,
+    paymentMethod: "online",
+  });
+
+  // 9. Odoslaná / Neúhradená faktúra (v lehote splatnosti)
+  await buildInvoice({
+    clientIdx: 3,
+    patientIdx: 3,
+    status: "sent",
+    serviceNames: ["Spay / Neuter", "Microchip"],
+    daysAgo: 2,
+  });
+
+  // 10. Odoslaná po splatnosti
+  await buildInvoice({
+    clientIdx: 1,
+    patientIdx: 1,
+    status: "sent",
+    serviceNames: ["Wellness Exam", "Nail Trim"],
+    daysAgo: 20,
+  });
+
+  // Zdravotné pripomienky (Care Reminders) – preventívne veterinárne pripomienky
+  const careReminderIds: string[] = [];
+  const makeFp = (seed: string) =>
+    Buffer.from(seed).toString("hex").padEnd(64, "0").slice(0, 64);
+  const insertedReminders = await db
+    .insert(careReminders)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        title: "Vakcinácia – Preočkovanie DHPP + Besnota (Nobivac)",
+        notes: "[DEMO] Ročné preočkovanie základných infekčných chorôb a besnoty",
+        dueDate: ymd(daysFromNow(7)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-1",
+        importFingerprint: makeFp("demo-rem-1"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[1]!.id,
+        title: "Dentálna hygiena – Ultrazvukové odstránenie zubného kameňa",
+        notes: "[DEMO] Sanácia ústnej dutiny a kontrola ďasien po začatí domácej starostlivosti",
+        dueDate: ymd(daysFromNow(14)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-2",
+        importFingerprint: makeFp("demo-rem-2"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[3]!.id,
+        title: "Geriatrický screening – Biochemický a hematologický profil",
+        notes: "[DEMO] Pravidelný polročný odber krvi a moču pre seniora",
+        dueDate: ymd(daysFromNow(-4)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-3",
+        importFingerprint: makeFp("demo-rem-3"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[4]!.id,
+        title: "Sezónne odčervenie – Antiparazitárna kúra (Dehinel Plus / Milbemax)",
+        notes: "[DEMO] Preventívne podanie širokospektrálneho odčervenia",
+        dueDate: ymd(daysFromNow(28)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-4",
+        importFingerprint: makeFp("demo-rem-4"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[2]!.id,
+        title: "Kontrola peria a pazúrov – Papagáj",
+        notes: "[DEMO] Pravidelná kontrola stavu zobáka, pazúrov a operenia",
+        dueDate: ymd(daysFromNow(40)),
+        status: "open" as const,
+        createdBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-5",
+        importFingerprint: makeFp("demo-rem-5"),
+      },
+      {
+        practiceId: opts.practiceId,
+        patientId: insertedPatients[0]!.id,
+        title: "Pooperačná kontrola – Kontrola hojenia a vybratie stehov",
+        notes: "[DEMO] Rána zahojená bez komplikácií, stehy vybraté",
+        dueDate: ymd(daysFromNow(-1)),
+        status: "completed" as const,
+        completedAt: daysFromNow(-1),
+        completedBy: doctorId,
+        externalSource: "demo_data",
+        externalId: "demo-rem-6",
+        importFingerprint: makeFp("demo-rem-6"),
+      },
+    ])
+    .returning({ id: careReminders.id });
+  careReminderIds.push(...insertedReminders.map((r) => r.id));
+
+  // A few inbound messages so the Inbox has real conversations to show in the
+  // walkthrough. Inbound + status not "read" + no readAt renders as unread.
+  const insertedComms = await db
+    .insert(communications)
+    .values([
+      {
+        practiceId: opts.practiceId,
+        clientId: insertedClients[0]!.id,
+        channel: "sms" as const,
+        direction: "inbound" as const,
+        content:
+          "Hi! Is Biscuit due for anything at his visit tomorrow? Want to make sure we do it all in one trip.",
+        status: "delivered" as const,
+      },
+      {
+        practiceId: opts.practiceId,
+        clientId: insertedClients[1]!.id,
+        channel: "email" as const,
+        direction: "inbound" as const,
+        subject: "Luna's recent invoice",
+        content:
+          "Thanks for seeing Luna. Quick question about the invoice you sent, can I pay online?",
+        status: "delivered" as const,
+      },
+      {
+        practiceId: opts.practiceId,
+        clientId: insertedClients[2]!.id,
+        channel: "sms" as const,
+        direction: "inbound" as const,
+        content: "Can I get a copy of Mango's records for our new groomer?",
+        status: "delivered" as const,
+      },
+    ])
+    .returning({ id: communications.id });
+
+  const marketingIds = await seedMarketingDemoData(db, {
+    practiceId: opts.practiceId,
+    ownerId: owner?.id ?? null,
+    clientIds: insertedClients.map((c) => c.id),
+    patientIds: insertedPatients.map((p) => p.id),
+    appointmentIds: insertedAppts.map((a) => a.id),
+  });
+
+  return {
+    clientIds: insertedClients.map((c) => c.id),
+    patientIds: insertedPatients.map((p) => p.id),
+    appointmentIds: insertedAppts.map((a) => a.id),
+    soapNoteIds,
+    vaccinationIds: insertedVax.map((v) => v.id),
+    problemIds: insertedProblems.map((p) => p.id),
+    invoiceIds,
+    invoiceItemIds,
+    paymentIds,
+    careReminderIds,
+    communicationIds: insertedComms.map((c) => c.id),
+    productIds: insertedProducts.map((product) => product.id),
+    ...marketingIds,
+  };
+}

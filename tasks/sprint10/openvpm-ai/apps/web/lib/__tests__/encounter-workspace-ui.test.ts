@@ -1,0 +1,446 @@
+import { readFileSync } from "node:fs";
+import { readPatientCardSource } from "./patient-card-source";
+import { describe, expect, it } from "vitest";
+
+const workspaceSource = readFileSync(
+  "app/(dashboard)/encounters/[appointmentId]/page.tsx",
+  "utf8",
+);
+const scheduleSource = readFileSync(
+  "app/(dashboard)/schedule/page.tsx",
+  "utf8",
+);
+const soapSource = readFileSync(
+  "app/(dashboard)/records/new-soap/[patientId]/page.tsx",
+  "utf8",
+);
+const encounterVitalsSource = readFileSync(
+  "components/records/encounter-vitals-card.tsx",
+  "utf8",
+);
+const ambulatorySoapSource = readFileSync(
+  "components/records/ambulatory-soap-card.tsx",
+  "utf8",
+);
+const patientChartSource = readPatientCardSource();
+const recordsSource = readFileSync("app/(dashboard)/records/page.tsx", "utf8");
+
+describe("clinic encounter workspace", () => {
+  it("opens from an appointment and keeps visit and patient context together", () => {
+    expect(scheduleSource).toContain("Open visit");
+    expect(scheduleSource).toContain(
+      "`/encounters/${appointment.id}#visit-closeout`",
+    );
+    expect(scheduleSource).toContain("`/encounters/${appointment.id}`");
+    expect(workspaceSource).toContain("trpc.appointments.getById.useQuery");
+    expect(workspaceSource).toContain("trpc.patients.getById.useQuery");
+    expect(workspaceSource).toContain("Clinical work");
+    expect(workspaceSource).toContain("Invoice state");
+    expect(workspaceSource).toContain("Charge capture");
+  });
+
+  it("requires the effective rollout gate for field visits and falls back to the standard workspace", () => {
+    expect(workspaceSource).toContain(
+      'appointment.origin === "field" && ambulatoryProfile?.enabled === true',
+    );
+    expect(workspaceSource).not.toContain(
+      'ambulatoryProfile?.enabled === true || appointment.origin === "field"',
+    );
+    expect(workspaceSource).not.toContain(
+      'const isAmbulatoryWorkspace = appointment.origin === "field";',
+    );
+    expect(workspaceSource).toContain(
+      "{isAmbulatoryWorkspace && appointment.patientId ? (",
+    );
+    expect(workspaceSource).toContain("{!isAmbulatoryWorkspace ? (");
+  });
+
+  it("repairs patientless appointments before allowing an exam to start", () => {
+    expect(workspaceSource).toContain(
+      "trpc.appointments.attachPatient.useMutation",
+    );
+    expect(workspaceSource).toContain("Attach a patient before clinical care");
+    expect(workspaceSource).toContain("Search patient to attach");
+    expect(workspaceSource).toContain("Patient attached to visit");
+    expect(workspaceSource).toContain(
+      'nextAction.status === "in_exam" && missingClinicalTarget',
+    );
+    expect(scheduleSource).toContain(
+      "Open the visit and attach a patient before starting the exam.",
+    );
+  });
+
+  it("keeps every visit work action appointment-bound through records", () => {
+    for (const tab of [
+      "vaccinations",
+      "prescriptions",
+      "labResults",
+      "procedures",
+    ]) {
+      expect(workspaceSource).toContain(`tab=${tab}&new=1`);
+    }
+    expect(recordsSource).toContain("const shouldOpenNewRecord");
+    expect(recordsSource).toContain("const visitContextKey");
+    expect(recordsSource).toContain(
+      "appliedVisitLink.current === visitContextKey",
+    );
+    expect(recordsSource).toContain(
+      "linkedPatientQuery.data.id !== linkedPatientId",
+    );
+    expect(recordsSource).toContain(
+      'if (linkedTab === "vaccinations") setShowVaccinationForm(true)',
+    );
+    expect(recordsSource).toContain(
+      'if (linkedTab === "labResults") setShowLabForm(true)',
+    );
+    expect(recordsSource).toContain(
+      'if (linkedTab === "procedures") setShowProcedureForm(true)',
+    );
+    expect(recordsSource).toContain("Recording for this visit");
+    expect(recordsSource).toContain("Leave visit context");
+    expect(recordsSource).toContain("visitContextMatchesPatient");
+    expect(recordsSource).toContain(
+      "appointmentId: linkedAppointmentId || undefined",
+    );
+    expect(recordsSource).toContain("{!linkedAppointmentId ? (");
+    expect(recordsSource).toContain(
+      "utils.encounters.getVisitReconciliation.invalidate",
+    );
+  });
+
+  it("links SOAP documentation to the appointment and returns to the visit", () => {
+    expect(workspaceSource).toContain("?appointmentId=${appointmentId}");
+    expect(soapSource).toContain(
+      'const appointmentId = searchParams.get("appointmentId") ?? undefined',
+    );
+    expect(soapSource).toContain("appointmentId,");
+    expect(soapSource).toContain(
+      "`/encounters/${encodeURIComponent(appointmentId)}`",
+    );
+    expect(soapSource).toContain("Draft will save after you begin typing");
+    expect(soapSource).toContain("Finalize SOAP note");
+  });
+
+  it("opens every SOAP editor entry as a separate document history entry", () => {
+    expect(workspaceSource).toMatch(
+      /<a\s+href=\{`\/records\/new-soap\/\$\{appointment\.patientId\}/,
+    );
+    expect(workspaceSource).toContain("<a href={props.soapDraftHref}>");
+    expect(recordsSource).toMatch(
+      /<a\s+href=\{`\/records\/new-soap\/\$\{encodeURIComponent\(patientId\)\}/,
+    );
+    expect(patientChartSource).toMatch(
+      /<a\s+href=\{`\/records\/new-soap\/\$\{encodeURIComponent\(patientId\)\}/,
+    );
+    for (const source of [workspaceSource, recordsSource, patientChartSource]) {
+      expect(source).not.toMatch(/<Link\s+href=\{`\/records\/new-soap\//);
+    }
+    expect(workspaceSource).not.toContain("<Link href={props.soapDraftHref}>");
+  });
+
+  it("keeps visit vitals appointment-owned and readable after closeout", () => {
+    expect(workspaceSource).toContain(
+      "function canRecordVitals(role?: string | null): boolean",
+    );
+    expect(workspaceSource).toContain('appointment.status === "in_exam"');
+    expect(workspaceSource).toContain(
+      'closeoutQuery.data?.closeout?.status !== "clinical_finalized"',
+    );
+    expect(workspaceSource).toContain(
+      'closeoutQuery.data?.closeout?.status !== "completed"',
+    );
+    expect(workspaceSource).toContain("patientId={appointment.patientId}");
+    expect(workspaceSource).toContain("appointmentId={appointment.id}");
+    expect(workspaceSource).toContain(
+      "visitStateReady={visitClinicalStateReady}",
+    );
+    expect(encounterVitalsSource).toContain(
+      "trpc.vitals.listByAppointment.useQuery",
+    );
+    expect(encounterVitalsSource).toContain("recordVitals.mutate({");
+    expect(encounterVitalsSource).toContain(
+      "const vitalsReady = Boolean(vitalsQuery.data) && !vitalsQuery.error",
+    );
+    expect(encounterVitalsSource).toContain(
+      "canRecord &&\n    isOnline &&\n    vitalsReady &&",
+    );
+    expect(encounterVitalsSource).toMatch(
+      /recordVitals\.mutate\(\{\s+patientId,\s+appointmentId,/,
+    );
+    expect(encounterVitalsSource).toContain(
+      "Checking whether this visit accepts new vitals...",
+    );
+    expect(encounterVitalsSource).toContain(
+      "This visit is closed to new vitals. Recorded values remain read-only.",
+    );
+    expect(encounterVitalsSource).toContain(
+      "Only an administrator, veterinarian, or technician can record visit vitals.",
+    );
+    expect(encounterVitalsSource).toContain(
+      "utils.vitals.listByPatient.invalidate({ patientId })",
+    );
+  });
+
+  it("preserves patient-only vitals for historical chart entry", () => {
+    expect(patientChartSource).toContain(
+      "trpc.vitals.listByPatient.useQuery({ patientId })",
+    );
+    expect(patientChartSource).toMatch(
+      /record\.mutate\(\{\s+patientId,\s+temperatureC:/,
+    );
+  });
+
+  it("creates appointment-linked service and product charges with role guards", () => {
+    expect(workspaceSource).toContain(
+      'role === "admin" || role === "front_desk"',
+    );
+    expect(workspaceSource).toContain('itemType: "service" as const');
+    expect(workspaceSource).toContain('itemType: "product" as const');
+    expect(workspaceSource).toContain("trpc.billing.createInvoice.useMutation");
+    expect(workspaceSource).toContain("appointmentId,");
+    expect(workspaceSource).toContain("Product stock is");
+    expect(workspaceSource).toContain("deducted atomically");
+    expect(workspaceSource).toContain("formatPrice={fmt}");
+  });
+
+  it("edits an existing unpaid draft without creating a duplicate invoice", () => {
+    expect(workspaceSource).toContain(
+      "trpc.billing.updateInvoiceItems.useMutation",
+    );
+    expect(workspaceSource).toContain("Loading existing visit charges...");
+    expect(workspaceSource).toContain("Only unpaid");
+    expect(workspaceSource).toContain("Update visit invoice");
+    expect(workspaceSource).toContain(
+      "Visit-prescription stock was already dispensed and is not moved twice.",
+    );
+    expect(workspaceSource).toContain("isBillingInvoiceLineTotalValid");
+  });
+
+  it("locks charge creation until invoice state is known and surfaces failures", () => {
+    expect(workspaceSource).toContain("invoiceStateReady");
+    expect(workspaceSource).toContain("Confirming visit invoice state...");
+    expect(workspaceSource).toContain(
+      "Charge capture is locked because invoice state could not be",
+    );
+    expect(workspaceSource).toContain(
+      "Unable to load invoice state. Do not create duplicate charges",
+    );
+    expect(workspaceSource).toContain("No active invoice for this visit");
+    expect(workspaceSource).toContain("!invoice.isEstimate");
+    expect(workspaceSource).toContain("Charge catalog is empty");
+    expect(workspaceSource).toContain(
+      "Charge capture is locked because tax and currency settings could",
+    );
+  });
+
+  it("requires the durable two-stage closeout instead of a direct checkout", () => {
+    expect(workspaceSource).toContain("trpc.encounters.getCloseout.useQuery");
+    expect(workspaceSource).toContain(
+      "trpc.encounters.finalizeClinical.useMutation",
+    );
+    expect(workspaceSource).toContain(
+      "trpc.encounters.completeVisit.useMutation",
+    );
+    expect(workspaceSource).toContain("Finalize clinical handoff");
+    expect(workspaceSource).toContain("Billing and owner handoff");
+    expect(workspaceSource).toContain("Download discharge");
+    expect(workspaceSource).toContain("defaultPayLaterDueDate");
+    expect(workspaceSource).toContain('type="date"');
+    expect(workspaceSource).toContain("Pay later — present with due date");
+    expect(workspaceSource).toContain("invoiceDueDate:");
+    expect(workspaceSource).not.toContain(
+      'return { label: "Check out", status: "checked_out" }',
+    );
+  });
+
+  it("makes clinical finalization explanatory and prevents late validation", () => {
+    expect(workspaceSource).toContain("finalizationIssues");
+    expect(workspaceSource).toContain("Before finalizing");
+    expect(workspaceSource).toContain("Documented exception");
+    expect(workspaceSource).toContain("linkedMedicationCount");
+    expect(workspaceSource).toContain("disabled={!canFinalizeNow}");
+    expect(workspaceSource).toContain(
+      "data?.canFinalizeDoctorRequiredVisit === true",
+    );
+    expect(workspaceSource).not.toContain(
+      'role === "veterinarian" ||\n    (appointment.typeRequiresDoctor',
+    );
+  });
+
+  it("keeps the signed owner handoff reviewable and mobile billing reachable", () => {
+    expect(workspaceSource).toContain("Diagnosis or visit summary");
+    expect(workspaceSource).toContain("Warning signs and when to call");
+    expect(workspaceSource).toContain("Prior finalized versions");
+    expect(workspaceSource).toContain("downloadHistoricalDischarge");
+    expect(workspaceSource).toContain('id="charge-capture"');
+    expect(workspaceSource).toContain('href="#charge-capture"');
+    expect(workspaceSource).toContain("tabIndex={-1}");
+  });
+
+  it("copies the ambulatory SOAP Plan into owner instructions only on explicit action", () => {
+    expect(ambulatorySoapSource).toContain("onPlanChange?.(sections.plan)");
+    expect(ambulatorySoapSource).toContain(
+      "onPlanChange?.(finalizedVisitPlan)",
+    );
+    expect(ambulatorySoapSource).toContain(
+      "note.appointmentId === appointmentId",
+    );
+    expect(workspaceSource).toContain(
+      'const [ambulatorySoapPlan, setAmbulatorySoapPlan] = useState("")',
+    );
+    expect(workspaceSource).toContain("onPlanChange={setAmbulatorySoapPlan}");
+    expect(workspaceSource).toContain("Copy from Plan");
+    expect(workspaceSource).toContain("copySoapPlanToOwnerInstructions");
+    expect(workspaceSource).toContain(
+      "setDischargeInstructions(normalizedSoapPlan)",
+    );
+    expect(workspaceSource).toContain('setNoInstructionsReason("")');
+    expect(workspaceSource).toContain(
+      "Internal SOAP content is never added automatically",
+    );
+    expect(workspaceSource).toContain(
+      "The SOAP Plan changed after the last copy",
+    );
+    for (const source of [workspaceSource, ambulatorySoapSource]) {
+      expect(source).not.toContain("localStorage");
+      expect(source).not.toContain("sessionStorage");
+    }
+  });
+
+  it("makes compact field closeout exception-driven without weakening safeguards", () => {
+    expect(workspaceSource).toContain("compactPendingActions");
+    expect(workspaceSource).toContain("still needed");
+    expect(workspaceSource).toContain(
+      "Only outstanding field decisions are surfaced here",
+    );
+    expect(workspaceSource).toContain("without bypassing checkout safeguards");
+    expect(workspaceSource).toContain("persistCloseoutDraft");
+    expect(workspaceSource).toContain("expectedRevision: revisionRef.current");
+    expect(workspaceSource).toContain("getVisitCompletionAction");
+  });
+
+  it("links prescriptions to the visit and preserves their inventory ownership", () => {
+    expect(workspaceSource).toContain("tab=prescriptions&new=1");
+    expect(workspaceSource).toContain("sourceDispenseChargeId");
+    expect(workspaceSource).toContain('dispenseChargeStatus === "pending"');
+    expect(workspaceSource).toContain("inventory already dispensed");
+    expect(workspaceSource).toContain("expectedUpdatedAt");
+  });
+
+  it("makes performed work reconciliation explicit without automatic billing", () => {
+    expect(workspaceSource).toContain(
+      "trpc.encounters.getVisitReconciliation.useQuery",
+    );
+    expect(workspaceSource).toContain(
+      "trpc.encounters.resolveVisitWork.useMutation",
+    );
+    expect(workspaceSource).toContain("Performed work reconciliation");
+    expect(workspaceSource).toContain("Link confirmed charge");
+    expect(workspaceSource).toContain("No charge");
+    expect(
+      readFileSync(
+        "components/records/reconciliation-reason-actions.tsx",
+        "utf8",
+      ),
+    ).toContain("Void/corrected");
+    expect(workspaceSource).toContain("never bills a suggestion automatically");
+  });
+
+  it("guides the clinic through one safe visit-completion action at a time", () => {
+    expect(workspaceSource).toContain("Finish this visit");
+    expect(workspaceSource).toContain("Visit completion progress");
+    expect(workspaceSource).toContain("getVisitCompletionAction");
+    expect(workspaceSource).toContain("href={actionHref}");
+    expect(workspaceSource).toContain("No charge? Continue handoff");
+    expect(workspaceSource).toContain(
+      "OpenVPM will not bill a suggestion automatically",
+    );
+  });
+
+  it("surfaces exact pending prescription charges without automatic billing", () => {
+    expect(workspaceSource).toContain("Ready from this visit");
+    expect(workspaceSource).toContain(
+      "Ready-to-add visit prescription charges",
+    );
+    expect(workspaceSource).toContain(
+      "addCatalogItem(entry, entry.quantity ?? 1)",
+    );
+    expect(workspaceSource).toContain(
+      "sourceDispenseChargeId === entry.sourceDispenseChargeId",
+    );
+    expect(workspaceSource).toContain("individual dispensing unit");
+    expect(workspaceSource).toContain("moneyToCents(entry.defaultPrice)");
+    expect(workspaceSource).toContain("Review medication unit before charging");
+    expect(workspaceSource).toContain(
+      "requiresPrescriptionInventoryUnitReview",
+    );
+    expect(workspaceSource).toContain(
+      "legacy package-priced dispense snapshot",
+    );
+  });
+
+  it("autosaves revisioned closeout drafts and preserves local work on conflict", () => {
+    expect(workspaceSource).toContain("persistCloseoutDraft");
+    expect(workspaceSource).toContain("expectedRevision: revisionRef.current");
+    expect(workspaceSource).toContain("clinicalDraftFingerprint");
+    expect(workspaceSource).toContain("const timer = window.setTimeout(");
+    expect(workspaceSource).toContain('setDraftSaveState("conflict")');
+    expect(workspaceSource).toContain("Use server version");
+    expect(workspaceSource).toContain("Overwrite with local version");
+    expect(workspaceSource).toContain(
+      "async function finalizeClinicalHandoff()",
+    );
+    expect(workspaceSource).toContain(
+      "const saved = await persistCloseoutDraft()",
+    );
+    expect(workspaceSource).toContain("autosaveTimerRef.current");
+    expect(workspaceSource).toContain(
+      "Offline — changes are only on this device until you reconnect.",
+    );
+  });
+
+  it("guards unsaved vitals and charges without persisting clinical data in the browser", () => {
+    const guardSource = readFileSync(
+      "lib/use-unsaved-changes-guard.ts",
+      "utf8",
+    );
+    expect(encounterVitalsSource).toContain("useUnsavedChangesGuard(");
+    expect(encounterVitalsSource).toContain("Offline — keep this page open.");
+    expect(workspaceSource).toContain("hasUnsavedCharges");
+    expect(workspaceSource).toContain(
+      "Visit charges have not been saved on the server.",
+    );
+    expect(recordsSource).toContain("const hasUnsavedRecordForm =");
+    expect(recordsSource).toContain(
+      "This clinical record has not been saved on the server.",
+    );
+    expect(recordsSource).toContain(
+      "Offline — clinical forms stay only on this device.",
+    );
+    expect(guardSource).toContain('window.addEventListener("beforeunload"');
+    expect(guardSource).toContain(
+      'document.addEventListener("click", handleDocumentClick, true)',
+    );
+    expect(guardSource).toContain(
+      'window.addEventListener("popstate", handlePopState, true)',
+    );
+    expect(guardSource).toContain("HISTORY_SENTINEL_KEY");
+    expect(guardSource).toContain('pendingPopAction = "restore"');
+    expect(guardSource).toContain('pendingPopAction = "leave"');
+    expect(guardSource).toContain("isSameDocumentHashNavigation(");
+    expect(guardSource).toContain('anchor.hasAttribute("download")');
+    expect(guardSource).not.toContain("window.history.pushState =");
+    for (const forbiddenStorage of [
+      "localStorage",
+      "sessionStorage",
+      "indexedDB",
+      "caches.open",
+      "serviceWorker",
+    ]) {
+      expect(workspaceSource).not.toContain(forbiddenStorage);
+      expect(encounterVitalsSource).not.toContain(forbiddenStorage);
+      expect(recordsSource).not.toContain(forbiddenStorage);
+      expect(guardSource).not.toContain(forbiddenStorage);
+    }
+  });
+});

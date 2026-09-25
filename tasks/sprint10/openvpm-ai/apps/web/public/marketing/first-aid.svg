@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgFirstAid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#312e81" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="glassFirstAid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+    <filter id="shadowFirstAid" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" fill="url(#bgFirstAid)" />
+
+  <!-- Background decor -->
+  <circle cx="680" cy="140" r="180" fill="#6366f1" opacity="0.15" />
+  <circle cx="120" cy="680" r="160" fill="#818cf8" opacity="0.12" />
+  <circle cx="400" cy="340" r="260" fill="none" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="6 8" opacity="0.25" />
+
+  <!-- Main Container Card -->
+  <g filter="url(#shadowFirstAid)">
+    <rect x="140" y="140" width="520" height="520" rx="32" fill="url(#glassFirstAid)" stroke="#c7d2fe" stroke-width="1.5" />
+  </g>
+
+  <!-- Top Category Tag -->
+  <rect x="230" y="180" width="340" height="38" rx="19" fill="#3730a3" fill-opacity="0.4" stroke="#818cf8" stroke-width="1" />
+  <text x="400" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#e0e7ff" text-anchor="middle" letter-spacing="1.5">PRVÁ POMOC &amp; AKÚTNE STAVY</text>
+
+  <!-- Central Graphic: Red Cross Emergency Medical Kit & Paw -->
+  <g transform="translate(400, 335)">
+    <!-- First Aid Kit Bag -->
+    <rect x="-90" y="-55" width="180" height="130" rx="20" fill="#dc2626" stroke="#fecaca" stroke-width="2.5" />
+    <!-- Handle -->
+    <path d="M-40 -55 C-40 -85 40 -85 40 -55" fill="none" stroke="#fecaca" stroke-width="6" stroke-linecap="round" />
+    <!-- White Circle and Red Cross in center -->
+    <circle cx="0" cy="10" r="38" fill="#ffffff" />
+    <path d="M-8 -14 h16 v16 h16 v16 h-16 v16 h-16 v-16 h-16 v-16 h16 z" fill="#dc2626" />
+
+    <!-- Cute paw silhouette on side of bag -->
+    <g transform="translate(60, -25)" fill="#ffffff" opacity="0.8">
+      <circle cx="0" cy="0" r="4" />
+      <circle cx="-5" cy="-5" r="2" />
+      <circle cx="0" cy="-7" r="2" />
+      <circle cx="5" cy="-5" r="2" />
+    </g>
+
+    <!-- Emergency SOS badge -->
+    <g transform="translate(-75, -45)">
+      <circle cx="0" cy="0" r="18" fill="#fbbf24" stroke="#ffffff" stroke-width="2" />
+      <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="900" fill="#451a03" text-anchor="middle">SOS</text>
+    </g>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="400" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">Prvá pomoc zvieratám</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="500" fill="#e0e7ff" text-anchor="middle">Zásady stabilizácie pacienta pred príchodom na kliniku</text>
+
+  <!-- Key Info Badges -->
+  <g transform="translate(400, 570)">
+    <rect x="-210" y="-18" width="190" height="36" rx="18" fill="#1e1b4b" stroke="#818cf8" stroke-width="1"/>
+    <text x="-115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#e0e7ff" text-anchor="middle">✓ Zastavenie krvácania</text>
+
+    <rect x="20" y="-18" width="190" height="36" rx="18" fill="#1e1b4b" stroke="#818cf8" stroke-width="1"/>
+    <text x="115" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#e0e7ff" text-anchor="middle">✓ Úpal &amp; intoxikácie</text>
+  </g>
+</svg>

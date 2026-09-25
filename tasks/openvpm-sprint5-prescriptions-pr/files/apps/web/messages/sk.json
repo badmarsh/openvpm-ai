@@ -1,0 +1,73 @@
+{
+  "prescriptions": {
+    "title": "Dohľad nad liečivami",
+    "subtitle": "Registr preskripcií a klinický dohľad nad podávanými liečivami",
+    "actions": {
+      "new": "Nový predpis",
+      "ledger": "Kniha OPL",
+      "view": "Detail predpisu",
+      "stop": "Zastaviť predpis"
+    },
+    "kpi": {
+      "active": "Aktívne predpisy",
+      "ending": "Končia do {days} dní",
+      "overdue": "Po termíne",
+      "guardian": "Strážca liekov",
+      "guardianCritical": "{count} kritických výstrah"
+    },
+    "tabs": {
+      "ariaLabel": "Rozsah zoznamu predpisov",
+      "active": "Aktívne",
+      "ending": "Končiace",
+      "overdue": "Po termíne",
+      "controlled": "Kontrolované (OPL)",
+      "alerts": "Výstrahy",
+      "all": "Všetky"
+    },
+    "search": {
+      "placeholder": "Hľadať liek, pacienta, majiteľa alebo č. Rx…",
+      "clear": "Vyčistiť filter"
+    },
+    "results": "Výsledky: {count}",
+    "table": {
+      "medication": "Liek",
+      "rx": "Č. Rx",
+      "dosage": "Dávkovanie",
+      "frequency": "Frekvencia",
+      "withdrawal": "Ochranná lehota",
+      "period": "Obdobie",
+      "status": "Stav",
+      "actions": "Akcie"
+    },
+    "status": {
+      "active": "Aktívny",
+      "ending": "Končí",
+      "overdue": "Po termíne",
+      "completed": "Dokončený",
+      "cancelled": "Zrušený"
+    },
+    "opl": {
+      "badge": "OPL",
+      "tooltip": "Kontrolovaná látka podľa zákona č. 139/1998 Z. z. — záznam v Knihe OPL"
+    },
+    "alert": {
+      "critical": "kritická výstraha",
+      "warning": "výstraha"
+    },
+    "withdrawal": {
+      "none": "—",
+      "value": "{days} dní"
+    },
+    "empty": {
+      "title": "Žiadne predpisy",
+      "description": "V tomto rozsahu zatiaľ neexistujú žiadne predpisy.",
+      "search": {
+        "title": "Žiadne výsledky hľadania",
+        "description": "Pre výraz „{query}“ sa nenašiel žiadny predpis."
+      }
+    },
+    "legal": {
+      "note": "Omamné a psychotropné látky sa evidujú v Knihe OPL podľa zákona č. 139/1998 Z. z."
+    }
+  }
+}

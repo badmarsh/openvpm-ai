@@ -1,0 +1,283 @@
+name: CI
+
+on:
+  push:
+    branches: [development, staging, main]
+  pull_request:
+    branches: [development, staging, main]
+
+# Playwright E2E (`pnpm test:e2e`) is a deploy gate documented in
+# docs/production-readiness/RELEASE_RUNBOOK.md — it is not executed in this
+# workflow because it needs a migrated database and a running app.
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify public release contents
+        run: pnpm verify:oss-release
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
+      - run: pnpm type-check
+
+      - run: pnpm test
+
+      - run: pnpm build
+        # Note: next build includes linting — no separate lint step needed
+
+  migration-integrity:
+    name: Migration history integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The append-only check resolves the actual merge base and compares
+          # every pre-existing SQL/snapshot byte plus every journal entry.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify append-only migration history
+        env:
+          MIGRATION_INTEGRITY_EVENT_NAME: ${{ github.event_name }}
+          MIGRATION_INTEGRITY_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MIGRATION_INTEGRITY_PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: pnpm --filter @openpims/db db:migrations:check
+
+  rls:
+    name: RLS tenant isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openpims
+          POSTGRES_PASSWORD: openpims
+          POSTGRES_DB: openpims
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U openpims"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://openpims:openpims@localhost:5432/openpims
+      OPENPIMS_APP_DB_PASSWORD: openpims_app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      # Apply committed migrations, apply RLS (+ least-priv role), then prove
+      # tenant isolation against a real Postgres on every PR.
+      - run: pnpm --filter @openpims/db db:migrate
+
+      - name: Execute RLS ownership preflight contract
+        run: pnpm --filter @openpims/db db:rls:preflight:test
+
+      # A data-only migration has no schema snapshot to prove it ran. Exercise
+      # the baseline command against a disposable database and prove that exact
+      # and later cutoffs both fail without a ledger until live data is safe.
+      - name: Execute snapshotless baseline safety contract
+        env:
+          BASELINE_POSTCONDITION_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run lib/__tests__/baseline-postconditions.integration.test.ts
+
+      # Schema drift guard: if drizzle-kit generate produces anything, a schema
+      # change was committed without its migration (or a migration was written
+      # without its snapshot, which silently re-emits old DDL forever).
+      - name: Check schema matches committed migrations
+        run: |
+          pnpm --filter @openpims/db db:generate
+          if [ -n "$(git status --porcelain packages/db/drizzle)" ]; then
+            echo "::error::Schema and committed migrations are out of sync — run pnpm db:generate and commit the result."
+            git status --porcelain packages/db/drizzle
+            exit 1
+          fi
+
+      - run: pnpm --filter @openpims/db db:rls
+
+      # Seed completeness contract: the documented seed flow must produce the
+      # demo dataset every feature page expects (automation journeys/rules, the
+      # 12 canonical CRM segments, content pillars/briefs, channel accounts).
+      - name: Verify documented seed flow completeness
+        run: |
+          pnpm --filter @openpims/db db:seed
+          pnpm db:seed:marketing
+          pnpm db:seed:verify
+
+      # Client treatment-plan decisions are legal record evidence. Prove the
+      # sealed revision/response graph, signature hash binding, replay refusal,
+      # immutable grants, and tenant/no-context isolation in real PostgreSQL.
+      - name: Execute treatment-plan evidence contract
+        run: |
+          pnpm --filter @openpims/db db:treatment-plan-evidence:test
+          pnpm --filter @openpims/db db:treatment-plan-concurrency:test
+
+      # Signed consent rows and their exact PDFs are legal evidence. Exercise
+      # both the owner-only sealed recovery path and app-role immutability,
+      # privilege, tenant, replay, and exact-byte recovery boundaries.
+      - name: Execute signed-consent evidence contract
+        env:
+          OPENPIMS_APP_DATABASE_URL: postgresql://openpims_app:openpims_app@localhost:5432/openpims
+        run: pnpm --filter @openpims/db db:consent-evidence:test
+
+      # The staff authoring API is dark by default. Exercise the complete
+      # protected route with the least-privilege app role against disposable
+      # real PostgreSQL, including replay, rollback, RLS, and two-writer races.
+      - name: Execute treatment-plan staff authoring contract
+        env:
+          TREATMENT_PLAN_AUTHORING_DB_INTEGRATION: "1"
+          TREATMENT_PLAN_AUTHORING_ENABLED: "true"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/visit-treatment-plan-authoring.integration.test.ts
+
+      # Recreate the exact staging-era 0093 state in a disposable database,
+      # preserve existing settlement evidence through 0094, advance through
+      # later migrations, and attack every finance tenant/privilege boundary
+      # with the restricted application role under the current RLS contract.
+      - name: Execute finance schema adoption contract
+        run: pnpm --filter @openpims/db db:finance-adoption:test
+
+      # Demo received the dormant backup/MFA objects from non-main migrations.
+      # Rebuild both a fresh-main database and that exact populated object shape,
+      # then prove the canonical forward migration is lossless and fail closed.
+      - name: Execute demo schema reconciliation contract
+        run: pnpm --filter @openpims/db db:demo-schema-reconciliation:test
+
+      # Exercise the clinic-facing patient + owner search through the real
+      # router and least-privilege RLS role. The fixture proves literal LIKE
+      # escaping, deterministic bounds, context cleanup, and cross-tenant deny.
+      - name: Execute patient and owner search database contract
+        env:
+          PATIENT_SEARCH_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/patient-search.integration.test.ts
+
+      # Steven Dennis's long-chart workflow crosses multiple clinical tables.
+      # Exercise the exact read-only POST projection as openpims_app, including
+      # literal matching, lifecycle lineage, keyset paging, role gates, RLS,
+      # clinic-local dates, and high-cardinality query-plan evidence.
+      - name: Execute patient history search contract
+        env:
+          PATIENT_HISTORY_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/patient-history.integration.test.ts
+
+      # Template catalog selection is a clinic-facing data boundary. Exercise
+      # the real router as the least-privilege app role and prove literal,
+      # bounded, deterministic, active-only, tenant-isolated search behavior.
+      - name: Execute template catalog search contract
+        env:
+          TEMPLATE_CATALOG_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/template-catalog-search.integration.test.ts
+
+      # Steven Dennis exposed a real route-level patient merge 500 caused by
+      # changing isolation inside a nested savepoint. Exercise the protected
+      # router as openpims_app and prove the event is written in the outer
+      # SERIALIZABLE tenant transaction with replay and RLS cleanup intact.
+      - name: Execute patient merge transaction contract
+        env:
+          PATIENT_MERGE_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/patient-merge-transaction.integration.test.ts
+
+      # A refill can belong to an older prescription while its dispense charge
+      # belongs to the current visit. Prove the queue row remains visible in
+      # closeout history and blocks checkout/financial handoff under RLS.
+      - name: Execute visit-dispense closure contract
+        env:
+          VISIT_DISPENSE_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/visit-dispense-closure.integration.test.ts
+
+      # Converting an estimate is one stock-owning state transition. Prove that
+      # concurrent visit billing converges, tracked stock changes once, and all
+      # stock/invoice/audit writes roll back together under least-privilege RLS.
+      - name: Execute estimate conversion database contract
+        env:
+          BILLING_CONVERSION_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/billing-estimate-conversion.integration.test.ts
+
+      # Compile, bind, and execute the exact read-only SQL used by the shared
+      # platform-admin and daily SMS operations queues. Unit tests cannot catch
+      # postgres.js timestamp encoders or correlated identifier rendering.
+      - name: Execute SMS operations queue SQL
+        env:
+          SMS_QUEUE_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run lib/messaging/__tests__/sms-operations-queues.integration.test.ts
+
+      # Execute the immutable provider-resolution insert validations and
+      # evidence assertions against the fully migrated disposable database.
+      - name: Execute SMS provider-resolution database contract
+        run: pnpm --filter @openpims/db db:sms-provider-resolutions:test
+
+      # Exercise real PostgreSQL row/advisory locks, savepoints, and durable
+      # event convergence with synthetic data only. No provider adapter is
+      # imported or called, and every hosted SMS capability remains disabled.
+      - name: Execute provider-free SMS concurrency drill
+        env:
+          SMS_CONCURRENCY_DB_INTEGRATION: "1"
+          MESSAGING_PROVISIONING_ENABLED: "false"
+          MESSAGING_INBOUND_ENABLED: "false"
+          MESSAGING_SENDING_ENABLED: "false"
+        run: pnpm --filter @openpims/web exec vitest run lib/messaging/__tests__/sms-concurrency-drill.integration.test.ts
+
+      # The reminder sweep is a candidate list. Prove against real PostgreSQL
+      # that dispatch-time revalidation honors clinic enablement, each clinic's
+      # lead window, cancellation, and rescheduling before a provider claim.
+      - name: Execute appointment reminder policy SQL
+        env:
+          REMINDER_POLICY_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run lib/messaging/__tests__/appointment-reminder-eligibility.integration.test.ts
+
+      # AI clinical finalization (imaging / voice SOAP / discharge) is the
+      # highest-risk write path. Prove against real PostgreSQL that envelope
+      # issue/consume/replay/expiry, revision conflicts, concurrent audit
+      # appends, advisory-lock serialization, RLS tenant isolation, ledger
+      # immutability grants, rollback atomicity, and post-commit side-effect
+      # ordering all hold with synthetic fixtures only.
+      - name: Execute AI clinical finalization database contract
+        env:
+          AI_FINALIZATION_DB_INTEGRATION: "1"
+        run: pnpm --filter @openpims/web exec vitest run server/__tests__/ai-clinical-finalization.integration.test.ts
+
+      - name: Prove tenant/RLS pool-reuse isolation
+        run: pnpm --filter @openpims/db db:rls:test
+
+      - run: pnpm --filter @openpims/db db:migration-runs:test

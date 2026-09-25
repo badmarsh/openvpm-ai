@@ -1,0 +1,19 @@
+{
+  "task_id": "arena-1790325424-sprint-30-secure-interop-bridg",
+  "state": "IMPLEMENTING",
+  "title": "Sprint 30: Secure Interop Bridge for v1→v2",
+  "allowed_paths": [
+    "src/interop/bridge-v1v2/",
+    "security/policies/bridge.md"
+  ],
+  "declared_risk": "low",
+  "created_at": "2026-09-25 10:37:04",
+  "updated_at": "2026-09-25 10:37:04",
+  "policy_decision": null,
+  "change_plan": null,
+  "worktree_path": null,
+  "verification_results": [],
+  "failure_reason": "",
+  "repair_attempts": 0,
+  "review_report": null
+}

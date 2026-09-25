@@ -1,0 +1,90 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "bash scripts/vercel-build.sh",
+  "outputDirectory": ".next",
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh",
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/voice-audio-retention",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/file-replicas",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/usage-reconcile",
+      "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/billing-lifecycle",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/first-clinic-win",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/cron/setup-recovery",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/wellness-billing",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/rate-limit-cleanup",
+      "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/cron/auth-cleanup",
+      "schedule": "45 4 * * *"
+    },
+    {
+      "path": "/api/cron/prescription-expiry",
+      "schedule": "30 10 * * *"
+    },
+    {
+      "path": "/api/cron/activation-digest",
+      "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/sms-operations",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/sms-provider-events",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/conversion-reconcile",
+      "schedule": "35 * * * *"
+    },
+    {
+      "path": "/api/cron/automation-worker",
+      "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-daily-closure",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/ekasa-retry",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/message-queue-drain",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

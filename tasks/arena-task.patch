@@ -1,0 +1,20 @@
+diff --git a/apps/web/app/(dashboard)/prescriptions/page.tsx b/apps/web/app/(dashboard)/prescriptions/page.tsx
+new file mode 100644
+index 0000000..2c9cd86
+--- /dev/null
++++ b/apps/web/app/(dashboard)/prescriptions/page.tsx
+@@ -0,0 +1,829 @@
++"use client";
++
++/**
++ * TASK-OPENVPM-SPRINT-5 — Prescriptions & Medication Oversight
++ * Dashboard UI Kit harmonization (docs/UIKIT.md).
++ *
++ * The register is built exclusively from `page-kit` primitives, uses semantic
++ * colour tokens only and keeps every clinical / legislative safeguard:
++ *
++ *   - OPL (narcotic & psychotropic substances, Act 139/1998 Coll.) are flagged
++ *     with `ShieldAlert` and link to `/controlled-substances`.
++ *   - Medication-guardian alerts and interaction warnings are rendered on the
++ *     row they belong to — never hidden behind a hover.
++ *   - Every row links to the patient record (`/records?patientId=…`) and to the

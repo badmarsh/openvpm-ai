@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgTravel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    <linearGradient id="glassTravel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+    <filter id="shadowTravel" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="800" fill="url(#bgTravel)" />
+
+  <!-- Background decor / compass lines -->
+  <circle cx="400" cy="340" r="260" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="8 8" opacity="0.25" />
+  <circle cx="400" cy="340" r="180" fill="none" stroke="#93c5fd" stroke-width="1" opacity="0.2" />
+
+  <!-- Main Card -->
+  <g filter="url(#shadowTravel)">
+    <rect x="140" y="140" width="520" height="520" rx="32" fill="url(#glassTravel)" stroke="#93c5fd" stroke-width="1.5" />
+  </g>
+
+  <!-- Tag -->
+  <rect x="250" y="180" width="300" height="38" rx="19" fill="#2563eb" fill-opacity="0.4" stroke="#60a5fa" stroke-width="1" />
+  <text x="400" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#bfdbfe" text-anchor="middle" letter-spacing="1.5">CESTOVANIE SO ZVIERATAMI</text>
+
+  <!-- Passport & Plane / World Graphic -->
+  <g transform="translate(400, 340)">
+    <!-- Passport Booklet -->
+    <rect x="-65" y="-70" width="130" height="150" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5" />
+    
+    <!-- Gold stars circle (EU style) -->
+    <circle cx="0" cy="-20" r="28" fill="none" stroke="#facc15" stroke-width="2.5" stroke-dasharray="4 6"/>
+    
+    <!-- Paw symbol in passport -->
+    <path d="M-5 -15 C-5 -18 -2.5 -20 0 -20 C2.5 -20 5 -18 5 -15 C5 -11 -5 -11 -5 -15 Z" fill="#facc15" />
+    <circle cx="-8" cy="-23" r="3" fill="#facc15" />
+    <circle cx="-3" cy="-27" r="3" fill="#facc15" />
+    <circle cx="3" cy="-27" r="3" fill="#facc15" />
+    <circle cx="8" cy="-23" r="3" fill="#facc15" />
+
+    <!-- Text on booklet -->
+    <rect x="-40" y="18" width="80" height="6" rx="3" fill="#94a3b8" />
+    <rect x="-30" y="32" width="60" height="5" rx="2.5" fill="#64748b" />
+
+    <!-- Airplane badge -->
+    <g transform="translate(65, -45)">
+      <circle cx="0" cy="0" r="26" fill="#38bdf8" stroke="#ffffff" stroke-width="2"/>
+      <path d="M-8 4 L-4 0 L-10 -10 L-6 -10 L0 -3 L8 -1 L14 -6 L16 -4 L12 2 L6 6 L4 12 L1 12 L2 6 Z" fill="#0f172a"/>
+    </g>
+  </g>
+
+  <!-- Title & Text -->
+  <text x="400" y="475" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#ffffff" text-anchor="middle">Príprava na dovolenku</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="500" fill="#dbeafe" text-anchor="middle">Európsky PetPass, očkovania a odčervenie</text>
+
+  <!-- Key info pills -->
+  <g transform="translate(400, 570)">
+    <rect x="-190" y="-18" width="180" height="36" rx="18" fill="#172554" stroke="#3b82f6" stroke-width="1"/>
+    <text x="-100" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="middle">✓ Vystavenie pasu</text>
+
+    <rect x="10" y="-18" width="180" height="36" rx="18" fill="#172554" stroke="#3b82f6" stroke-width="1"/>
+    <text x="100" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="middle">✓ Vstupné požiadavky EÚ</text>
+  </g>
+
+  <text x="400" y="730" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#93c5fd" text-anchor="middle" letter-spacing="1">BEZPEČNÉ CESTOVANIE S VETERINÁROM</text>
+</svg>

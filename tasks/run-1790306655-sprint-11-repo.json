@@ -1,0 +1,22 @@
+{
+  "task_id": "arena-1790306655-sprint-11-reports-wellness",
+  "state": "IMPLEMENTING",
+  "title": "Sprint 11: Reports & Wellness",
+  "allowed_paths": [
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/server/routers/extensions/",
+    "packages/db/schema/ext_",
+    "apps/web/messages/"
+  ],
+  "declared_risk": "low",
+  "created_at": "2026-09-25 05:24:15",
+  "updated_at": "2026-09-25 05:24:15",
+  "policy_decision": null,
+  "change_plan": null,
+  "worktree_path": null,
+  "verification_results": [],
+  "failure_reason": "",
+  "repair_attempts": 0,
+  "review_report": null
+}
