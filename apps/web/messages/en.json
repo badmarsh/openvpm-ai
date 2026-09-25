@@ -3139,7 +3139,83 @@
     },
     "wellness": {
       "title": "Wellness Plans & Programs",
-      "subtitle": "Clinic preventive care plans and redemption tracking during patient visits."
+      "subtitle": "Clinic preventive care plans and redemption tracking during patient visits.",
+      "retry": "Retry",
+      "toast": {
+        "redeemSuccess": "Plan benefit redeemed successfully.",
+        "deceasedBlocked": "Benefits can't be redeemed – the patient is recorded as deceased.",
+        "forbidden": "You don't have permission to redeem benefits.",
+        "redeemError": "Could not redeem the benefit."
+      },
+      "validation": {
+        "benefitRequired": "Enter the name of the redeemed benefit."
+      },
+      "plans": {
+        "heading": "Active preventive care plans",
+        "activeCount": "{active} of {total} active",
+        "loadError": "Could not load wellness plans.",
+        "emptyTitle": "No wellness plans yet",
+        "emptyDesc": "No wellness plans have been created in settings yet.",
+        "manage": "Manage plans",
+        "active": "Active",
+        "inactive": "Inactive",
+        "defaultDescription": "Comprehensive annual preventive care plan.",
+        "monthly": "Monthly",
+        "annual": "Annually"
+      },
+      "toolbar": {
+        "searchLabel": "Search wellness enrollments",
+        "searchPlaceholder": "Search patient, owner or plan…",
+        "statusLabel": "Filter by status",
+        "statusAll": "All statuses",
+        "statusActive": "Active",
+        "statusCancelled": "Cancelled",
+        "clearFilters": "Clear filters",
+        "countOne": "{count} enrollment",
+        "countFew": "{count} enrollments",
+        "countOther": "{count} enrollments"
+      },
+      "kpi": {
+        "all": "All enrollments",
+        "active": "Active enrollments",
+        "activeShare": "{percent} of all enrollments",
+        "cancelled": "Cancelled enrollments"
+      },
+      "enrollments": {
+        "heading": "Patients enrolled in wellness plans",
+        "loadError": "Could not load wellness enrollments.",
+        "loading": "Loading wellness enrollments...",
+        "emptyTitle": "No patients are enrolled in a wellness plan yet.",
+        "emptyFilteredTitle": "No enrollments match the filters",
+        "emptyFilteredDesc": "Adjust the search or the status filter.",
+        "colPatient": "Patient",
+        "colPlan": "Plan",
+        "colStatus": "Status",
+        "colAction": "Action",
+        "noPatient": "No patient assigned",
+        "owner": "Owner: {name}",
+        "validFrom": "Valid from {date}",
+        "statusActive": "Active enrollment",
+        "statusCancelled": "Cancelled",
+        "redeem": "Redeem benefit",
+        "selected": "Selected"
+      },
+      "redemption": {
+        "heading": "Benefit redemption",
+        "benefitLabel": "Benefit name *",
+        "benefitPlaceholder": "E.g. Free preventive check-up, Nail trim, 10% off dental cleaning",
+        "notesLabel": "Vet / front desk note",
+        "notesPlaceholder": "E.g. performed during the examination",
+        "submit": "Confirm benefit redemption",
+        "historyHeading": "Patient redemption history",
+        "historyLoading": "Loading history...",
+        "historyLoadError": "Could not load the redemption history.",
+        "historyEmpty": "No benefits have been redeemed yet.",
+        "colBenefit": "Benefit",
+        "colRedeemedAt": "Redeemed",
+        "noPatientSelected": "No patient selected",
+        "selectPatientDesc": "Click a patient in the enrollment list to view their history and redeem a benefit."
+      }
     },
     "studio": {
       "toastTvCreated": "Campaign was added to the waiting-room TV.",
@@ -4464,7 +4540,8 @@
       "revenue": "Revenue",
       "appointments": "Appointments",
       "services": "Services",
-      "inventory": "Inventory"
+      "inventory": "Inventory",
+      "label": "Report sections"
     },
     "exportCsv": "Export CSV",
     "exportPdf": "Export PDF",
@@ -4482,7 +4559,17 @@
       "last30": "Last 30 Days",
       "monthToDate": "Month to Date",
       "lastMonth": "Last Month",
-      "yearToDate": "Year to Date"
+      "yearToDate": "Year to Date",
+      "presets": "Quick date ranges",
+      "errors": {
+        "startRequired": "Enter a start date.",
+        "endRequired": "Enter an end date.",
+        "startInvalid": "The start date is not a valid date.",
+        "endInvalid": "The end date is not a valid date.",
+        "startAfterEnd": "The start date must be on or before the end date.",
+        "tooLong": "The report range can span at most {days} days.",
+        "invalid": "Invalid report date range."
+      }
     },
     "invalidDateRange": {
       "title": "Choose a valid report date range"
@@ -4512,7 +4599,8 @@
       "emptyTitle": "No doctor breakdown available",
       "emptyDesc": "Appointments will be grouped by assigned doctor for the selected date range.",
       "pdfTitle": "Appointments Report",
-      "pdfEmpty": "No appointment data for this period."
+      "pdfEmpty": "No appointment data for this period.",
+      "unassigned": "Unassigned"
     },
     "services": {
       "emptyTitle": "No service data available",
@@ -4544,7 +4632,8 @@
       "restrictedTitle": "Reports are restricted",
       "restrictedDesc": "Only administrators and veterinarians can view practice reports.",
       "backToDashboard": "Back to dashboard"
-    }
+    },
+    "loading": "Loading report…"
   },
   "roles": {
     "admin": "Admin",
