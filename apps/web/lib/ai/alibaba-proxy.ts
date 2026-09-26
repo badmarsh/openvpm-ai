@@ -14,6 +14,7 @@ import type { LanguageModel } from "ai";
 export const ALIBABA_DEFAULT_IMAGE_MODEL = "wan2.1-t2i-turbo";
 export const ALIBABA_DEFAULT_VIDEO_MODEL = "wan2.1-t2v-turbo";
 export const ALIBABA_DEFAULT_CHAT_MODEL = "qwen-plus";
+export const ALIBABA_DEFAULT_EMBEDDING_MODEL = "text-embedding-v4";
 
 export interface AlibabaProxyConfig {
   baseUrl: string;
@@ -314,6 +315,82 @@ export async function generateAlibabaChat(options: {
 
     return {
       content,
+      model: json?.model || model,
+      usage: json?.usage,
+    };
+  } catch (err: unknown) {
+    throw formatProxyNetworkError(err, baseUrl);
+  }
+}
+
+export interface EmbeddingOptions {
+  input: string | string[];
+  model?: string;
+  dimensions?: number;
+  baseUrl?: string;
+  apiKey?: string;
+}
+
+export interface EmbeddingResult {
+  data: Array<{
+    object: "embedding";
+    index: number;
+    embedding: number[];
+  }>;
+  model: string;
+  usage?: {
+    prompt_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/**
+ * Generate embeddings via Alibaba Proxy (DashScope text-embedding-v4 / OpenAI text-embedding-3-*)
+ * POST /v1/embeddings
+ *
+ * Returns 1536-dimensional vectors by default (text-embedding-v4).
+ * Use `dimensions` parameter to request lower dimensions if supported by the model.
+ */
+export async function generateAlibabaEmbeddings(
+  options: EmbeddingOptions
+): Promise<EmbeddingResult> {
+  const { baseUrl, apiKey } = getAlibabaProxyConfig(options);
+  const model = options.model || ALIBABA_DEFAULT_EMBEDDING_MODEL;
+
+  try {
+    const body: Record<string, unknown> = {
+      model,
+      input: options.input,
+    };
+    if (options.dimensions) {
+      body.dimensions = options.dimensions;
+    }
+
+    const res = await fetch(`${baseUrl}/embeddings`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      const message =
+        errorBody?.error?.message ||
+        `Embedding generation failed with status ${res.status}`;
+      throw new Error(message);
+    }
+
+    const json = await res.json();
+    if (!json?.data || !Array.isArray(json.data)) {
+      throw new Error("No embedding data returned from Alibaba proxy");
+    }
+
+    return {
+      data: json.data,
       model: json?.model || model,
       usage: json?.usage,
     };
