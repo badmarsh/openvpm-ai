@@ -38,6 +38,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.request
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
