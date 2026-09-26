@@ -218,6 +218,69 @@ if not INTERNAL_SERVICE_TOKEN or INTERNAL_SERVICE_TOKEN == "openvpm-service-secr
                     "perzistovať (%s) — platí len do reštartu procesu.",
                     _exc,
                 )
+
+# Voliteľná rotácia interného tokenu (final-pass Workstream C, 2026-09-26).
+# Default je VYPNUTÁ (0): rotácia zneplatní rozbehnuté podpísané callbacky —
+# rovnaký dopad má strata token súboru (pozri komentár vyššie). Zapína sa
+# explicitne cez OPENVPM_TOKEN_ROTATION_HOURS > 0 a vykoná sa pri štarte,
+# PRED konštrukciou AgentOS (pozri sekciu 15), aby nový token skutočne
+# podpisoval scheduler aj approvals callbacky.
+TOKEN_ROTATION_HOURS = float(os.getenv("OPENVPM_TOKEN_ROTATION_HOURS", "0") or "0")
+_INTERNAL_TOKEN_FILE = TMP_DIR / "internal_service_token"
+_INTERNAL_TOKEN_META_FILE = TMP_DIR / "internal_service_token_meta.json"
+
+
+def rotate_internal_service_token_if_expired() -> bool:
+    """Ak je rotácia zapnutá a token prekročil TTL, vygeneruje a perzistuje nový.
+
+    Vracia True, ak bol token zrotovaný. Poistky:
+      - explicitný OPENVPM_INTERNAL_SERVICE_TOKEN sa nikdy nerotuje (spravuje ho operátor),
+      - rotuje sa len token, ktorý tento runtime sám vygeneroval (token súbor existuje),
+      - bez meta súboru sa vek odvodí z mtime token súboru,
+      - pri chybe I/O sa rotácia preskočí (existujúce callbacky zostávajú platné).
+    """
+    if TOKEN_ROTATION_HOURS <= 0:
+        return False
+    if os.getenv("OPENVPM_INTERNAL_SERVICE_TOKEN", "").strip():
+        logger.debug("Explicitný INTERNAL_SERVICE_TOKEN — rotácia preskočená.")
+        return False
+    try:
+        if not _INTERNAL_TOKEN_FILE.is_file():
+            return False
+        if _INTERNAL_TOKEN_META_FILE.is_file():
+            meta = json.loads(_INTERNAL_TOKEN_META_FILE.read_text(encoding="utf-8"))
+            created_epoch = float(meta.get("created_at_epoch", 0.0))
+        else:
+            created_epoch = _INTERNAL_TOKEN_FILE.stat().st_mtime
+        age_hours = max(0.0, time.time() - created_epoch) / 3600.0
+        if age_hours < TOKEN_ROTATION_HOURS:
+            return False
+
+        import secrets
+
+        new_token = secrets.token_urlsafe(32)
+        _INTERNAL_TOKEN_FILE.write_text(new_token, encoding="utf-8")
+        try:
+            os.chmod(_INTERNAL_TOKEN_FILE, 0o600)
+        except OSError:
+            pass
+        _INTERNAL_TOKEN_META_FILE.write_text(
+            json.dumps({"created_at_epoch": time.time(), "ttl_hours": TOKEN_ROTATION_HOURS}),
+            encoding="utf-8",
+        )
+        global INTERNAL_SERVICE_TOKEN
+        INTERNAL_SERVICE_TOKEN = new_token
+        logger.warning(
+            "Internal service token rotovaný (vek %.1fh >= TTL %.1fh) — staré "
+            "rozbehnuté callbacky stratia platnosť.",
+            age_hours,
+            TOKEN_ROTATION_HOURS,
+        )
+        return True
+    except (OSError, ValueError, TypeError) as exc:
+        logger.warning("Token rotácia preskočená (fail-safe): %s", exc)
+        return False
+
 SCHEDULE_TIMEZONE = os.getenv("OPENVPM_SCHEDULE_TZ", "Europe/Bratislava")
 SQLITE_BUSY_TIMEOUT_MS = int(os.getenv("OPENVPM_SQLITE_BUSY_TIMEOUT_MS", "30000"))
 
@@ -1476,7 +1539,7 @@ arena_dispatcher = Agent(
         "Každý dispatch zaloguj ako rozhodnutie (decision log cez tím).",
     ],
     add_history_to_context=False,
-    num_history_runs=0,  # stateless worker — historia kontaminuje dispatch rozhodnutia
+    num_history_runs=0,
     markdown=True,
 )
 
@@ -1601,8 +1664,8 @@ openvpm_dev_team = Team(
     ],
     store_member_responses=True,
     show_members_responses=True,
-    add_history_to_context=True,
-    num_history_runs=2,  # znizene z 5: menej historickeho sumu, nova uloha ma vzdy prednost
+    add_history_to_context=False,  # Team delegates to members; no run history on team
+    num_history_runs=0,
     markdown=True,
     instructions=[
         "Si koordinátor vývojového tímu OpenVPM AI (Agno 3.0.11 AgentOS).",
@@ -1684,6 +1747,46 @@ async def lifespan(app: AgentOS):
 # 15. AgentOS Runtime
 # =============================================================================
 
+def _cors_allowed_origins() -> List[str]:
+    """CORS originy pre AgentOS.
+
+    Default zachováva pôvodný zoznam (lokálne porty, LAN 192.168.0.100,
+    os.agno.com a agentos-tunnel.significa.sk) — správanie bez env varu sa
+    nemení. OPENVPM_CORS_ORIGINS (čiarkou delený zoznam) ho celý prepíše;
+    prázdny/polámaný záznam padá späť na default (fail-safe).
+    """
+    default_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3007",
+        "http://localhost:3008",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:3007",
+        "http://127.0.0.1:3008",
+        "http://192.168.0.100:3000",
+        "http://192.168.0.100:3001",
+        "http://192.168.0.100:3007",
+        "http://192.168.0.100:3008",
+        "http://192.168.0.100:7777",
+        "https://os.agno.com",
+        # Vlastná origin služby cez Cloudflare tunnel. Potrebné len ak AgentOS UI
+        # otvoríš na tejto doméne a prehliadač z nej volá API (server-side fetch
+        # z apps/web CORS nepodlieha). Pridané spolu s opravou bind-vs-dial.
+        "https://agentos-tunnel.significa.sk",
+    ]
+    raw = os.getenv("OPENVPM_CORS_ORIGINS", "").strip()
+    if not raw:
+        return default_origins
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    return origins or default_origins
+
+
+# Rotácia tokenu (ak je zapnutá cez OPENVPM_TOKEN_ROTATION_HOURS) MUSÍ prebehnúť
+# pred konštrukciou AgentOS: konstruktor si hodnotu INTERNAL_SERVICE_TOKEN prevezme
+# raz pri importe, neskoršia zmena globálu by už nemala efekt.
+rotate_internal_service_token_if_expired()
+
 agent_os: AgentOS = AgentOS(
     id="openvpm-pipeline-os",
     name="OpenVPM AI Pipeline AgentOS",
@@ -1703,26 +1806,7 @@ agent_os: AgentOS = AgentOS(
     ],
     teams=[openvpm_dev_team],
     knowledge=[knowledge_base, openvpm_knowledge_legacy],
-    cors_allowed_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3007",
-        "http://localhost:3008",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:3007",
-        "http://127.0.0.1:3008",
-        "http://192.168.0.100:3000",
-        "http://192.168.0.100:3001",
-        "http://192.168.0.100:3007",
-        "http://192.168.0.100:3008",
-        "http://192.168.0.100:7777",
-        "https://os.agno.com",
-        # Vlastná origin služby cez Cloudflare tunnel. Potrebné len ak AgentOS UI
-        # otvoríš na tejto doméne a prehliadač z nej volá API (server-side fetch
-        # z apps/web CORS nepodlieha). Pridané spolu s opravou bind-vs-dial.
-        "https://agentos-tunnel.significa.sk",
-    ],
+    cors_allowed_origins=_cors_allowed_origins(),
     scheduler=True,
     scheduler_poll_interval=15,
     scheduler_base_url=AGENTOS_INTERNAL_URL,
