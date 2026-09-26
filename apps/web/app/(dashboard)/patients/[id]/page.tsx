@@ -38,6 +38,13 @@ import {
   ReceiptEuro,
   Stethoscope,
   Syringe,
+  PawPrint,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Printer,
+  HeartPulse,
+  Pill,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -148,8 +155,35 @@ import {
   OverviewTab,
   WeightHistoryTab,
 } from "@/components/patients/sections";
+import { ImagingTab } from "@/components/patients/sections/imaging-tab";
+import { RemindersTab } from "@/components/patients/sections/reminders-tab";
 import { PatientStickyRail } from "@/components/patients/patient-sticky-rail";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  PageHeader,
+  PageToolbar,
+  DataTableFrame,
+  KpiGrid,
+  KpiCard,
+  pageShellClass,
+  underlineTabsListClass,
+  underlineTabsTriggerClass,
+  tableHeadClass,
+  tableCellClass,
+  tableRowClass,
+} from "@/components/layout/page-kit";
+import { TableScroll } from "@/components/common/table-scroll";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 
 
@@ -216,7 +250,9 @@ type Tab =
   | "diagnostics"
   | "preventive"
   | "prescriptions"
-  | "admin";
+  | "admin"
+  | "imaging"
+  | "reminders";
 
 const TAB_IDS: Tab[] = [
   "overview",
@@ -225,12 +261,14 @@ const TAB_IDS: Tab[] = [
   "preventive",
   "prescriptions",
   "admin",
+  "imaging",
+  "reminders",
 ];
 
 // Backwards-compatible mapping for previously bookmarked ?tab= links:
 // weight/appointments merged into overview; labResults+vitals into
 // diagnostics; records into history; vaccinations+procedures into
-// preventive; documents+invoices into admin.
+// preventive; documents+invoices into admin. Imaging & reminders are new clinical dossier tabs.
 const LEGACY_TAB_MAP: Record<string, Tab> = {
   weight: "overview",
   appointments: "overview",
@@ -242,6 +280,8 @@ const LEGACY_TAB_MAP: Record<string, Tab> = {
   procedures: "preventive",
   documents: "admin",
   invoices: "admin",
+  imaging: "imaging",
+  reminders: "reminders",
 };
 
 
@@ -418,8 +458,13 @@ export default function PatientDetailPage() {
   }, []);
   const [fieldVisitLocationId, setFieldVisitLocationId] = useState("");
   const [copiedMicrochip, setCopiedMicrochip] = useState(false);
+  const [weightModalOpen, setWeightModalOpen] = useState(false);
+  const [sympathyOpen, setSympathyOpen] = useState(false);
+  const [sympathyReason, setSympathyReason] = useState<"deceased" | "euthanized" | "transferred">("deceased");
+  const [sympathyConfirm, setSympathyConfirm] = useState("");
+  const [sympathyNote, setSympathyNote] = useState("");
 
-  // Six dense clinical units replace the previous eleven spread-out tabs.
+  // Six dense clinical units replace the previous eleven spread-out tabs – plus dedicated imaging & care schedule (Sprint 31 Clinical Dossier).
   const tabs: { id: Tab; label: string }[] = useMemo(
     () => [
       { id: "overview", label: t("patients.tabs.overview", "Overview") },
@@ -437,6 +482,8 @@ export default function PatientDetailPage() {
         label: t("patients.tabs.prescriptions", "Prescriptions & Therapy"),
       },
       { id: "admin", label: t("patients.tabs.admin", "Documents & Billing") },
+      { id: "imaging", label: t("patients.tabs.imaging", "Medical Imaging") },
+      { id: "reminders", label: t("patients.tabs.reminders", "Reminders & Care Schedule") },
     ],
     [t],
   );
@@ -700,6 +747,57 @@ export default function PatientDetailPage() {
       weightKg: canonicalPatientWeight,
       recordedAt: weightMeasuredInstant ?? undefined,
     });
+  }
+
+  // Weight trend indicator for header (last 2 measurements)
+  const weightTrendIndicator = useMemo(() => {
+    const weights = patient?.weights ?? [];
+    if (weights.length < 2) return null;
+    const latest = Number(weights[0]?.weightKg);
+    const previous = Number(weights[1]?.weightKg);
+    if (!Number.isFinite(latest) || !Number.isFinite(previous) || previous === 0) return null;
+    const diff = latest - previous;
+    const pct = (diff / previous) * 100;
+    if (Math.abs(pct) < 0.5) return { icon: Minus, label: t("patients.header.trendStable", "stable"), tone: "muted" as const, pct };
+    if (diff > 0) return { icon: TrendingUp, label: t("patients.header.trendUp", "rising"), tone: "warning" as const, pct };
+    return { icon: TrendingDown, label: t("patients.header.trendDown", "falling"), tone: "primary" as const, pct };
+  }, [patient?.weights, t]);
+
+  const sympathyGate = trpc.extensions.patientClinicalCard.triggerSympathyGate.useMutation({
+    onSuccess: async (data) => {
+      toast.success(t("patients.sympathyGate.success", "Patient status updated and outreach suppressed."));
+      setSympathyOpen(false);
+      setSympathyConfirm("");
+      setSympathyNote("");
+      await refreshPatientDetail();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const dossierExport = trpc.extensions.patientClinicalCard.logDossierExport.useMutation({
+    onSuccess: () => toast.success(t("patients.dossier.export", "Export logged")),
+    onError: (err) => toast.error(err.message),
+  });
+
+  // KPI data from extension + local queries (Overview Clinical Command Center)
+  const kpiQuery = trpc.extensions.patientClinicalCard.getKpi.useQuery(
+    { patientId: canonicalPatientId },
+    { enabled: Boolean(patient?.id) }
+  );
+  const recentEncountersQuery = trpc.extensions.patientClinicalCard.listRecentEncounters.useQuery(
+    { patientId: canonicalPatientId },
+    { enabled: Boolean(patient?.id) }
+  );
+
+  function handlePrintDossier() {
+    // Log export for audit (ext_patient_dossier_exports) then trigger browser print + PDF download
+    if (patient) {
+      dossierExport.mutate({ patientId: patient.id, format: "print" });
+    }
+    // Include medical summary PDF generation in print flow
+    void handleDownloadSummary();
+    // Defer print to allow PDF generation log
+    setTimeout(() => window.print(), 600);
   }
 
   // Allergies: recorded here feed the alert bar, prescription safety
@@ -1118,12 +1216,30 @@ export default function PatientDetailPage() {
         : "bg-amber-500";
 
   return (
-    <div>
+    <div className={pageShellClass}>
+      <PageHeader
+        icon={PawPrint}
+        title={patient.name}
+        subtitle={`${patient.species ? t(`patients.species_${patient.species}`, patient.species) : ""}${patient.breed ? ` · ${patient.breed}` : ""} · ${calculateAge(patient.dob, t)}${patient.microchipNumber ? ` · ${t("patients.profile.chipLabel", "Chip:")} ${patient.microchipNumber}` : ""}`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/patients/${patient.id}/edit`)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              {t("patients.actions.editPatient", "Edit Patient")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrintDossier}>
+              <Printer className="mr-2 h-4 w-4" />
+              {t("patients.dossier.print", "Print Dossier")}
+            </Button>
+          </>
+        }
+      />
+
       <Button
         variant="ghost"
         size="sm"
         onClick={() => router.push("/patients")}
-        className="mb-4"
+        className="mb-2"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         {t("patients.actions.backToPatients", "Back to Patients")}
@@ -1468,6 +1584,136 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Weight with trend inside header band */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 font-medium">
+          <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+          {t("patients.header.lastWeight", "Last weight")}: <span className="font-mono tabular-nums">{latestWeight}</span>
+          {weightTrendIndicator ? (
+            <span
+              className={cn(
+                "ml-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                weightTrendIndicator.tone === "warning"
+                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                  : weightTrendIndicator.tone === "primary"
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "bg-muted text-muted-foreground"
+              )}
+              title={`${weightTrendIndicator.pct.toFixed(1)}%`}
+            >
+              <weightTrendIndicator.icon className="h-3 w-3" />
+              {weightTrendIndicator.label}
+            </span>
+          ) : null}
+        </span>
+        {canManagePatientDetail ? (
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setWeightModalOpen(true)}>
+            <Plus className="mr-1 h-3 w-3" />
+            {t("patients.toolbar.addWeight", "Add Weight")}
+          </Button>
+        ) : null}
+        {/* Status indicator with extended mapping */}
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+            patient.status === "deceased"
+              ? "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              : patient.status === "inactive"
+                ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+          )}
+        >
+          <span className={cn("h-2 w-2 rounded-full", statusColor)} />
+          {patient.status === "deceased"
+            ? t("patients.header.statusDeceased", "Deceased")
+            : patient.status === "inactive"
+              ? t("patients.header.statusTransferred", "Transferred")
+              : t("patients.header.statusActive", "Active")}
+        </span>
+      </div>
+
+      {/* KPI Grid – Clinical Command Center (Overview) */}
+      <KpiGrid>
+        <KpiCard
+          label={t("patients.kpi.lastVisit", "Last visit")}
+          value={
+            kpiQuery.data?.lastVisitAt
+              ? formatClinicalDate(kpiQuery.data.lastVisitAt, recordsTimeZone, "—")
+              : latestVisit
+                ? formatClinicalDate(latestVisit.startTime, recordsTimeZone, "—")
+                : t("patients.profile.noPriorVisits", "No prior visits")
+          }
+          icon={CalendarDays}
+          hint={kpiQuery.data?.lastVisitAt ? undefined : undefined}
+        />
+        <KpiCard
+          label={t("patients.kpi.activeTreatment", "Active treatment")}
+          value={String(kpiQuery.data?.activeMedicationsCount ?? activePrescriptions.length)}
+          icon={HeartPulse}
+          tone={activePrescriptions.length > 0 ? "primary" : "muted"}
+          hint={
+            activePrescriptions.length > 0
+              ? activePrescriptions.map((p) => p.medicationName).slice(0, 2).join(", ")
+              : undefined
+          }
+        />
+        <KpiCard
+          label={t("patients.kpi.upcomingVaccinations", "Upcoming revaccinations")}
+          value={String(kpiQuery.data?.upcomingVaccinationsCount ?? (nextVaccinationDueDate ? 1 : 0))}
+          icon={Syringe}
+          tone={nextVaccinationDueDate ? "warning" : "muted"}
+          hint={nextVaccinationDueDate ? formatClinicalDate(nextVaccinationDueDate, recordsTimeZone, "—") : undefined}
+        />
+        <KpiCard
+          label={t("patients.kpi.sympathyStatus", "Sympathy status")}
+          value={
+            patient.status === "deceased"
+              ? t("patients.sympathy.gateActive", "Sympathy Gate Active")
+              : t("patients.status.active", "Active")
+          }
+          icon={Shield}
+          tone={patient.status === "deceased" ? "destructive" : "muted"}
+          hint={
+            patient.status === "deceased"
+              ? t("patients.sympathyGate.warningBadge", "Sympathy Gate Active – outreach suppressed")
+              : undefined
+          }
+        />
+      </KpiGrid>
+
+      {/* Quick Actions Toolbar (PageToolbar) */}
+      <PageToolbar>
+        <Button size="sm" asChild>
+          <Link href={`/encounters/new?patientId=${encodeURIComponent(patient.id)}`}>
+            <Stethoscope className="mr-2 h-4 w-4" />
+            {t("patients.toolbar.newEncounter", "New Encounter")}
+          </Link>
+        </Button>
+        <Button size="sm" variant="outline" asChild>
+          <Link href={`/billing/new?patientId=${encodeURIComponent(patient.id)}`}>
+            <ReceiptEuro className="mr-2 h-4 w-4" />
+            {t("patients.toolbar.createInvoice", "Create Invoice")}
+          </Link>
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setWeightModalOpen(true)}>
+          <Activity className="mr-2 h-4 w-4" />
+          {t("patients.toolbar.addWeight", "Add Weight")}
+        </Button>
+        <Button size="sm" variant="outline" onClick={handlePrintDossier}>
+          <Printer className="mr-2 h-4 w-4" />
+          {t("patients.toolbar.printDossier", "Print Dossier")}
+        </Button>
+        <Button
+          size="sm"
+          variant={patient.status === "deceased" ? "secondary" : "destructive"}
+          onClick={() => setSympathyOpen(true)}
+          className="ml-auto"
+        >
+          <Heart className="mr-2 h-4 w-4" />
+          {t("patients.toolbar.sympathyGate", "Sympathy Gate")}
+        </Button>
+      </PageToolbar>
 
       <PatientStickyRail
         name={patient.name}
@@ -1853,7 +2099,7 @@ export default function PatientDetailPage() {
         </details>
       ) : null}
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation – underline tabs per UIKIT.md */}
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as Tab)}
@@ -1862,15 +2108,13 @@ export default function PatientDetailPage() {
         <div className="overflow-x-auto border-b border-border">
           <TabsList
             aria-label={t("patients.detail.chartSectionsAria", "Sekcie karty pacienta")}
-            className="inline-flex h-auto w-auto min-w-max gap-0 rounded-none bg-transparent p-0"
+            className={underlineTabsListClass}
           >
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className={cn(
-                  "relative min-h-11 rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium shadow-none transition-colors data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none",
-                )}
+                className={cn(underlineTabsTriggerClass)}
               >
                 {tab.label}
               </TabsTrigger>
@@ -1878,8 +2122,8 @@ export default function PatientDetailPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="overview" className="mt-6">
-          <div className="space-y-8">
+        <TabsContent value="overview" className="mt-0">
+          <div className="space-y-6">
             <OverviewTab
               patient={patient}
               recordsTimeZone={recordsTimeZone}
@@ -1899,6 +2143,106 @@ export default function PatientDetailPage() {
               insuranceLoading={insuranceQuery.isLoading}
               insuranceExpired={insuranceExpired}
             />
+            {/* Quick summary: last 3 encounters + active meds (Clinical Command Center) */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DataTableFrame>
+                <div className="p-3">
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" />
+                    {t("patients.overviewTab.recentEncounters", "Recent encounters")} ·{" "}
+                    <span className="tabular-nums">{recentEncountersQuery.data?.length ?? 0}</span>
+                  </h4>
+                  {recentEncountersQuery.isLoading ? (
+                    <div className="h-20 animate-pulse rounded bg-muted" />
+                  ) : recentEncountersQuery.data && recentEncountersQuery.data.length > 0 ? (
+                    <TableScroll>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className={tableHeadClass}>{t("patients.historySearch.clinicalDate", "Clinical date")}</th>
+                            <th className={tableHeadClass}>{t("patients.tabs.records", "Medical Records")}</th>
+                            <th className={tableHeadClass}>{t("patients.labResultsTab.colFlag", "Flag")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentEncountersQuery.data.slice(0, 3).map((note) => (
+                            <tr key={note.id} className={tableRowClass}>
+                              <td className={tableCellClass}>
+                                {note.createdAt ? formatClinicalDate(note.createdAt, recordsTimeZone, "—") : "—"}
+                              </td>
+                              <td className={cn(tableCellClass, "max-w-[260px] truncate")}>
+                                {note.subjective?.slice(0, 80) ?? note.assessment?.slice(0, 80) ?? "—"}
+                              </td>
+                              <td className={tableCellClass}>
+                                <span
+                                  className={cn(
+                                    "rounded-full px-2 py-0.5 text-xs font-medium",
+                                    note.status === "draft"
+                                      ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                  )}
+                                >
+                                  {note.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </TableScroll>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {t("patients.overviewTab.noRecentEncounters", "No recent encounters")}
+                    </p>
+                  )}
+                  <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs" onClick={() => setActiveTab("history")}>
+                    {t("patients.overviewTab.viewAllHistory", "View full history")} <ChevronRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
+              </DataTableFrame>
+              <DataTableFrame>
+                <div className="p-3">
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Pill className="h-3.5 w-3.5" />
+                    {t("patients.overviewTab.activeMeds", "Active medications")} ·{" "}
+                    <span className="tabular-nums">{activePrescriptions.length}</span>
+                  </h4>
+                  {activePrescriptions.length > 0 ? (
+                    <TableScroll>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className={tableHeadClass}>{t("patients.prescriptionsTab.colMedication", "Medication")}</th>
+                            <th className={tableHeadClass}>{t("patients.prescriptionsTab.colDosage", "Dosage")}</th>
+                            <th className={tableHeadClass}>{t("patients.prescriptionsTab.colStatus", "Status")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activePrescriptions.slice(0, 3).map((rx) => (
+                            <tr key={rx.id} className={tableRowClass}>
+                              <td className={tableCellClass}>{rx.medicationName}</td>
+                              <td className={tableCellClass}>{rx.dosage ?? "—"}</td>
+                              <td className={tableCellClass}>
+                                <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                  {rx.effectiveStatus}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </TableScroll>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {t("patients.overview.vitalsNone", "No active medications")}
+                    </p>
+                  )}
+                  <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs" onClick={() => setActiveTab("prescriptions")}>
+                    {t("patients.tabs.prescriptions", "Prescriptions & Therapy")} <ChevronRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
+              </DataTableFrame>
+            </div>
             {chartSections.overview.map((section) => (
               <ChartSection key={section.id} id={section.id} label={section.label}>
                 {section.id === "weight" ? (
@@ -1932,7 +2276,7 @@ export default function PatientDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="history" className="mt-6">
+        <TabsContent value="history" className="mt-0">
           <section aria-labelledby="patient-section-records">
             <h2 id="patient-section-records" className="sr-only">
               {t("patients.tabs.records", "Medical Records")}
@@ -1948,8 +2292,8 @@ export default function PatientDetailPage() {
           </section>
         </TabsContent>
 
-        <TabsContent value="diagnostics" className="mt-6">
-          <div className="space-y-8">
+        <TabsContent value="diagnostics" className="mt-0">
+          <div className="space-y-6">
             {chartSections.diagnostics.map((section) => (
               <ChartSection key={section.id} id={section.id} label={section.label}>
                 {section.id === "labResults" ? (
@@ -1967,11 +2311,19 @@ export default function PatientDetailPage() {
                 ) : null}
               </ChartSection>
             ))}
+            {/* Clinical hint: reference intervals & High/Low flags */}
+            <p className="text-xs text-muted-foreground">
+              {t("patients.labResultsTab.referenceInterval", "Reference interval")} ·{" "}
+              <span className="font-medium text-red-600">{t("patients.labResultsTab.flagHigh", "High")}</span> /{" "}
+              <span className="font-medium text-amber-600">{t("patients.labResultsTab.flagAbnormal", "Abnormal")}</span> ·{" "}
+              <span className="font-medium text-emerald-600">{t("patients.labResultsTab.flagNormal", "Normal")}</span>{" "}
+              — {t("patients.remindersTab.help", "Ochranná lehota a referenčný interval sú vždy zvýraznené.")}
+            </p>
           </div>
         </TabsContent>
 
-        <TabsContent value="preventive" className="mt-6">
-          <div className="space-y-8">
+        <TabsContent value="preventive" className="mt-0">
+          <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-muted-foreground">
                 {t(
@@ -2009,11 +2361,18 @@ export default function PatientDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="prescriptions" className="mt-6">
+        <TabsContent value="prescriptions" className="mt-0">
           <section aria-labelledby="patient-section-prescriptions">
             <h2 id="patient-section-prescriptions" className="sr-only">
               {t("patients.tabs.prescriptions", "Prescriptions & Therapy")}
             </h2>
+            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+              <span className="font-semibold">{t("patients.prescriptionsTab.controlledBadge", "Controlled")}</span> —{" "}
+              {t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}{" "}
+              <span className="ml-2 font-mono text-[11px]">{t("patients.prescriptionsTab.withdrawal", "Withdrawal")}</span>:{" "}
+              {t("patients.clinicalDossier.prescriptions", "Recepty a Medikácie")} —{" "}
+              {t("patients.remindersTab.help", "ochranná lehota")}
+            </div>
             <PrescriptionsTab
               patientId={patient.id}
               timeZone={recordsTimeZone}
@@ -2022,8 +2381,8 @@ export default function PatientDetailPage() {
           </section>
         </TabsContent>
 
-        <TabsContent value="admin" className="mt-6">
-          <div className="space-y-8">
+        <TabsContent value="admin" className="mt-0">
+          <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-muted-foreground">
                 {t(
@@ -2050,7 +2409,177 @@ export default function PatientDetailPage() {
             ))}
           </div>
         </TabsContent>
+
+        <TabsContent value="imaging" className="mt-0">
+          <section aria-labelledby="patient-section-imaging">
+            <h2 id="patient-section-imaging" className="sr-only">
+              {t("patients.tabs.imaging", "Medical Imaging")}
+            </h2>
+            <ImagingTab patientId={patient.id} timeZone={recordsTimeZone} />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="reminders" className="mt-0">
+          <section aria-labelledby="patient-section-reminders">
+            <h2 id="patient-section-reminders" className="sr-only">
+              {t("patients.tabs.reminders", "Reminders & Care Schedule")}
+            </h2>
+            <RemindersTab patientId={patient.id} timeZone={recordsTimeZone} />
+          </section>
+        </TabsContent>
       </Tabs>
+
+      {/* Weight Quick-Add Modal (Pridať hmotnosť) */}
+      <Dialog open={weightModalOpen} onOpenChange={setWeightModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("patients.weightModal.title", "Add Weight")}</DialogTitle>
+            <DialogDescription>
+              {t("patients.header.lastWeight", "Last weight")}: {latestWeight}
+              {weightTrendIndicator ? ` · ${weightTrendIndicator.label}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleRecordWeight(e);
+              if (canSubmitWeight) setWeightModalOpen(false);
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="weight-modal-kg">{t("patients.weightModal.weightLabel", "Weight (kg)")}</Label>
+              <Input
+                id="weight-modal-kg"
+                type="number"
+                step={0.001}
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                placeholder="12.4"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="weight-modal-date">{t("patients.weightModal.measuredAt", "Measured at")}</Label>
+              <DateTimePicker
+                value={weightMeasuredAt}
+                onChange={setWeightMeasuredAt}
+                max={formatDateTimeLocalInputForTimeZone(new Date(), recordsSettingsTimeZone)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setWeightModalOpen(false)}>
+                {t("patients.weightModal.cancel", "Cancel")}
+              </Button>
+              <Button type="submit" size="sm" disabled={!canSubmitWeight || addWeight.isPending}>
+                {addWeight.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                {t("patients.weightModal.save", "Save weight")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sympathy Gate Modal (Zákon 39/2007 Z. z. & GDPR) */}
+      <Dialog open={sympathyOpen} onOpenChange={setSympathyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-destructive" />
+              {t("patients.sympathyGate.title", "Sympathy Gate")}
+            </DialogTitle>
+            <DialogDescription>{t("patients.sympathyGate.suppressedNotice", "All automated reminders and marketing will be suppressed and logged with reason sympathy_gate.")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-2">
+              <label className="flex items-center gap-2 rounded-md border border-border p-2 text-sm has-[input:checked]:border-destructive has-[input:checked]:bg-destructive/5">
+                <input
+                  type="radio"
+                  name="sympathyReason"
+                  checked={sympathyReason === "deceased"}
+                  onChange={() => setSympathyReason("deceased")}
+                />
+                {t("patients.sympathyGate.markDeceased", "Mark as deceased")}
+              </label>
+              <label className="flex items-center gap-2 rounded-md border border-border p-2 text-sm has-[input:checked]:border-destructive has-[input:checked]:bg-destructive/5">
+                <input
+                  type="radio"
+                  name="sympathyReason"
+                  checked={sympathyReason === "euthanized"}
+                  onChange={() => setSympathyReason("euthanized")}
+                />
+                {t("patients.sympathyGate.markEuthanized", "Mark as euthanized")}
+              </label>
+              <label className="flex items-center gap-2 rounded-md border border-border p-2 text-sm has-[input:checked]:border-amber-500 has-[input:checked]:bg-amber-50 dark:has-[input:checked]:bg-amber-950/20">
+                <input
+                  type="radio"
+                  name="sympathyReason"
+                  checked={sympathyReason === "transferred"}
+                  onChange={() => setSympathyReason("transferred")}
+                />
+                {t("patients.sympathyGate.markTransferred", "Mark as transferred")}
+              </label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sympathyNote">{t("patients.sympathyGate.reason", "Reason / note")}</Label>
+              <Textarea
+                id="sympathyNote"
+                value={sympathyNote}
+                onChange={(e) => setSympathyNote(e.target.value)}
+                maxLength={500}
+                rows={2}
+                placeholder={t("patients.sympathyGate.reason", "Reason / note")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sympathyConfirm">{t("patients.sympathyGate.confirmLabel", "Type POTVRDIŤ to confirm")}</Label>
+              <Input
+                id="sympathyConfirm"
+                value={sympathyConfirm}
+                onChange={(e) => setSympathyConfirm(e.target.value)}
+                placeholder={t("patients.sympathyGate.confirmPlaceholder", "POTVRDIŤ")}
+              />
+            </div>
+            <p className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
+              ext_automation_suppression_log · sympathy_gate · {t("patients.sympathyGate.warningBadge", "Sympathy Gate Active – outreach suppressed")}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setSympathyOpen(false)}>
+              {t("patients.actions.cancel", "Cancel")}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={
+                sympathyConfirm.trim().toUpperCase() !== "POTVRDIŤ" &&
+                sympathyConfirm.trim().toUpperCase() !== "CONFIRM" || sympathyGate.isPending
+              }
+              onClick={() => {
+                if (!canonicalPatientId) return;
+                // Allow both POTVRDIŤ and CONFIRM
+                const ok = sympathyConfirm.trim().toUpperCase() === "POTVRDIŤ" || sympathyConfirm.trim().toUpperCase() === "CONFIRM";
+                if (!ok) {
+                  toast.error(t("patients.sympathyGate.confirmLabel", "Type POTVRDIŤ to confirm"));
+                  return;
+                }
+                sympathyGate.mutate({
+                  patientId: canonicalPatientId,
+                  reason: sympathyReason,
+                  confirmationText: sympathyConfirm,
+                  note: sympathyNote || undefined,
+                });
+              }}
+            >
+              {sympathyGate.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t("patients.sympathyGate.title", "Sympathy Gate")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
