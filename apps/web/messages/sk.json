@@ -10545,7 +10545,16 @@
     "signedBy": "Podpísal/a {name}",
     "dispense": "Vydať",
     "statutorySigned": "Autorizované (Z. 39/2007)",
-    "btnCreate": "Vystaviť recept"
+    "btnCreate": "Vystaviť recept",
+    "confirmControlledSubstance": "Potvrdzujem klinickú indikáciu a zodpovednosť za túto omamnú/psychotropnú látku podľa Zákona 139/1998 Z. z. a Zákona 39/2007 Z. z.",
+    "controlledNotice": "Omamná látka: vyžaduje sa manuálne potvrdenie (Zákon 139/1998 Z. z.)",
+    "controlledSubstanceDetected": "Detegovaná omamná látka (Zákon 139/1998 Z. z.). Automatický prefill je blokovaný; vyžaduje sa explicitný manuálny zápis a potvrdenie ošetrujúcim veterinárom.",
+    "creating": "Vystavuje sa...",
+    "dispensingFailedUnsigned": "Recept nie je možné vydať bez overenia podpisu licencovaného veterinárneho lekára.",
+    "newPrescriptionModalDesc": "Vystavenie overeného veterinárneho receptu s klinickými bezpečnostnými poistkami.",
+    "signingPrescription": "Podpisuje sa...",
+    "statutoryControlledSubstances": "Omamné a psychotropné látky (Zákon 139/1998 Z. z. a Zákon 39/2007 Z. z.) vyžadujú manuálny zápis, nulový AI prefill a potvrdenie podpisom veterinárneho lekára.",
+    "veterinarianSignatureRequired": "Overenie podpisu veterinárneho lekára je povinné pred výdajom liečiva."
   },
   "prescriptions": {
     "title": "Dohľad nad liečivami",

@@ -10545,7 +10545,16 @@
     "signedBy": "Signed by {name}",
     "dispense": "Dispense",
     "statutorySigned": "Authorised (Act 39/2007)",
-    "btnCreate": "Issue prescription"
+    "btnCreate": "Issue prescription",
+    "confirmControlledSubstance": "I confirm clinical indication and responsibility for this controlled substance under Act 139/1998 Coll. & Act 39/2007 Coll.",
+    "controlledNotice": "Controlled substance: manual confirmation required (Zákon 139/1998 Z. z.)",
+    "controlledSubstanceDetected": "Controlled substance detected (Act 139/1998 Coll.). Automated prefill blocked; explicit manual entry and attending veterinarian confirmation required.",
+    "creating": "Creating...",
+    "dispensingFailedUnsigned": "Prescription cannot be dispensed without licensed veterinarian signature check.",
+    "newPrescriptionModalDesc": "Create a verified veterinary prescription with clinical safety safeguards.",
+    "signingPrescription": "Signing...",
+    "statutoryControlledSubstances": "Controlled Substances (Act 139/1998 Coll. & Act 39/2007 Coll.) require manual entry, zero AI prefill, and attending veterinarian signature confirmation.",
+    "veterinarianSignatureRequired": "Veterinarian signature check is mandatory before dispensing."
   },
   "prescriptions": {
     "title": "Medication Oversight",

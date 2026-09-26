@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   Activity,
@@ -125,6 +126,7 @@ function PrescriptionStatusBadge({
 
 export default function MedicationOversightPage() {
   const { t } = useI18n();
+  const { data: session } = useSession();
   const [scope, setScope] = useState<ScopeKey>("all");
   const [search, setSearch] = useState("");
   const patientSelectId = useId();
@@ -178,7 +180,7 @@ export default function MedicationOversightPage() {
   const createPrescriptionMutation = trpc.records.createPrescription.useMutation({
     onSuccess: async () => {
       toast.success(
-        t("medications.createdSuccess", "Recept bol ├║spe┼íne vystaven├╜"),
+        t("medications.createdSuccess", "Recept bol úspešne vystavený"),
       );
       setIsNewModalOpen(false);
       resetNewForm();
@@ -211,11 +213,11 @@ export default function MedicationOversightPage() {
       return;
     }
     if (!newMedicationName.trim()) {
-      toast.error(t("medications.fieldMedicationName", "N├ízov lie─ìiva *"));
+      toast.error(t("medications.fieldMedicationName", "Názov liečiva *"));
       return;
     }
     if (!newDosage.trim()) {
-      toast.error(t("medications.fieldDosageUnit", "D├ívkovacia jednotka a sila *"));
+      toast.error(t("medications.fieldDosageUnit", "Dávkovacia jednotka a sila *"));
       return;
     }
     if (!newFrequency.trim()) {
@@ -227,7 +229,7 @@ export default function MedicationOversightPage() {
       toast.error(
         t(
           "medications.statutoryControlledSubstances",
-          "Omamn├⌐ a psychotropn├⌐ l├ítky (Z├íkon 139/1998 Z. z.) vy┼╛aduj├║ potvrdenie podpisom lek├íra.",
+          "Omamné a psychotropné látky (Zákon 139/1998 Z. z.) vyžadujú potvrdenie podpisom lekára.",
         ),
       );
       return;
@@ -285,7 +287,7 @@ export default function MedicationOversightPage() {
         signedByName:
           signedPrescriptions[row.id]?.signedBy ??
           row.prescribedByName ??
-          t("medications.unknownPrescriber", "ΓÇö"),
+          t("medications.unknownPrescriber", "—"),
       };
     });
   }, [rawItems, dispensedPrescriptions, signedPrescriptions, t]);
@@ -334,13 +336,13 @@ export default function MedicationOversightPage() {
   // Human-in-the-loop signing flow
   const handleSign = (rowId: string, medicationName: string) => {
     const isControlled = isControlledSubstanceName(medicationName);
-    const doctorName = "MVDr. Martin S├╜kora"; // Current attending veterinarian
+    const doctorName = session?.user?.name || "MVDr. Martin Sýkora"; // attending vet from session
 
     if (isControlled) {
       toast.info(
         t(
           "medications.controlledNotice",
-          "Omamn├í l├ítka: vy┼╛aduje sa manu├ílne potvrdenie (Z├íkon 139/1998 Z. z.)",
+          "Omamná látka: vyžaduje sa manuálne potvrdenie (Zákon 139/1998 Z. z.)",
         ),
       );
     }
@@ -354,9 +356,9 @@ export default function MedicationOversightPage() {
     }));
 
     toast.success(
-      t("medications.signedSuccess", "Recept bol autorizovan├╜ a podp├¡san├╜"),
+      t("medications.signedSuccess", "Recept bol autorizovaný a podpísaný"),
       {
-        description: t("medications.signedBy", "Podp├¡sal/a {name}", {
+        description: t("medications.signedBy", "Podpísal/a {name}", {
           name: doctorName,
         }),
       },
@@ -365,18 +367,18 @@ export default function MedicationOversightPage() {
 
   // Dispense flow with licensed veterinarian signature check
   const handleDispense = (rowId: string, isSigned: boolean) => {
-    // Clinical Safety & Slovak Law (Z├íkon 39/2007 Z. z. & Z├íkon 139/1998 Z. z.):
+    // Clinical Safety & Slovak Law (Zákon 39/2007 Z. z. & Zákon 139/1998 Z. z.):
     // Prescriptions cannot be dispensed without licensed veterinarian signature check.
     if (!isSigned) {
       toast.error(
         t(
           "medications.dispensingFailedUnsigned",
-          "Recept nie je mo┼╛n├⌐ vyda┼Ñ bez overenia podpisu licencovan├⌐ho veterin├írneho lek├íra.",
+          "Recept nie je možné vydať bez overenia podpisu licencovaného veterinárneho lekára.",
         ),
         {
           description: t(
             "medications.veterinarianSignatureRequired",
-            "Overenie podpisu veterin├írneho lek├íra je povinn├⌐ pred v├╜dajom lie─ìiva.",
+            "Overenie podpisu veterinárneho lekára je povinné pred výdajom liečiva.",
           ),
         },
       );
@@ -388,17 +390,17 @@ export default function MedicationOversightPage() {
       [rowId]: true,
     }));
 
-    toast.success(t("medications.dispensedSuccess", "Recept bol vydan├╜"));
+    toast.success(t("medications.dispensedSuccess", "Recept bol vydaný"));
   };
 
   return (
     <div className={pageShellClass}>
       <PageHeader
         icon={Pill}
-        title={t("medications.title", "Doh─╛ad nad predp├¡san├╜mi lie─ìivami")}
+        title={t("medications.title", "Dohľad nad predpísanými liečivami")}
         subtitle={t(
           "medications.subtitle",
-          "V┼íetky predpisy na jednom mieste ΓÇö stav lie─ìby, OPL, kon─ìiace a prepadnut├⌐ d├ívky, interakcie a upozornenia klinick├⌐ho str├í┼╛cu.",
+          "Všetky predpisy na jednom mieste — stav liečby, OPL, končiace a prepadnuté dávky, interakcie a upozornenia klinického strážcu.",
         )}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -408,7 +410,7 @@ export default function MedicationOversightPage() {
               className="gap-1.5 text-xs font-semibold shadow-xs"
             >
               <Plus className="h-4 w-4" />
-              {t("medications.newPrescription", "+ Nov├╜ recept")}
+              {t("medications.newPrescription", "+ Nový recept")}
             </Button>
             <Button variant="outline" size="sm" asChild className="gap-1.5 text-xs">
               <Link href="/controlled-substances">
@@ -419,7 +421,7 @@ export default function MedicationOversightPage() {
             <Button variant="outline" size="sm" asChild className="gap-1.5 text-xs">
               <Link href="/records">
                 <Pill className="h-4 w-4 text-primary" />
-                {t("medications.toRecords", "Klinick├⌐ karty")}
+                {t("medications.toRecords", "Klinické karty")}
               </Link>
             </Button>
           </div>
@@ -429,30 +431,30 @@ export default function MedicationOversightPage() {
       {/* KPI Grid */}
       <KpiGrid>
         <KpiCard
-          label={t("medications.kpiActive", "Akt├¡vne predpisy")}
+          label={t("medications.kpiActive", "Aktívne predpisy")}
           value={summary?.active ?? pillCounts.active}
           icon={<Pill className="h-3.5 w-3.5 text-primary" />}
           active={scope === "active"}
           onClick={() => setScope(scope === "active" ? "all" : "active")}
         />
         <KpiCard
-          label={t("medications.kpiDispensed", "Vydan├⌐")}
+          label={t("medications.kpiDispensed", "Vydané")}
           value={pillCounts.dispensed}
-          icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+          icon={<CheckCircle2 className="h-3.5 w-3.5 text-success" />}
           active={scope === "dispensed"}
           onClick={() => setScope(scope === "dispensed" ? "all" : "dispensed")}
         />
         <KpiCard
-          label={t("medications.kpiOverdue", "Po term├¡ne")}
+          label={t("medications.kpiOverdue", "Po termíne")}
           value={summary?.overdue ?? pillCounts.expired}
           icon={<CalendarClock className="h-3.5 w-3.5 text-destructive" />}
           active={scope === "expired"}
           onClick={() => setScope(scope === "expired" ? "all" : "expired")}
         />
         <KpiCard
-          label={t("medications.kpiControlled", "Omamn├⌐ l├ítky (OPL)")}
+          label={t("medications.kpiControlled", "Omamné látky (OPL)")}
           value={summary?.controlledActive ?? 0}
-          icon={<ShieldAlert className="h-3.5 w-3.5 text-amber-500" />}
+          icon={<ShieldAlert className="h-3.5 w-3.5 text-warning" />}
         />
       </KpiGrid>
 
@@ -463,13 +465,13 @@ export default function MedicationOversightPage() {
           <p className="font-semibold text-foreground">
             {t(
               "medications.statutoryControlledSubstances",
-              "Omamn├⌐ a psychotropn├⌐ l├ítky (Z├íkon 139/1998 Z. z. a Z├íkon 39/2007 Z. z.) vy┼╛aduj├║ manu├ílny z├ípis, nulov├╜ AI prefill a potvrdenie podpisom veterin├írneho lek├íra.",
+              "Omamné a psychotropné látky (Zákon 139/1998 Z. z. a Zákon 39/2007 Z. z.) vyžadujú manuálny zápis, nulový AI prefill a potvrdenie podpisom veterinárneho lekára.",
             )}
           </p>
           <p className="text-[11px]">
             {t(
               "medications.veterinarianSignatureRequired",
-              "Overenie podpisu veterin├írneho lek├íra je povinn├⌐ pred v├╜dajom lie─ìiva.",
+              "Overenie podpisu veterinárneho lekára je povinné pred výdajom liečiva.",
             )}
           </p>
         </div>
@@ -484,11 +486,11 @@ export default function MedicationOversightPage() {
             const count = pillCounts[pillKey] ?? 0;
 
             const pillLabels: Record<string, string> = {
-              all: t("medications.scopeAll", "V┼íetky"),
-              active: t("medications.scopeActive", "Akt├¡vne"),
-              dispensed: t("medications.scopeDispensed", "Vydan├⌐"),
-              cancelled: t("medications.scopeCancelled", "Zru┼íen├⌐"),
-              expired: t("medications.scopeExpired", "Expirovan├⌐"),
+              all: t("medications.scopeAll", "Všetky"),
+              active: t("medications.scopeActive", "Aktívne"),
+              dispensed: t("medications.scopeDispensed", "Vydané"),
+              cancelled: t("medications.scopeCancelled", "Zrušené"),
+              expired: t("medications.scopeExpired", "Expirované"),
             };
 
             return (
@@ -526,7 +528,7 @@ export default function MedicationOversightPage() {
             onChange={(val) => setSearch(val)}
             placeholder={t(
               "medications.searchPlaceholder",
-              "Filtrova┼Ñ pod─╛a lieku, pacienta alebo majite─╛a...",
+              "Filtrovať podľa lieku, pacienta alebo majiteľa...",
             )}
             className="w-full sm:w-64"
           />
@@ -547,10 +549,10 @@ export default function MedicationOversightPage() {
         <DataTableFrame className="p-8">
           <EmptyState
             icon={Pill}
-            title={t("medications.emptyTitle", "┼╜iadne predpisy v tomto filtri")}
+            title={t("medications.emptyTitle", "Žiadne predpisy v tomto filtri")}
             description={t(
               "medications.emptyDescription",
-              "Predpisy sa vystavuj├║ v klinickej karte pacienta (z├ílo┼╛ka Predpisy) alebo po─ìas vy┼íetrenia.",
+              "Predpisy sa vystavujú v klinickej karte pacienta (záložka Predpisy) alebo počas vyšetrenia.",
             )}
           />
         </DataTableFrame>
@@ -560,28 +562,28 @@ export default function MedicationOversightPage() {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className={cn(tableHeadClass, "w-28")}>
-                  {t("medications.colRxNumber", "─î├¡slo receptu")}
+                  {t("medications.colRxNumber", "Číslo receptu")}
                 </th>
                 <th className={tableHeadClass}>
                   {t("medications.colPatient", "Pacient")}
                 </th>
                 <th className={tableHeadClass}>
-                  {t("medications.colMedication", "Lie─ìivo")}
+                  {t("medications.colMedication", "Liečivo")}
                 </th>
                 <th className={tableHeadClass}>
-                  {t("medications.colDosage", "D├ívkovanie")}
+                  {t("medications.colDosage", "Dávkovanie")}
                 </th>
                 <th className={tableHeadClass}>
-                  {t("medications.colDates", "Platnos┼Ñ")}
+                  {t("medications.colDates", "Platnosť")}
                 </th>
                 <th className={cn(tableHeadClass, "text-right")}>
-                  {t("medications.colQuantity", "Mno┼╛stvo")}
+                  {t("medications.colQuantity", "Množstvo")}
                 </th>
                 <th className={tableHeadClass}>
                   {t("medications.colStatus", "Stav")}
                 </th>
                 <th className={tableHeadClass}>
-                  {t("medications.colPrescriber", "Predp├¡sal / Podpis")}
+                  {t("medications.colPrescriber", "Predpísal / Podpis")}
                 </th>
                 <th className={cn(tableHeadClass, "text-right")}>
                   {t("medications.colActions", "Akcie")}
@@ -594,13 +596,13 @@ export default function MedicationOversightPage() {
                   [row.clientFirstName, row.clientLastName]
                     .filter(Boolean)
                     .join(" ")
-                    .trim() || t("medications.noOwner", "Majite─╛ neuveden├╜");
+                    .trim() || t("medications.noOwner", "Majiteľ neuvedený");
 
                 const statusLabels: Record<PrescriptionStatus, string> = {
                   active: t("medications.statusActive", "Prebieha"),
-                  dispensed: t("medications.statusDispensed", "Vydan├⌐"),
-                  cancelled: t("medications.statusCancelled", "Zru┼íen├⌐"),
-                  expired: t("medications.statusExpired", "Expirovan├⌐"),
+                  dispensed: t("medications.statusDispensed", "Vydané"),
+                  cancelled: t("medications.statusCancelled", "Zrušené"),
+                  expired: t("medications.statusExpired", "Expirované"),
                 };
 
                 return (
@@ -665,20 +667,20 @@ export default function MedicationOversightPage() {
                     {/* Dense Mono Validity Dates */}
                     <td className={cn(tableCellClass, "font-mono tabular-nums text-xs text-foreground whitespace-nowrap")}>
                       <span>{formatClinicalDate(row.startDate)}</span>
-                      <span className="mx-1 text-muted-foreground">ΓåÆ</span>
+                      <span className="mx-1 text-muted-foreground">→</span>
                       <span>
                         {row.endDate
                           ? formatClinicalDate(row.endDate)
-                          : t("medications.openEnded", "neur─ìito")}
+                          : t("medications.openEnded", "neurčito")}
                       </span>
                     </td>
 
                     {/* Dense Mono Quantity */}
                     <td className={cn(tableCellClass, "text-right font-mono tabular-nums text-xs text-foreground")}>
-                      <span>{row.quantity != null ? row.quantity : "ΓÇö"}</span>
+                      <span>{row.quantity != null ? row.quantity : "—"}</span>
                       {row.refillsRemaining > 0 && (
                         <span className="block text-[10px] text-muted-foreground font-sans">
-                          {t("medications.refills", "+{count} opakovan├¡", {
+                          {t("medications.refills", "+{count} opakovaní", {
                             count: row.refillsRemaining,
                           })}
                         </span>
@@ -697,9 +699,9 @@ export default function MedicationOversightPage() {
                     <td className={tableCellClass}>
                       <div className="flex items-center gap-1">
                         {row.isSigned ? (
-                          <FileCheck2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <FileCheck2 className="h-3.5 w-3.5 text-success shrink-0" />
                         ) : (
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
                         )}
                         <span className="text-xs text-foreground truncate max-w-[140px]">
                           {row.signedByName}
@@ -707,12 +709,12 @@ export default function MedicationOversightPage() {
                       </div>
                       <div className="mt-0.5 text-[10px] text-muted-foreground">
                         {row.isSigned ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            {t("medications.statutorySigned", "Autorizovan├⌐ (Z. 39/2007)")}
+                          <span className="text-success-muted-foreground">
+                            {t("medications.statutorySigned", "Autorizované (Z. 39/2007)")}
                           </span>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            {t("medications.unsignedWarning", "Nepodp├¡san├⌐ (Vy┼╛aduje overenie)")}
+                          <span className="text-warning-muted-foreground">
+                            {t("medications.unsignedWarning", "Nepodpísané (Vyžaduje overenie)")}
                           </span>
                         )}
                       </div>
@@ -730,7 +732,7 @@ export default function MedicationOversightPage() {
                             onClick={() => handleSign(row.id, row.medicationName)}
                           >
                             <FileCheck2 className="h-3 w-3" />
-                            {t("medications.signPrescription", "Podp├¡sa┼Ñ & Autorizova┼Ñ")}
+                            {t("medications.signPrescription", "Podpísať & Autorizovať")}
                           </Button>
                         )}
 
@@ -743,7 +745,7 @@ export default function MedicationOversightPage() {
                             onClick={() => handleDispense(row.id, row.isSigned)}
                           >
                             <CheckCircle2 className="h-3 w-3" />
-                            {t("medications.dispense", "Vyda┼Ñ")}
+                            {t("medications.dispense", "Vydať")}
                           </Button>
                         )}
 
@@ -770,7 +772,7 @@ export default function MedicationOversightPage() {
                           >
                             <Link href={`/encounters/${row.appointmentId}`}>
                               <Syringe className="h-3 w-3" />
-                              {t("medications.openVisit", "Vy┼íetrenie")}
+                              {t("medications.openVisit", "Vyšetrenie")}
                             </Link>
                           </Button>
                         )}
@@ -791,12 +793,12 @@ export default function MedicationOversightPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Pill className="h-5 w-5 text-primary" />
-                {t("medications.newPrescriptionModalTitle", "Nov├╜ recept")}
+                {t("medications.newPrescriptionModalTitle", "Nový recept")}
               </DialogTitle>
               <DialogDescription>
                 {t(
                   "medications.newPrescriptionModalDesc",
-                  "Vystavenie overen├⌐ho veterin├írneho receptu s klinick├╜mi bezpe─ìnostn├╜mi poistkami.",
+                  "Vystavenie overeného veterinárneho receptu s klinickými bezpečnostnými poistkami.",
                 )}
               </DialogDescription>
             </DialogHeader>
@@ -828,13 +830,13 @@ export default function MedicationOversightPage() {
               {/* Medication Name */}
               <div>
                 <Label htmlFor="med-name" className="text-xs font-semibold">
-                  {t("medications.fieldMedicationName", "N├ízov lie─ìiva *")}
+                  {t("medications.fieldMedicationName", "Názov liečiva *")}
                 </Label>
                 <Input
                   id="med-name"
                   value={newMedicationName}
                   onChange={(e) => setNewMedicationName(e.target.value)}
-                  placeholder="napr. Amoxicillin, Meloxicam, Ketam├¡n..."
+                  placeholder="napr. Amoxicillin, Meloxicam, Ketamín..."
                   className="mt-1 h-9 text-xs"
                   required
                 />
@@ -845,25 +847,25 @@ export default function MedicationOversightPage() {
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
                   <div className="flex items-center gap-1.5 font-bold text-destructive">
                     <ShieldAlert className="h-4 w-4" />
-                    <span>Z├íkon 139/1998 Z. z. & Z├íkon 39/2007 Z. z.</span>
+                    <span>Zákon 139/1998 Z. z. & Zákon 39/2007 Z. z.</span>
                   </div>
                   <p className="text-[11px] text-destructive leading-relaxed">
                     {t(
                       "medications.controlledSubstanceDetected",
-                      "Detegovan├í omamn├í l├ítka (Z├íkon 139/1998 Z. z.). Automatick├╜ prefill je blokovan├╜; vy┼╛aduje sa explicitn├╜ manu├ílny z├ípis a potvrdenie o┼íetruj├║cim veterin├írom.",
+                      "Detegovaná omamná látka (Zákon 139/1998 Z. z.). Automatický prefill je blokovaný; vyžaduje sa explicitný manuálny zápis a potvrdenie ošetrujúcim veterinárom.",
                     )}
                   </p>
                   <label className="flex items-center gap-2 pt-1 font-medium text-destructive cursor-pointer">
                     <Checkbox
                       checked={newControlledConfirmed}
-                      onChange={(e) =>
-                        setNewControlledConfirmed(e.target.checked)
+                      onCheckedChange={(checked) =>
+                        setNewControlledConfirmed(checked)
                       }
                     />
                     <span className="text-[11px]">
                       {t(
                         "medications.confirmControlledSubstance",
-                        "Potvrdzujem klinick├║ indik├íciu a zodpovednos┼Ñ za t├║to omamn├║/psychotropn├║ l├ítku pod─╛a Z├íkona 139/1998 Z. z. a Z├íkona 39/2007 Z. z.",
+                        "Potvrdzujem klinickú indikáciu a zodpovednosť za túto omamnú/psychotropnú látku podľa Zákona 139/1998 Z. z. a Zákona 39/2007 Z. z.",
                       )}
                     </span>
                   </label>
@@ -874,7 +876,7 @@ export default function MedicationOversightPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="med-dosage" className="text-xs font-semibold">
-                    {t("medications.fieldDosageUnit", "D├ívkovacia jednotka a sila *")}
+                    {t("medications.fieldDosageUnit", "Dávkovacia jednotka a sila *")}
                   </Label>
                   <Input
                     id="med-dosage"
@@ -893,7 +895,7 @@ export default function MedicationOversightPage() {
                     id="med-freq"
                     value={newFrequency}
                     onChange={(e) => setNewFrequency(e.target.value)}
-                    placeholder="napr. 1x denne, ka┼╛d├╜ch 12 hod"
+                    placeholder="napr. 1x denne, každých 12 hod"
                     className="mt-1 h-9 text-xs"
                     required
                   />
@@ -904,7 +906,7 @@ export default function MedicationOversightPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label htmlFor="med-qty" className="text-xs font-semibold">
-                    {t("medications.fieldQuantity", "Mno┼╛stvo *")}
+                    {t("medications.fieldQuantity", "Množstvo *")}
                   </Label>
                   <Input
                     id="med-qty"
@@ -918,7 +920,7 @@ export default function MedicationOversightPage() {
                 </div>
                 <div>
                   <Label htmlFor="med-start" className="text-xs font-semibold">
-                    {t("medications.fieldStartDate", "Platnos┼Ñ od *")}
+                    {t("medications.fieldStartDate", "Platnosť od *")}
                   </Label>
                   <Input
                     id="med-start"
@@ -931,7 +933,7 @@ export default function MedicationOversightPage() {
                 </div>
                 <div>
                   <Label htmlFor="med-end" className="text-xs font-semibold">
-                    {t("medications.fieldEndDate", "Platnos┼Ñ do")}
+                    {t("medications.fieldEndDate", "Platnosť do")}
                   </Label>
                   <Input
                     id="med-end"
@@ -946,13 +948,13 @@ export default function MedicationOversightPage() {
               {/* Instructions */}
               <div>
                 <Label htmlFor="med-inst" className="text-xs font-semibold">
-                  {t("medications.fieldInstructions", "Pokyny pre aplik├íciu")}
+                  {t("medications.fieldInstructions", "Pokyny pre aplikáciu")}
                 </Label>
                 <Textarea
                   id="med-inst"
                   value={newInstructions}
                   onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="napr. Pod├íva┼Ñ po jedle, zap├¡ja┼Ñ dostatkom vody..."
+                  placeholder="napr. Podávať po jedle, zapíjať dostatkom vody..."
                   rows={2}
                   className="mt-1 text-xs resize-none"
                 />
@@ -967,7 +969,7 @@ export default function MedicationOversightPage() {
                 onClick={() => setIsNewModalOpen(false)}
                 className="text-xs"
               >
-                {t("common.cancel", "Zru┼íi┼Ñ")}
+                {t("common.cancel", "Zrušiť")}
               </Button>
               <Button
                 type="submit"
@@ -983,7 +985,7 @@ export default function MedicationOversightPage() {
                 ) : (
                   <Plus className="h-3.5 w-3.5" />
                 )}
-                {t("medications.btnCreate", "Vystavi┼Ñ recept")}
+                {t("medications.btnCreate", "Vystaviť recept")}
               </Button>
             </DialogFooter>
           </form>
