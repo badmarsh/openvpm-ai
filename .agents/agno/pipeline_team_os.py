@@ -305,7 +305,10 @@ TABLES: Dict[str, str] = {
 
 # Modely & Proxies
 ALIPROXY_BASE = os.getenv("ALIPROXY_BASE_URL", "http://192.168.0.100:8080/v1")
-if "127.0.0.1" in ALIPROXY_BASE or "localhost" in ALIPROXY_BASE:
+# Loopback je platný cieľ, keď AliProxy beží v rámci WSL (alebo pri WSL2 mirrored
+# networking). Historické prepnutie na LAN IP platí len bez explicitného opt-in —
+# start-agno.ps1 nastavuje OPENVPM_ALIPROXY_ALLOW_LOOPBACK=1 po úspešnom probe.
+if ("127.0.0.1" in ALIPROXY_BASE or "localhost" in ALIPROXY_BASE) and not os.getenv("OPENVPM_ALIPROXY_ALLOW_LOOPBACK"):
     ALIPROXY_BASE = "http://192.168.0.100:8080/v1"
 ALIPROXY_KEY = os.getenv("ALIPROXY_API_KEY") or os.getenv("ALIPROXY_KEY") or os.getenv("DASHSCOPE_API_KEY", "EMPTY")
 
@@ -474,22 +477,39 @@ def _looks_real(api_key: str) -> bool:
     return True
 
 
+def _primary_chat_proxy() -> Tuple[str, str, str]:
+    """Vráti (base_url, api_key, provider) pre orchestrátor/learning chat modely.
+
+    Antigravity sa použije LEN s reálnym kľúčom (pozri _looks_real); bez neho
+    (kvóta vyčerpaná, kľúč odobratý) smeruje všetko na AliProxy.
+    2026-09-26: AliProxy je default — Antigravity kvóta vyčerpaná.
+    """
+    if _looks_real(ANTIGRAVITY_KEY) and ANTIGRAVITY_BASE:
+        return ANTIGRAVITY_BASE, ANTIGRAVITY_KEY, "Antigravity Proxy"
+    return ALIPROXY_BASE, ALIPROXY_KEY, "AliProxy"
+
+
 def _resolve_proxy_model(model_id: str) -> str:
-    if not ANTIGRAVITY_KEY or not ANTIGRAVITY_BASE:
+    """Overí model_id proti PRIMÁRNEMU proxy (nie vždy Antigravity) a ponúkne fallback."""
+    base_url, api_key, _provider = _primary_chat_proxy()
+    if not api_key or not base_url or api_key == "EMPTY":
         return model_id
     try:
         req = urllib.request.Request(
-            ANTIGRAVITY_BASE.rstrip("/") + "/models",
-            headers={"Authorization": f"Bearer {ANTIGRAVITY_KEY}"},
+            base_url.rstrip("/") + "/models",
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
         available = {m["id"] for m in data.get("data", [])}
         if model_id in available:
             return model_id
-        candidates = [GEMINI_MODEL_ID] + [m for m in available if "gemini" in m.lower()] + list(available)
+        candidates = [model_id, QWEN_CODER_MODEL_ID, GEMINI_MODEL_ID]
+        candidates += sorted(m for m in available if "qwen" in m.lower())
+        candidates += sorted(available)
         for cand in candidates:
             if cand in available:
+                logger.info("Model %s nie je na proxy — fallback na %s", model_id, cand)
                 return cand
     except Exception as exc:
         logger.warning("Could not validate model %s against proxy: %s", model_id, exc)
@@ -502,12 +522,13 @@ def make_orchestrator_model():
     if _looks_real(os.getenv("OPENAI_API_KEY", "")):
         return OpenAIChat(id=ORCHESTRATOR_MODEL_ID)
     resolved_id = _resolve_proxy_model(ORCHESTRATOR_MODEL_ID)
+    base_url, api_key, provider = _primary_chat_proxy()
     return OpenAILike(
         id=resolved_id,
         name=resolved_id,
-        provider="Antigravity Proxy",
-        base_url=ANTIGRAVITY_BASE,
-        api_key=ANTIGRAVITY_KEY,
+        provider=provider,
+        base_url=base_url,
+        api_key=api_key,
         timeout=90.0,
     )
 
@@ -515,12 +536,13 @@ def make_learning_model():
     if _looks_real(os.getenv("OPENAI_API_KEY", "")):
         return OpenAIChat(id=LEARNING_MODEL_ID)
     resolved_id = _resolve_proxy_model(LEARNING_MODEL_ID)
+    base_url, api_key, provider = _primary_chat_proxy()
     return OpenAILike(
         id=resolved_id,
         name=resolved_id,
-        provider="Antigravity Proxy",
-        base_url=ANTIGRAVITY_BASE,
-        api_key=ANTIGRAVITY_KEY,
+        provider=provider,
+        base_url=base_url,
+        api_key=api_key,
         timeout=90.0,
     )
 
@@ -541,9 +563,10 @@ def make_qwen_model():
             api_key=ANTIGRAVITY_KEY,
             timeout=90.0,
         )
+    resolved_id = _resolve_proxy_model(QWEN_CODER_MODEL_ID)
     return OpenAILike(
-        id="qwen-coder-plus",
-        name="AliProxy Qwen Coder Plus",
+        id=resolved_id,
+        name="AliProxy Qwen Coder",
         provider="AliProxy",
         base_url=ALIPROXY_BASE,
         api_key=ALIPROXY_KEY,

@@ -118,6 +118,7 @@ never travel out to Cloudflare and back.
 | `OPENVPM_AGENTOS_PORT` | `AgentOS.serve()` bind | `7777` |
 | `OPENVPM_AGENTOS_INTERNAL_URL` | scheduler `scheduler_base_url` | `http://127.0.0.1:7777` |
 | `OPENVPM_AGENTOS_BASE_URL` | external/operator use | `https://agentos-tunnel.significa.sk` |
+| `OPENVPM_ALIPROXY_ALLOW_LOOPBACK` | AliProxy loopback opt-in | `1` when AliProxy is reachable at 127.0.0.1 from WSL (set by `start-agno.ps1` after a successful probe) |
 | `AGENT_OS_URL` | `apps/web` → `/admin/ai-swarm` probe | leave blank locally; set to the tunnel URL only for the hosted deployment |
 
 ```ini

@@ -105,6 +105,29 @@ warranted a source edit under the "minimal, reversible" constraint.
 
 ---
 
+## Update 2026-09-26 (evening) — AliProxy-first routing + real launcher
+
+Post-implementation changes on the same branch:
+
+1. **`urllib.request` import fixed** (`d1c9fc1`) — `_resolve_proxy_model` was dead code
+   (NameError swallowed by except, ~10 warnings per boot, seen in `/tmp/agno_os.log`).
+2. **All three model factories now route through `_primary_chat_proxy()`**: Antigravity
+   is used ONLY with a real key (`_looks_real`); otherwise everything (orchestrator,
+   learning, qwen) targets **AliProxy**. Rationale: Antigravity quota exhausted
+   (2026-09-26). Model-ID validation also targets the primary proxy; fallback is
+   deterministic (sorted). Verified by 4 extracted-code scenarios (loopback opt-in,
+   LAN guard, Antigravity precedence, qwen fallback).
+3. **`OPENVPM_ALIPROXY_ALLOW_LOOPBACK`** — the historic loopback→LAN rewrite now
+   requires explicit opt-in, set by the launcher after a successful in-WSL probe.
+4. **`start-agno.ps1`** (replaces the inline-bash `start-agno.bat`, which now delegates):
+   fixes check → CDP check → AliProxy probe from WSL (127.0.0.1 → Windows-host-IP →
+   LAN) → model discovery via `/models` → `.env` upsert (repo + `/home/ubuntu/agno`,
+   key-preserving) → source sync → tmux restart → **45 s health wait with log tail on
+   failure** → tunnel check with 502 hint. The old 4 s health check produced false
+   "(no response yet)" on healthy boots (~20 s CUDA model load).
+
+---
+
 ## Verification Commands (all re-run in-session)
 
 ```bash
