@@ -3982,7 +3982,9 @@
       "soapTimeline": "SOAP timeline",
       "historySearch": "History search",
       "healthSummary": "Health summary",
-      "insurance": "Insurance"
+      "insurance": "Insurance",
+      "imaging": "Medical Imaging",
+      "reminders": "Reminders & Care Schedule"
     },
     "prescriptionsTab": {
       "loadError": "Unable to load prescriptions.",
@@ -4003,7 +4005,11 @@
       "filterAll": "All",
       "filterActive": "Active",
       "filterFinished": "Finished",
-      "issuePrescription": "Write prescription"
+      "issuePrescription": "Write prescription",
+      "controlledWarning": "Controlled substance — manual entry required (Act 139/1998). No AI prefill.",
+      "controlledBadge": "Controlled",
+      "withdrawal": "Withdrawal",
+      "colWithdrawal": "Withdrawal"
     },
     "labResultsTab": {
       "loadError": "Unable to load lab results.",
@@ -4021,7 +4027,11 @@
       "flagNormal": "Normal",
       "voided": "(voided)",
       "pending": "Pending",
-      "addResult": "Add lab result"
+      "addResult": "Add lab result",
+      "referenceInterval": "Reference interval",
+      "flagHigh": "High",
+      "flagLow": "Low",
+      "withdrawal": "Withdrawal period"
     },
     "proceduresTab": {
       "loadError": "Unable to load procedures.",
@@ -4196,7 +4206,8 @@
       "callClient": "Call client",
       "uploadPhoto": "Upload photo",
       "tryPhotoAgain": "Try photo again",
-      "chipLabel": "Chip:"
+      "chipLabel": "Chip:",
+      "sympathyGateActive": "Sympathy Gate Active"
     },
     "vitals": {
       "title": "Vitals",
@@ -4638,7 +4649,107 @@
       "insuranceValidUntil": "Valid until",
       "insuranceCoverage": "Coverage"
     },
-    "column_actions": "Actions"
+    "column_actions": "Actions",
+    "clinicalDossier": {
+      "overview": "Overview",
+      "encounters": "Encounters & SOAP",
+      "prescriptions": "Prescriptions & Controlled Meds Log",
+      "labResults": "Lab Results & Diagnostics",
+      "imaging": "Medical Imaging",
+      "reminders": "Reminders & Care Schedule"
+    },
+    "header": {
+      "avatarAlt": "Photo of {name}",
+      "statusActive": "Active",
+      "statusDeceased": "Deceased",
+      "statusEuthanized": "Euthanized",
+      "statusTransferred": "Transferred",
+      "weightLabel": "Weight",
+      "lastWeight": "Last weight",
+      "trendUp": "rising",
+      "trendDown": "falling",
+      "trendStable": "stable",
+      "chipLabel": "Chip:"
+    },
+    "toolbar": {
+      "newEncounter": "New Encounter",
+      "createInvoice": "Create Invoice",
+      "addWeight": "Add Weight",
+      "printDossier": "Print Dossier",
+      "sympathyGate": "Sympathy Gate"
+    },
+    "kpi": {
+      "lastVisit": "Last visit",
+      "activeTreatment": "Active treatment",
+      "upcomingVaccinations": "Upcoming revaccinations",
+      "sympathyStatus": "Sympathy status"
+    },
+    "overviewTab": {
+      "recentEncounters": "Recent encounters",
+      "activeMeds": "Active medications",
+      "noRecentEncounters": "No recent encounters",
+      "viewAllHistory": "View full history"
+    },
+    "weightModal": {
+      "title": "Add Weight",
+      "weightLabel": "Weight (kg)",
+      "measuredAt": "Measured at",
+      "save": "Save weight",
+      "cancel": "Cancel",
+      "trendUp": "Weight rising",
+      "trendDown": "Weight falling"
+    },
+    "sympathyGate": {
+      "title": "Sympathy Gate",
+      "markDeceased": "Mark as deceased",
+      "markEuthanized": "Mark as euthanized",
+      "markTransferred": "Mark as transferred",
+      "confirmLabel": "Type POTVRDIŤ to confirm",
+      "confirmPlaceholder": "POTVRDIŤ",
+      "reason": "Reason / note",
+      "suppressedNotice": "All automated reminders and marketing will be suppressed and logged with reason sympathy_gate.",
+      "success": "Patient status updated and outreach suppressed.",
+      "warningBadge": "Sympathy Gate Active – outreach suppressed",
+      "reactivate": "Reactivate patient"
+    },
+    "dossier": {
+      "print": "Print Dossier",
+      "export": "Export Dossier",
+      "printing": "Preparing print..."
+    },
+    "imagingTab": {
+      "loadError": "Failed to load medical imaging.",
+      "help": "Attachments in category “imaging” (RTG, USG, MRI) — never overwrite the patient photo (patient.photoUrl).",
+      "count": "{count} studies",
+      "empty": "No imaging studies",
+      "emptyDesc": "RTG, USG or MRI images uploaded as “imaging” appear here. Patient photo stays untouched.",
+      "study": "Imaging study",
+      "view": "View",
+      "download": "Download",
+      "imagingStudy": "Imaging study"
+    },
+    "remindersTab": {
+      "loadError": "Failed to load reminders and care schedule.",
+      "help": "Vaccinations, deworming, checkups and planned procedures — vaccination card and withdrawal periods in one place.",
+      "addVaccination": "Add vaccination",
+      "empty": "No reminders",
+      "emptyDesc": "Scheduled vaccinations, dewormings and checkups will appear here. Vaccination card is up to date.",
+      "upcomingVaccinations": "Upcoming revaccinations",
+      "openReminders": "Active reminders",
+      "vaccinationHistory": "Vaccination & deworming history",
+      "colVaccine": "Vaccine",
+      "colLastDone": "Last given",
+      "colNextDue": "Next due",
+      "colBatch": "Batch",
+      "colTitle": "Title",
+      "colType": "Type",
+      "colNotes": "Notes",
+      "colDue": "Due",
+      "colStatus": "Status",
+      "colDate": "Date",
+      "voided": "(voided)",
+      "valid": "valid"
+    }
   },
   "recalls": {
     "checkingAccess": "Checking recall access...",
@@ -10633,7 +10744,7 @@
       "clinicianConfirmationRequired": "A veterinarian must confirm AI content before it becomes part of the medical record.",
       "aiRemainsDraft": "AI suggestion stays in draft until signed by a veterinarian.",
       "controlledSubstanceZeroPrefill": "Controlled substance detected — AI prefill is blocked. Enter manually (ShieldAlert).",
-      "sympathyOutreachSuppressed": "Patient is deceased — automated reminders and marketing are suppressed.",
+      "sympathyOutreachSuppressed": "Automated outreach suppressed — patient is deceased (Sympathy Gate).",
       "manualEntryRequired": "Manual entry required",
       "draftBadge": "AI draft",
       "awaitingSignature": "Awaiting veterinarian signature"

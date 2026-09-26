@@ -3982,7 +3982,9 @@
       "soapTimeline": "Časová os SOAP",
       "historySearch": "Vyhľadávanie v histórii",
       "healthSummary": "Zdravotný sumár",
-      "insurance": "Poistenie"
+      "insurance": "Poistenie",
+      "imaging": "Zobrazovacia diagnostika",
+      "reminders": "Pripomienky a Plán starostlivosti"
     },
     "prescriptionsTab": {
       "loadError": "Nepodarilo sa načítať predpisy.",
@@ -4003,7 +4005,11 @@
       "filterAll": "Všetky",
       "filterActive": "Aktívne",
       "filterFinished": "Ukončené",
-      "issuePrescription": "Vystaviť predpis"
+      "issuePrescription": "Vystaviť predpis",
+      "controlledWarning": "Omamná a psychotropná látka — vyžaduje ručný zápis (Zákon 139/1998 Z. z.). Bez AI prefill.",
+      "controlledBadge": "Kontrolovaná látka",
+      "withdrawal": "Ochranná lehota",
+      "colWithdrawal": "Ochranná lehota"
     },
     "labResultsTab": {
       "loadError": "Nepodarilo sa načítať laboratórne výsledky.",
@@ -4021,7 +4027,11 @@
       "flagNormal": "Normálny",
       "voided": "(anulovaný)",
       "pending": "Čaká sa",
-      "addResult": "Pridať laboratórny výsledok"
+      "addResult": "Pridať laboratórny výsledok",
+      "referenceInterval": "Referenčný interval",
+      "flagHigh": "Vysoká",
+      "flagLow": "Nízka",
+      "withdrawal": "Ochranná lehota"
     },
     "proceduresTab": {
       "loadError": "Nepodarilo sa načítať zákroky.",
@@ -4196,7 +4206,8 @@
       "callClient": "Zavolať majiteľovi",
       "uploadPhoto": "Nahrať fotografiu",
       "tryPhotoAgain": "Skúsiť fotografiu znova",
-      "chipLabel": "Čip:"
+      "chipLabel": "Čip:",
+      "sympathyGateActive": "Sympathy Gate aktívna"
     },
     "vitals": {
       "title": "Vitálne funkcie",
@@ -4638,7 +4649,107 @@
       "insuranceValidUntil": "Platnosť do",
       "insuranceCoverage": "Krytie"
     },
-    "column_actions": "Akcie"
+    "column_actions": "Akcie",
+    "clinicalDossier": {
+      "overview": "Prehľad",
+      "encounters": "História ošetrení",
+      "prescriptions": "Recepty a Medikácie",
+      "labResults": "Laboratórne Výsledky",
+      "imaging": "Zobrazovacia Diagnostika",
+      "reminders": "Pripomienky a Plán starostlivosti"
+    },
+    "header": {
+      "avatarAlt": "Fotografia – {name}",
+      "statusActive": "Aktívny",
+      "statusDeceased": "Zosnulý",
+      "statusEuthanized": "Eutanázia",
+      "statusTransferred": "Preložený",
+      "weightLabel": "Hmotnosť",
+      "lastWeight": "Posledná hmotnosť",
+      "trendUp": "stúpa",
+      "trendDown": "klesá",
+      "trendStable": "stabilná",
+      "chipLabel": "Čip:"
+    },
+    "toolbar": {
+      "newEncounter": "Nové ošetrenie",
+      "createInvoice": "Vytvoriť faktúru",
+      "addWeight": "Pridať hmotnosť",
+      "printDossier": "Tlač spisu",
+      "sympathyGate": "Sympathy Gate"
+    },
+    "kpi": {
+      "lastVisit": "Posledná návšteva",
+      "activeTreatment": "Aktívna liečba",
+      "upcomingVaccinations": "Nadchádzajúce revakcinácie",
+      "sympathyStatus": "Sympathy status"
+    },
+    "overviewTab": {
+      "recentEncounters": "Posledné ošetrenia",
+      "activeMeds": "Aktívne medikácie",
+      "noRecentEncounters": "Žiadne nedávne ošetrenia",
+      "viewAllHistory": "Zobraziť celú históriu"
+    },
+    "weightModal": {
+      "title": "Pridať hmotnosť",
+      "weightLabel": "Hmotnosť (kg)",
+      "measuredAt": "Dátum merania",
+      "save": "Uložiť hmotnosť",
+      "cancel": "Zrušiť",
+      "trendUp": "Hmotnosť stúpa",
+      "trendDown": "Hmotnosť klesá"
+    },
+    "sympathyGate": {
+      "title": "Sympathy Gate",
+      "markDeceased": "Označiť ako zosnulý",
+      "markEuthanized": "Označiť ako eutanázia",
+      "markTransferred": "Označiť ako preložený",
+      "confirmLabel": "Napíšte POTVRDIŤ pre potvrdenie",
+      "confirmPlaceholder": "POTVRDIŤ",
+      "reason": "Dôvod / poznámka",
+      "suppressedNotice": "Všetky automatizované pripomienky a marketing budú potlačené a zalogované s dôvodom sympathy_gate.",
+      "success": "Stav pacienta aktualizovaný a komunikácia potlačená.",
+      "warningBadge": "Sympathy Gate aktívna – komunikácia potlačená",
+      "reactivate": "Reaktivovať pacienta"
+    },
+    "dossier": {
+      "print": "Tlač spisu",
+      "export": "Exportovať spis",
+      "printing": "Pripravujem tlač..."
+    },
+    "imagingTab": {
+      "loadError": "Nepodarilo sa načítať zobrazovaciu diagnostiku.",
+      "help": "Prílohy kategórie „imaging“ (RTG, USG, MRI) – nikdy neprepisujú fotografiu pacienta (patient.photoUrl).",
+      "count": "{count} štúdií",
+      "empty": "Žiadne zobrazovacie štúdie",
+      "emptyDesc": "RTG, USG či MRI snímky nahrané ako „imaging“ sa zobrazia tu. Fotografia pacienta zostáva nedotknutá.",
+      "study": "Zobrazovacia štúdia",
+      "view": "Zobraziť",
+      "download": "Stiahnuť",
+      "imagingStudy": "Zobrazovacia štúdia"
+    },
+    "remindersTab": {
+      "loadError": "Nepodarilo sa načítať pripomienky a plán starostlivosti.",
+      "help": "Očkovania, odčervenia, kontroly a plánované zákroky – očkovací preukaz a ochranné lehoty na jednom mieste.",
+      "addVaccination": "Pridať očkovanie",
+      "empty": "Žiadne pripomienky",
+      "emptyDesc": "Naplánované očkovania, odčervenia a kontroly sa zobrazia tu. Stav očkovacieho preukazu je aktuálny.",
+      "upcomingVaccinations": "Nadchádzajúce revakcinácie",
+      "openReminders": "Aktívne pripomienky",
+      "vaccinationHistory": "História očkovaní a odčervení",
+      "colVaccine": "Vakcína",
+      "colLastDone": "Posledne podaná",
+      "colNextDue": "Nasledujúca dávka",
+      "colBatch": "Šarža",
+      "colTitle": "Názov",
+      "colType": "Typ",
+      "colNotes": "Poznámky",
+      "colDue": "Termín",
+      "colStatus": "Stav",
+      "colDate": "Dátum",
+      "voided": "(zrušené)",
+      "valid": "platné"
+    }
   },
   "recalls": {
     "checkingAccess": "Overuje sa prístup k pripomienkam...",
@@ -10633,7 +10744,7 @@
       "clinicianConfirmationRequired": "Veterinárny lekár musí potvrdiť AI obsah pred zápisom do zdravotného záznamu.",
       "aiRemainsDraft": "AI návrh ostáva v stave koncept, kým ho nepodpíše veterinárny lekár.",
       "controlledSubstanceZeroPrefill": "Zistená omamná látka — AI predvyplnenie je zablokované. Zadajte ručne (ShieldAlert).",
-      "sympathyOutreachSuppressed": "Pacient je uhynutý — automatické pripomienky a marketing sú potlačené.",
+      "sympathyOutreachSuppressed": "Automatizovaná komunikácia potlačená — pacient je zosnulý (Sympathy Gate).",
       "manualEntryRequired": "Vyžaduje sa ručný zápis",
       "draftBadge": "AI koncept",
       "awaitingSignature": "Čaká sa na podpis veterinárneho lekára"

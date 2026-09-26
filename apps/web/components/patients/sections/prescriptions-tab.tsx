@@ -2,13 +2,16 @@
 
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
-import { Pill, Plus } from "lucide-react";
+import { Pill, Plus, ShieldAlert } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/common/empty-state";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatClinicalDate } from "@/lib/records/clinical-dates";
 import { Button } from "@/components/ui/button";
+import { DataTableFrame, tableHeadClass, tableCellClass, tableRowClass } from "@/components/layout/page-kit";
+import { TableScroll } from "@/components/common/table-scroll";
+import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 
 function getPrescriptionStatusBadge(status: string | null) {
   switch (status) {
@@ -146,93 +149,100 @@ export function PrescriptionsTab({
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colMedication", "Medication")}
-              </th>
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colDosage", "Dosage")}
-              </th>
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colFrequency", "Frequency")}
-              </th>
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colStatus", "Status")}
-              </th>
-              <th className="h-10 px-4 text-right align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colRefills", "Refills")}
-              </th>
-              <th className="h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {t("patients.prescriptionsTab.colDate", "Date")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((rx, index) => {
-              const previous = visibleRows[index - 1];
-              const previousIsActive = previous?.effectiveStatus === "active";
-              const isActive = rx.effectiveStatus === "active";
-              const startsActiveGroup = filter === "all" && isActive && !previous;
-              const startsFinishedGroup =
-                filter === "all" && !isActive && (previousIsActive || !previous);
-              return (
-                <Fragment key={rx.id}>
-                  {startsActiveGroup || startsFinishedGroup ? (
-                    <tr className="border-b border-border bg-muted/30">
-                      <td
-                        colSpan={6}
-                        className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        {startsActiveGroup
-                          ? t(
-                              "patients.prescriptionsTab.activeSection",
-                              "Active medication",
-                            )
-                          : t(
-                              "patients.prescriptionsTab.finishedSection",
-                              "Finished medication",
-                            )}
+      <DataTableFrame>
+        <TableScroll>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/20">
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colMedication", "Medication")}</th>
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colDosage", "Dosage")}</th>
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colFrequency", "Frequency")}</th>
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colStatus", "Status")}</th>
+                <th className={cn(tableHeadClass, "text-right")}>{t("patients.prescriptionsTab.colRefills", "Refills")}</th>
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colDate", "Date")}</th>
+                <th className={tableHeadClass}>{t("patients.prescriptionsTab.colWithdrawal", "Withdrawal")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map((rx, index) => {
+                const previous = visibleRows[index - 1];
+                const previousIsActive = previous?.effectiveStatus === "active";
+                const isActive = rx.effectiveStatus === "active";
+                const startsActiveGroup = filter === "all" && isActive && !previous;
+                const startsFinishedGroup =
+                  filter === "all" && !isActive && (previousIsActive || !previous);
+                const isControlled = isControlledSubstanceName(rx.medicationName ?? "");
+                return (
+                  <Fragment key={rx.id}>
+                    {startsActiveGroup || startsFinishedGroup ? (
+                      <tr className="border-b border-border bg-muted/30">
+                        <td colSpan={7} className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {startsActiveGroup
+                            ? t("patients.prescriptionsTab.activeSection", "Active medication")
+                            : t("patients.prescriptionsTab.finishedSection", "Finished medication")}
+                        </td>
+                      </tr>
+                    ) : null}
+                    <tr className={cn(tableRowClass, isControlled && "bg-amber-50/40 dark:bg-amber-950/10")}>
+                      <td className={tableCellClass}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-medium">{rx.medicationName}</span>
+                          {isControlled ? (
+                            <span
+                              title={t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}
+                              className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            >
+                              <ShieldAlert className="h-3 w-3" />
+                              {t("patients.prescriptionsTab.controlledBadge", "Controlled")}
+                            </span>
+                          ) : null}
+                        </span>
+                        {isControlled ? (
+                          <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+                            {t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className={cn(tableCellClass, "tabular-nums")}>{rx.dosage ?? "\u2014"}</td>
+                      <td className={tableCellClass}>{rx.frequency ?? "\u2014"}</td>
+                      <td className={tableCellClass}>
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                            getPrescriptionStatusBadge(rx.effectiveStatus)
+                          )}
+                        >
+                          {rx.effectiveStatus === "active"
+                            ? t("patients.prescriptionsTab.statusActive", "active")
+                            : rx.effectiveStatus === "cancelled"
+                              ? t("patients.prescriptionsTab.statusCancelled", "cancelled")
+                              : rx.effectiveStatus === "expired"
+                                ? t("patients.prescriptionsTab.statusExpired", "expired")
+                                : (rx.effectiveStatus ?? "unknown")}
+                        </span>
+                      </td>
+                      <td className={cn(tableCellClass, "text-right tabular-nums")}>{rx.refillsRemaining ?? 0}</td>
+                      <td className={cn(tableCellClass, "text-muted-foreground tabular-nums")}>
+                        {rx.startDate ? formatClinicalDate(rx.startDate, timeZone, "\u2014") : "\u2014"}
+                      </td>
+                      <td className={cn(tableCellClass, "text-muted-foreground text-xs")}>
+                        {/* ochranná lehota – derived from instructions or default */}
+                        {(rx as unknown as { instructions?: string })?.instructions?.toLowerCase().includes("ochrann") ? (
+                          <span className="font-medium text-amber-700 dark:text-amber-300">
+                            {t("patients.prescriptionsTab.withdrawal", "Withdrawal")}: {(rx as unknown as { instructions: string }).instructions!.slice(0, 30)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                     </tr>
-                  ) : null}
-                  <tr className="border-b border-border last:border-0">
-                    <td className="px-4 py-2.5 font-medium">{rx.medicationName}</td>
-                    <td className="px-4 py-2.5 tabular-nums">{rx.dosage ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5">{rx.frequency ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-                          getPrescriptionStatusBadge(rx.effectiveStatus),
-                        )}
-                      >
-                        {rx.effectiveStatus === "active"
-                          ? t("patients.prescriptionsTab.statusActive", "active")
-                          : rx.effectiveStatus === "cancelled"
-                            ? t("patients.prescriptionsTab.statusCancelled", "cancelled")
-                            : rx.effectiveStatus === "expired"
-                              ? t("patients.prescriptionsTab.statusExpired", "expired")
-                              : (rx.effectiveStatus ?? "unknown")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">
-                      {rx.refillsRemaining ?? 0}
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      {rx.startDate
-                        ? formatClinicalDate(rx.startDate, timeZone, "\u2014")
-                        : "\u2014"}
-                    </td>
-                  </tr>
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableScroll>
+      </DataTableFrame>
     </div>
   );
 }

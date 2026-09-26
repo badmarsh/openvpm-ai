@@ -34,6 +34,7 @@ import { medicationOversightRouter } from "./medication-oversight";
 import { aiSwarmRouter } from "./ai-swarm";
 import { schemaValidationRouter } from "./schema-validation";
 import { bridgeV1V2Router } from "./bridge-v1v2";
+import { patientClinicalCardRouter } from "./patient-clinical-card";
 
 /**
  * Root router for all VET.IS custom extensions.
@@ -75,6 +76,7 @@ export const extensionsRouter = createRouter({
   aiSwarm: aiSwarmRouter,
   schemaValidation: schemaValidationRouter,
   bridgeV1V2: bridgeV1V2Router,
+  patientClinicalCard: patientClinicalCardRouter,
 });
 
 export {
@@ -110,4 +112,5 @@ export {
   aiSwarmRouter,
   schemaValidationRouter,
   bridgeV1V2Router,
+  patientClinicalCardRouter,
 };
