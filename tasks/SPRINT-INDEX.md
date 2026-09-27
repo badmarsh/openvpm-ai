@@ -39,7 +39,7 @@ Status legend: `merged (#PR)` = delivered and merged · `OPEN · READY` = premis
 | 29 | arena-sprint-29-patient-detail-clinical-card.md | Patient Detail and Clinical Card /patients/[id] | PARTIAL (#72) — delivered by #72 with a different tab set; only the contract test is missing |
 | 30 | arena-sprint-30-automations-crm-journeys.md | Automations and CRM Journey Builder /automations | merged (#64, #71) — wiring in #71 |
 | 32 | arena-sprint-32-soap-ai-provenance-ledger.md | AI provenance ledger on SOAP finalization (records, ai, imaging) | merged (#74) — promoted from GT-001; delivered in #74 (migration 0114_regular_doctor_doom) |
-| 33 | arena-sprint-33-soap-ai-vet-confirmation.md | Vet's final confirmation click on AI-assisted SOAP notes | OPEN · READY — owner decision 2026-09-27: the vet makes the final click on AI content; blocked on 32 |
+| 33 | arena-sprint-33-soap-ai-vet-confirmation.md | Vet's final confirmation click on AI-assisted SOAP notes | OPEN · LIKELY-DONE — owner decision 2026-09-27: the vet makes the final click on AI content; blocked on 32 |
 | 34 | arena-sprint-34-admin-ai-team.md | AI team: replace /admin/ai-swarm with the practice's model & endpoint roster | OPEN · READY — owner decision 2026-09-27: rename to AI team (multiple models and endpoints); removes Agno UI |
 
 **Next free sprint number: 35.** (31 is reserved: commit `fcfc18e` used it informally, no spec.)
@@ -48,7 +48,6 @@ Status legend: `merged (#PR)` = delivered and merged · `OPEN · READY` = premis
 
 | Id | File | Priority | Title | Status |
 |----|------|----------|-------|--------|
-| GT-001 | gt-001-ai-provenance-ledger-soap-finalization.md | P0 | Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1) | OPEN · PROMOTED |
 | GT-006 | gt-006-prijatie-ai-navrhu-po-sekciach.md | P1 | Prijatie AI návrhu po sekciách + viditeľné označenie AI textu (F-04-4) | OPEN · BACKLOG |
 | GT-007 | gt-007-kontrola-role-knihy-opl.md | P1 | Doplniť kontrolu roly na controlledSubstances.list (F-06-2) | OPEN · BACKLOG |
 | GT-010 | gt-010-ai-settings-getsettings-rola.md | P1 | Brána roly pre aiSettings.getSettings (F-17-1, alias F-X4-3) | OPEN · BACKLOG |
