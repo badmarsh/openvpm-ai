@@ -335,18 +335,28 @@ def list_arena_sprints() -> str:
 
 
 def read_sprint_assignment(sprint_number: int) -> str:
-    """Načíta a vráti zadanie konkrétneho sprintu zo súboru tasks/arena-sprint-<sprint_number>-*.md."""
+    """Načíta a vráti zadanie konkrétneho sprintu zo súboru tasks/sprints/arena-sprint-<sprint_number>-*.md.
+
+    Od reorganizácie 2026-09-27 žijú špecifikácie sprintov v ``tasks/sprints/``;
+    koreň ``tasks/`` sa prehľadáva ako záloha pre staršie checkouty.
+    """
     tasks_dir = os.path.join(_get_repo_path(), "tasks")
-    pattern = os.path.join(tasks_dir, f"arena-sprint-{sprint_number}-*.md")
-    matches = glob.glob(pattern)
+    search_dirs = [os.path.join(tasks_dir, "sprints"), tasks_dir]
+    pattern = os.path.join(search_dirs[0], f"arena-sprint-{sprint_number}-*.md")
+    matches: List[str] = []
+    for d in search_dirs:
+        matches = glob.glob(os.path.join(d, f"arena-sprint-{sprint_number}-*.md"))
+        if matches:
+            break
     if not matches:
         available = sorted(
             os.path.basename(p)
-            for p in glob.glob(os.path.join(tasks_dir, "arena-sprint-*.md"))
+            for d in search_dirs
+            for p in glob.glob(os.path.join(d, "arena-sprint-*.md"))
         )
         hint = (
             "Dostupné zadania: " + ", ".join(available) if available
-            else "V tasks/ nie je žiadne zadanie typu arena-sprint-*.md."
+            else "V tasks/sprints/ ani v tasks/ nie je žiadne zadanie typu arena-sprint-*.md."
         )
         return (
             f"ASSIGNMENT_NOT_FOUND: sprint {sprint_number} nemá zadanie "
@@ -371,7 +381,7 @@ def sanitize_golden_ticket_prompt(text: str) -> str:
     """Zabráni vnoreniu Golden Ticketu do Golden Ticketu (prompt bloat).
 
     Ak ``requirements``/``assignment`` už je Golden Ticket (napr. obsah súboru
-    ``tasks/arena-sprint-X.md`` preposlaný cez ``create_and_dispatch_arena_task``),
+    ``tasks/sprints/arena-sprint-X.md`` preposlaný cez ``create_and_dispatch_arena_task``),
     jeho vloženie do nového tiketu vyrobí dvojitú hlavičku ``# GOLDEN TICKET``,
     dvojitý ``## 1. Context / Why`` a dvojité ``Scope/DoD`` — model tak dostane dva
     protichodné rámce a časť zadania sa stratí v šume.
@@ -1127,7 +1137,7 @@ def create_and_dispatch_arena_task(
     task_id = f"arena-{int(time.time())}-{slug}"
     
     paths_val = allowed_paths or "apps/web/app/, apps/web/components/, apps/web/server/routers/extensions/, packages/db/schema/ext_*.ts, apps/web/messages/"
-    # Ak už `requirements` je Golden Ticket (napr. obsah tasks/arena-sprint-X.md),
+    # Ak už `requirements` je Golden Ticket (napr. obsah tasks/sprints/arena-sprint-X.md),
     # vnorenie by vyrobilo dvojitú hlavičku a dvojité sekcie — viď sanitize_golden_ticket_prompt.
     requirements = sanitize_golden_ticket_prompt(requirements)
     prompt = f"""<system_prompt>

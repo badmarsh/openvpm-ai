@@ -1,13 +1,13 @@
 """Prompt-template tests for the Arena Golden Ticket generators.
 
-Closes the gap left by ``tasks/arena-sprint-prompt-engineering-audit.md``, which
+Closes the gap left by ``tasks/sprints/arena-sprint-prompt-engineering-audit.md``, which
 identified three chronic defects and was never implemented:
 
 1. **Prompt bloat / nesting** — when ``requirements`` (or a sprint assignment)
    is *already* a Golden Ticket, embedding it into a new ticket produced a
    duplicate ``# GOLDEN TICKET`` H1 and duplicate ``## 1. Context / Why`` /
    ``Scope`` / ``Definition of Done`` sections. Reproduced in the wild by
-   ``tasks/arena-1790286107-arena-sprint-8-billing-ledger-.md``, which contains
+   ``tasks/archive/2026-09-24-arena-1790286107-arena-sprint-8-billing-ledger-.md``, which contains
    two H1 headers and two ``## 1. Context / Why`` headings.
 2. **Sandbox OOM** — a full monorepo ``tsc --noEmit`` needs 2.2-2.8 GB and dies
    with exit 134 in a 2-4 GB Arena sandbox, so the ticket must instruct
@@ -33,7 +33,9 @@ import pipeline_tools as pt  # noqa: E402
 
 
 REPO_ROOT = AGNO_DIR.parents[1]
-SPRINT8_DISPATCH_FILE = REPO_ROOT / "tasks" / "arena-1790286107-arena-sprint-8-billing-ledger-.md"
+SPRINT8_DISPATCH_FILE = (
+    REPO_ROOT / "tasks" / "archive" / "2026-09-24-arena-1790286107-arena-sprint-8-billing-ledger-.md"
+)
 
 
 def _headings(text: str) -> list[tuple[int, str]]:
@@ -217,6 +219,38 @@ def test_create_and_dispatch_includes_sandbox_memory_guard(
 def test_missing_sprint_returns_sentinel_and_lists_what_exists() -> None:
     result = pt.read_sprint_assignment(9999)
     assert result.startswith("ASSIGNMENT_NOT_FOUND"), result[:80]
+
+
+def test_sprint_assignment_is_read_from_tasks_sprints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Since the 2026-09-27 reorganisation, specs live in tasks/sprints/."""
+    sprints = tmp_path / "tasks" / "sprints"
+    sprints.mkdir(parents=True)
+    (sprints / "arena-sprint-42-demo.md").write_text("# Arena Sprint 42: Demo\n", encoding="utf-8")
+    monkeypatch.setattr(pt, "_get_repo_path", lambda: str(tmp_path))
+    result = pt.read_sprint_assignment(42)
+    assert "arena-sprint-42-demo.md" in result
+    assert "# Arena Sprint 42: Demo" in result
+
+
+def test_sprint_assignment_falls_back_to_legacy_tasks_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tasks = tmp_path / "tasks"
+    tasks.mkdir()
+    (tasks / "arena-sprint-7-legacy.md").write_text("# Arena Sprint 7: Legacy\n", encoding="utf-8")
+    monkeypatch.setattr(pt, "_get_repo_path", lambda: str(tmp_path))
+    assert "# Arena Sprint 7: Legacy" in pt.read_sprint_assignment(7)
+
+
+def test_real_sprint_library_is_resolvable() -> None:
+    """Every numbered sprint 1-30 in the checked-in library resolves by number."""
+    if not (REPO_ROOT / "tasks" / "sprints").is_dir():
+        pytest.skip("tasks/sprints/ not present in this checkout")
+    for n in range(1, 31):
+        result = pt.read_sprint_assignment(n)
+        assert not result.startswith("ASSIGNMENT_NOT_FOUND"), f"sprint {n}: {result[:120]}"
 
 
 def test_missing_index_is_a_sentinel_not_prose(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

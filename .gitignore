@@ -138,8 +138,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# ─── tasks/ runtime churn (see prompts/arena-final-pass-agno-consolidation.md §5.1) ───
-# Ground truth stays versioned: tasks/*.md, tasks/proposed/*.md, tasks/SPRINT-INDEX.md.
+# ─── tasks/ runtime churn (see tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md §5.1) ───
+# Ground truth stays versioned: tasks/SPRINT-INDEX.md, tasks/VERIFICATION-LOG.md, tasks/sprints/*.md,
+# tasks/proposed/*.md, tasks/archive/*.
 # Runtime artifacts the Agno swarm writes/dispatches are NOT ground truth and must
 # never be committed — this is what produced the 300-file commit (dab4d05).
 tasks/run-*.json
