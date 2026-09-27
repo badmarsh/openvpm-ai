@@ -1,3 +1,10 @@
+---
+id: 21
+kind: sprint
+title: Practice Settings Master Hub /settings
+state: done
+prs: [56]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #56. `settings-master-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-21-settings-master-hub.md` · first committed 2026-09-25 (`5070f2ac`)

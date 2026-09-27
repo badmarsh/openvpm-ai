@@ -1,3 +1,10 @@
+---
+id: 13
+kind: sprint
+title: /patients/new, /clients/new, /patients/duplicates
+state: done
+prs: [54]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #54. `patient-intake-duplicates-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-13-patient-client-intake-duplicates.md` · first committed 2026-09-25 (`b01a79bc`)

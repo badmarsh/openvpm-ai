@@ -44,6 +44,30 @@ jobs:
       - run: pnpm build
         # Note: next build includes linting — no separate lint step needed
 
+  task-specs:
+    name: Task specs (lint + generated index)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      # Zero-dependency tooling: no install step. See tasks/WORKFLOW.md.
+      - name: Unit tests for the task tooling
+        run: node --test scripts/tasks/tasks.test.mjs
+
+      - name: Lint spec frontmatter
+        run: node scripts/tasks/tasks.mjs lint
+
+      - name: Generated sprint index is current
+        run: node scripts/tasks/tasks.mjs index --check
+
   migration-integrity:
     name: Migration history integrity
     runs-on: ubuntu-latest

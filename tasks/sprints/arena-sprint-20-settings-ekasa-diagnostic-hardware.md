@@ -1,3 +1,11 @@
+---
+id: 20
+kind: sprint
+title: /settings/ekasa, /settings/ai, /settings/simulation
+state: done
+prs: [66]
+note: "#58 closed unmerged"
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #66. The first attempt, PR #58, was closed unmerged. `settings-hardware-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-20-settings-ekasa-diagnostic-hardware.md` · first committed 2026-09-25 (`b01a79bc`)

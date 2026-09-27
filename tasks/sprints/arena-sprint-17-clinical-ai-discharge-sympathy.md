@@ -1,3 +1,10 @@
+---
+id: 17
+kind: sprint
+title: /agent/discharge (post-op discharge, sympathy gate)
+state: done
+prs: [52]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #52. `discharge-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-17-clinical-ai-discharge-sympathy.md` · first committed 2026-09-25 (`b01a79bc`)

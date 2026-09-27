@@ -1,3 +1,10 @@
+---
+id: 4
+kind: sprint
+title: /lab-results
+state: done
+prs: [41]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #41 (2026-09-24) changed `lab-results/page.tsx`.  
 > **Notes:** Re-dispatched on 2026-09-25 (`arena-1790308093-lab-results-page`) after it had already merged. Nothing changed because of it.  

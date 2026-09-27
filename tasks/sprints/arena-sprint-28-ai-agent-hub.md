@@ -1,3 +1,10 @@
+---
+id: 28
+kind: sprint
+title: AI Agent Hub /agent
+state: done
+prs: [61]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #61. `ai-agent-hub-pagekit.test.ts` exists.  
 > **Notes:** NUMBER COLLISION with the generic 'Sprint 28: Optimize Dependency Injection Tree', which was never implemented.  

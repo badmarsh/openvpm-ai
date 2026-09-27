@@ -1,3 +1,10 @@
+---
+id: 7
+kind: sprint
+title: /encounters, /care-reminders
+state: done
+prs: [44]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #44. `encounters-hub-ui.test.ts` and `care-reminders-ui.test.ts` exist.  
 > **Origin:** `tasks/arena-sprint-7-encounters-care-reminders.md` · first committed 2026-09-24 (`14181f31`)

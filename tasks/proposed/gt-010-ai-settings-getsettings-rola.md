@@ -1,3 +1,10 @@
+---
+id: GT-010
+kind: ticket
+title: Brána roly pre aiSettings.getSettings (F-17-1, alias F-X4-3)
+state: open
+priority: P1
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `aiSettings.getSettings` is still `protectedProcedure` (`server/routers/extensions/ai-settings.ts:22`).  
 > **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  

@@ -1,3 +1,10 @@
+---
+id: GT-006
+kind: ticket
+title: Prijatie AI návrhu po sekciách + viditeľné označenie AI textu (F-04-4)
+state: open
+priority: P1
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `draftWithAi.onSuccess` (`new-soap/[patientId]/page.tsx:492-500`) still overwrites all four SOAP sections at once. Since then the page only added a replace-confirmation dialog. There's no per-section accept and no AI-text marker.  
 > **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  

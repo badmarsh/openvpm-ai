@@ -1,3 +1,11 @@
+---
+id: 25
+kind: sprint
+title: Encounter Detail and SOAP Editor /encounters/[appointmentId]
+state: done
+prs: [57]
+note: spec premise 'stub 0 lines' was false
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #57. `encounter-detail-pagekit.test.ts` exists.  
 > **Notes:** False premise: the spec says 'implement from stub 0 lines', but the page was 5,409 lines when it was written.  

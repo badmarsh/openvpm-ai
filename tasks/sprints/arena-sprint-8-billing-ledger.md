@@ -1,3 +1,10 @@
+---
+id: 8
+kind: sprint
+title: /billing (list, detail row, panels)
+state: done
+prs: [46]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #46 changed `billing/page.tsx`. `billing-list-ui.test.ts` exists.  
 > **Notes:** Its Agno dispatch copy is the regression fixture for `test_prompt_templates.py`.  

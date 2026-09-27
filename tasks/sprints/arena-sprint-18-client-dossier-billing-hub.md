@@ -1,3 +1,20 @@
+---
+id: 18
+kind: sprint
+title: Client 360 /clients/[id], /clients/[id]/edit
+state: open
+priority: P2
+targets:
+  - apps/web/app/(dashboard)/clients/[id]/page.tsx
+  - apps/web/app/(dashboard)/clients/[id]/edit/page.tsx
+contract_test: apps/web/lib/__tests__/client-detail-pagekit.test.ts
+premises:
+  - "lines: apps/web/app/(dashboard)/clients/[id]/page.tsx | 800..1000"
+  - "lacks: apps/web/app/(dashboard)/clients/[id]/page.tsx | @/components/layout/page-kit"
+  - "lacks: apps/web/app/(dashboard)/clients/[id]/edit/page.tsx | @/components/layout/page-kit"
+  - "exists: apps/web/lib/__tests__/client-detail-communication-log-ui.test.ts"
+note: "never implemented; pages unchanged since #37"
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `clients/[id]/page.tsx` (897 lines) and `clients/[id]/edit/page.tsx` haven't changed since PR #37. They have no page-kit and `client-detail-pagekit.test.ts` doesn't exist.  
 > **Notes:** SPRINT-INDEX said 'running in Arena', but no PR was ever opened. Still valid backlog, and it also clears the leftover raw `<h1>` from ui-phase2.  

@@ -1,3 +1,10 @@
+---
+id: 3
+kind: sprint
+title: Field visits, CEHZ, KVEPIS panel
+state: done
+prs: [39, 40]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #39, then hotfix PR #40, which corrected the IČO modulo-11 checksum shipped in #39.  
 > **Notes:** The hotfix was needed because the checksum spec wasn't pinned by a test before the first PR.  

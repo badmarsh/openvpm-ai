@@ -1,3 +1,10 @@
+---
+id: GT-016
+kind: ticket
+title: Progres, zrušenie a timeout pri čakaní na AI (F-X7-1)
+state: open
+priority: P1
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** The AI draft on `new-soap/[patientId]` still has no progress indicator, cancel or client-side timeout.  
 > **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  

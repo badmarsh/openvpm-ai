@@ -1,3 +1,10 @@
+---
+id: 16
+kind: sprint
+title: /agent/voice (ambient scribe, GDPR, controlled substances)
+state: done
+prs: [53]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #53 (branch `arena/01a0d6ba`). `voice-scribe-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-16-clinical-ai-voice-ambient.md` · first committed 2026-09-25 (`b01a79bc`)

@@ -1,3 +1,10 @@
+---
+id: 1
+kind: sprint
+title: Command palette ranking
+state: done
+prs: [42]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #42 (2026-09-24) changed `components/common/command-search.tsx`.  
 > **Origin:** `tasks/arena-sprint-1-command-palette.md` · first committed 2026-09-24 (`14181f31`)

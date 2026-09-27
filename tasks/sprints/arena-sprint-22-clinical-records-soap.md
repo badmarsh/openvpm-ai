@@ -1,3 +1,11 @@
+---
+id: 22
+kind: sprint
+title: Clinical Records and SOAP Workspace /records
+state: done
+prs: [56]
+note: "#55 was description-only"
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** The code landed in PR #56. PR #55, titled 'Sprint 22', merged only a `PR_DESCRIPTION.md` and no code. `clinical-records-pagekit.test.ts` exists.  
 > **Notes:** When a PR's title claims a sprint, check its diff, not the title.  

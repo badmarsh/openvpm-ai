@@ -1,3 +1,10 @@
+---
+id: 24
+kind: sprint
+title: Admin Panel and AI Swarm Hub /admin /admin/ai-swarm
+state: done
+prs: [63]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #63 (bundled with Sprint 26). `admin-panel-pagekit.test.ts` exists.  
 > **Notes:** NUMBER COLLISION: a different, generic 'Sprint 24: Finalize VPM Context Layer' (`archive/2026-09-25-arena-1790325424-sprint-24-…`) also landed, via PR #67 (`a4e60cd`).  

@@ -1,3 +1,10 @@
+---
+id: 19
+kind: sprint
+title: /migration-archive, /settings/import-v2 (PIMS archive, HMAC)
+state: done
+prs: [59, 65]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #59, then PR #65 (V2 import pipeline). `migration-archive-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-19-migration-archive-portability.md` · first committed 2026-09-25 (`b01a79bc`)

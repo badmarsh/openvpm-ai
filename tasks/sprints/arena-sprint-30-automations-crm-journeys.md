@@ -1,3 +1,11 @@
+---
+id: 30
+kind: sprint
+title: Automations and CRM Journey Builder /automations
+state: done
+prs: [64, 71]
+note: "wiring in #71"
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #64, plus wiring in PR #71. `automations-hub-pagekit.test.ts` exists.  
 > **Notes:** NUMBER COLLISION with the generic 'Sprint 30: Secure Interop Bridge v1→v2' (PR #67, `dcb15c2`).  

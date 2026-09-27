@@ -1,3 +1,11 @@
+---
+id: 5
+kind: sprint
+title: /prescriptions
+state: done
+prs: [45, 68, 70]
+note: "follow-ups #68, #70 and commit fcfc18e"
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #45, then follow-ups PR #68 (statutory safeguards) and PR #70 (CP437 mojibake, session signing), plus direct commit `fcfc18e` 'port arena sprint-31 page'.  
 > **Notes:** Dispatched 3 times; one Arena session ran in an EMPTY workspace and wrote code blind (`arena-response-01a0d584`). The 'sprint-31' referenced by `fcfc18e` has no spec file.  

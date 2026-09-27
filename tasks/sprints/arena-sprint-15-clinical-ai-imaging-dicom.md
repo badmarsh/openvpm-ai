@@ -1,3 +1,18 @@
+---
+id: 15
+kind: sprint
+title: Clinical AI Imaging & DICOM hub /agent/imaging
+state: open
+priority: P2
+targets:
+  - apps/web/app/(dashboard)/agent/imaging/page.tsx
+contract_test: apps/web/lib/__tests__/imaging-pagekit.test.ts
+premises:
+  - "lines: apps/web/app/(dashboard)/agent/imaging/page.tsx | 1700..2000"
+  - "lacks: apps/web/app/(dashboard)/agent/imaging/page.tsx | @/components/layout/page-kit"
+  - "exists: apps/web/lib/__tests__/imaging-modality.test.ts"
+note: "never implemented (session 01a0d6ba delivered Sprint 16); page unchanged since #43"
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `agent/imaging/page.tsx` has been 1,858 lines and untouched since PR #43 (Sprint 6). It has no page-kit import and `imaging-pagekit.test.ts` doesn't exist.  
 > **Notes:** SPRINT-INDEX called this 'dispatched — session 01a0d6ba'. That session's branch actually delivered Sprint 16 (PR #53), so Sprint 15 was never implemented. It's still valid backlog.  

@@ -1,3 +1,10 @@
+---
+id: 26
+kind: sprint
+title: "Marketing Studio Part 2: /marketing/reviews /marketing/website"
+state: done
+prs: [63]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #63. `marketing-reviews-pagekit.test.ts` exists.  
 > **Notes:** NUMBER COLLISION with the generic 'Sprint 26: Audit Legacy State Bindings' (PR #67, `42f85a2`).  

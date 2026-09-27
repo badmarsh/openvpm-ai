@@ -1,3 +1,10 @@
+---
+id: 9
+kind: sprint
+title: /billing/pos, /billing/new
+state: done
+prs: [48]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #48 changed `/billing/pos` and `/billing/new`. `billing-pos-ui.test.ts` and `billing-new-ui.test.ts` exist.  
 > **Origin:** `tasks/arena-sprint-9-billing-entry-pos-new-invoice.md` · first committed 2026-09-24 (`14181f31`)

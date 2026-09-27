@@ -1,3 +1,10 @@
+---
+id: GT-001
+kind: ticket
+title: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
+state: open
+priority: P0
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `lib/records/soap-lifecycle.ts` (finalizeAppointmentSoapDraft) still writes nothing to the AI audit ledger. Only discharge/imaging/voice routers use `extAiAuditLog`.  
 > **Notes:** P0, still open. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  

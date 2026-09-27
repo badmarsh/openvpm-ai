@@ -1,3 +1,10 @@
+---
+id: 10
+kind: sprint
+title: /billing/ekasa
+state: done
+prs: [47]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #47 (branch `swarm/agno-sprint-10-ekasa`). `billing-ekasa-ui.test.ts` exists.  
 > **Notes:** The only PR that came straight from the Agno swarm branch.  

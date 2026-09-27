@@ -1,3 +1,10 @@
+---
+id: GT-012
+kind: ticket
+title: Feature mapping musí platiť pre všetky AI funkcie (F-17-3, aliasy F-14-1, F-X2-1)
+state: open
+priority: P1
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `labParser` and `marketingCopy` appear only in the type union (`lib/ai/ai-config-resolver.ts:21,24`). No call site resolves them.  
 > **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  

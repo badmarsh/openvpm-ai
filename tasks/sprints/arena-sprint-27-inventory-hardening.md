@@ -1,3 +1,11 @@
+---
+id: 27
+kind: sprint
+title: Inventory Hardening and Supplier Integration /inventory
+state: done
+prs: [61]
+note: "commit 87c2a263 inside #61"
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** Commit `87c2a263` 'sprint 27 hardening', which shipped inside PR #61 (Sprint 28's PR). `inventory-hardening-pagekit.test.ts` exists.  
 > **Notes:** NUMBER COLLISION with the generic 'Sprint 27: Schema Validation Middleware' (PR #67, `155073e`).  

@@ -1,3 +1,17 @@
+---
+id: 29
+kind: sprint
+title: Patient Detail and Clinical Card /patients/[id]
+state: partial
+priority: P3
+prs: [72]
+targets:
+  - apps/web/app/(dashboard)/patients/[id]/page.tsx
+contract_test: apps/web/lib/__tests__/patient-detail-pagekit.test.ts
+premises:
+  - "contains: apps/web/app/(dashboard)/patients/[id]/page.tsx | @/components/layout/page-kit"
+note: "delivered by #72 with a different tab set; only the contract test is missing"
+---
 > **Verification 2026-09-27** · Status: **PARTIAL** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** Actually delivered by PR #72 (from `.agents/prompts/arena-patient-clinical-reorg.md`): 6 underline tabs and a sympathy-gate dialog on `patients/[id]`. `/patients` already uses PageHeader + DataTableFrame.  
 > **Notes:** False premise ('stub 0 lines'; the page was 2,055). The tab set differs from this spec, and `patient-detail-pagekit.test.ts` was never created. Don't re-dispatch; at most add the test.  

@@ -1,3 +1,10 @@
+---
+id: 23
+kind: sprint
+title: Appointment Scheduler and Calendar /schedule
+state: done
+prs: [60]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #60 (same branch `01a0d725` as PR #56). `scheduler-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-23-appointment-scheduler.md` · first committed 2026-09-25 (`5070f2ac`)

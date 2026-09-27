@@ -1,3 +1,10 @@
+---
+id: 11
+kind: sprint
+title: /reports, /wellness
+state: done
+prs: [50]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #50. `reports-wellness-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-11-reports-wellness.md` · first committed 2026-09-25 (`b01a79bc`)

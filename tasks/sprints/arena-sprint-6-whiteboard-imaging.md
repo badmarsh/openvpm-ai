@@ -1,3 +1,10 @@
+---
+id: 6
+kind: sprint
+title: /whiteboard + imaging modality tags
+state: done
+prs: [43]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #43 changed `/whiteboard` and added `components/imaging/modality-badge.tsx`.  
 > **Origin:** `tasks/arena-sprint-6-whiteboard-imaging.md` · first committed 2026-09-24 (`14181f31`)

@@ -1,3 +1,10 @@
+---
+id: 2
+kind: sprint
+title: /recalls, /vaccinations, /controlled-substances
+state: done
+prs: [38]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #38 (2026-09-24) changed `/recalls`, `/vaccinations`, `/controlled-substances`.  
 > **Origin:** `tasks/arena-sprint-2-uikit-harmonization.md` · first committed 2026-09-24 (`14181f31`)

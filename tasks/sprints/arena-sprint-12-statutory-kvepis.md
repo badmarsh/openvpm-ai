@@ -1,3 +1,10 @@
+---
+id: 12
+kind: sprint
+title: /statutory, /statutory/kvepis
+state: done
+prs: [49]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #49. `statutory-pagekit.test.ts` exists.  
 > **Notes:** The remaining `<h1>`s in `statutory/page.tsx` are inside print templates, which is intended.  

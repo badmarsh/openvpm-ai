@@ -1,3 +1,10 @@
+---
+id: 14
+kind: sprint
+title: /field-visits (ambulatory livestock, CEHZ, withdrawal)
+state: done
+prs: [51]
+---
 > **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** PR #51. `field-visits-pagekit.test.ts` exists.  
 > **Origin:** `tasks/arena-sprint-14-field-visits-cehz.md` · first committed 2026-09-25 (`b01a79bc`)

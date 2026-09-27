@@ -1,3 +1,10 @@
+---
+id: GT-013
+kind: ticket
+title: Viditeľná data residency, DPA a automatický fallback v AI nastaveniach (F-17-4, F-17-6)
+state: open
+priority: P1
+---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `components/settings/ai-settings-tab.tsx` still has no residency / DPA / region wording.  
 > **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
