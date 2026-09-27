@@ -792,6 +792,13 @@
       "when": 1790351646186,
       "tag": "0112_odd_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1790489175068,
+      "tag": "0113_cheerful_khan",
+      "breakpoints": true
     }
   ]
 }
