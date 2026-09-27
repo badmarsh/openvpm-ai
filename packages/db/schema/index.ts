@@ -71,3 +71,4 @@ export * from "./ext_schema_validation";
 export * from "./ext_inventory";
 export * from "./ext_bridge_v1v2";
 export * from "./ext_patient_clinical_card";
+export * from "./ext_soap_ai_provenance";
