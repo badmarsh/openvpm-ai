@@ -2,10 +2,11 @@
 id: 33
 kind: sprint
 title: Vet's final confirmation click on AI-assisted SOAP notes
-state: open
+state: done
 priority: P0
 source: GT-001
 depends_on: [32]
+prs: [76]
 targets:
   - apps/web/server/routers/records.ts
   - apps/web/lib/records/soap-lifecycle.ts
