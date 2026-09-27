@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
+import type { AppendAiAuditEventInput } from "@/lib/ai/audit-ledger";
 
 /**
  * Human-in-the-loop contract for every AI-assisted clinical surface.
@@ -125,7 +126,7 @@ export interface AiConfirmationAuditRecord {
   actorId: string;
   actorName: string;
   confirmedAt: Date;
-  entityType: "soap_note" | "discharge_report" | "imaging_analysis" | "treatment_plan" | "prescription";
+  entityType: AppendAiAuditEventInput["entityType"];
   entityId: string;
   originalDraftHash: string;
   confirmedContentHash: string;
