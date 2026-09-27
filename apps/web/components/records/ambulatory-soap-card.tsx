@@ -17,6 +17,8 @@ import {
   SOAP_SECTION_MAX_LENGTH,
   soapSectionText,
 } from "@/lib/records/soap-content";
+import type { SoapSectionProvenance } from "@/lib/records/soap-ai-provenance";
+import { AiSoapFinalizeDialog } from "@/components/records/ai-soap-finalize-dialog";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes-guard";
 import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
@@ -57,6 +59,14 @@ export function AmbulatorySoapCard({
   const [sections, setSections] = useState<SoapSections>({ ...EMPTY_SECTIONS });
   const [dirty, setDirty] = useState(false);
   const initializedDraftRef = useRef<string | null>(null);
+  // Sprint 33: the vet's final confirmation click on AI-assisted SOAP.
+  const [aiConfirm, setAiConfirm] = useState<{
+    saved: { id: string; revision: number };
+    confirmationId: string;
+    sections: SoapSectionProvenance;
+  } | null>(null);
+  const [aiConfirmPending, setAiConfirmPending] = useState(false);
+  const aiReprepareTriedRef = useRef(false);
   const draftQuery = trpc.records.getSoapDraft.useQuery(
     { patientId, appointmentId },
     { enabled: canWrite && linkedSoapCount === 0 },
@@ -157,7 +167,9 @@ export function AmbulatorySoapCard({
         initializedDraftRef.current = `${saved.draft.id}:${saved.draft.revision}`;
         utils.records.getSoapDraft.setData(
           { patientId, appointmentId },
-          saved.draft,
+          // Saving never links or consumes AI receipts, so the AI-assisted
+          // flag of the loaded draft carries over unchanged.
+          { ...saved.draft, aiAssisted: draft?.aiAssisted ?? false },
         );
         setDirty(false);
         toast.success(t("soap.toasts.saved", "SOAP draft saved"));
@@ -187,6 +199,7 @@ export function AmbulatorySoapCard({
   const finalize = trpc.records.finalizeSoapNote.useMutation({
     onSuccess: async () => {
       setDirty(false);
+      setAiConfirm(null);
       await Promise.all([
         utils.records.getSoapDraft.invalidate({ patientId, appointmentId }),
         utils.records.listSoapNotes.invalidate({ patientId }),
@@ -196,6 +209,8 @@ export function AmbulatorySoapCard({
     },
     onError: (error) => toast.error(error.message),
   });
+  // Sprint 33: issues the vet's confirmation envelope for AI-assisted drafts.
+  const prepareSoapFinalization = trpc.records.prepareSoapFinalization.useMutation();
 
   const hasContent = Object.values(sections).some(
     (value) => value.trim().length > 0,
@@ -227,11 +242,80 @@ export function AmbulatorySoapCard({
     }
   }
 
+  /**
+   * Sprint 33: issue the confirmation envelope for the saved draft and open
+   * the vet's confirmation dialog. `required: false` means the draft has no
+   * AI receipts and finalizes without the extra click.
+   */
+  async function openAiConfirm(saved: { id: string; revision: number }) {
+    const prepared = await prepareSoapFinalization.mutateAsync({
+      patientId,
+      appointmentId,
+      noteId: saved.id,
+      expectedRevision: saved.revision,
+    });
+    if (!prepared.required) {
+      await finalize.mutateAsync({
+        patientId,
+        appointmentId,
+        noteId: saved.id,
+        expectedRevision: saved.revision,
+      });
+      return;
+    }
+    setAiConfirm({
+      saved,
+      confirmationId: prepared.confirmationId,
+      sections: prepared.sections,
+    });
+  }
+
+  async function handleAiConfirm() {
+    if (!aiConfirm || aiConfirmPending) return;
+    setAiConfirmPending(true);
+    const current = aiConfirm;
+    try {
+      await finalize.mutateAsync({
+        patientId,
+        appointmentId,
+        noteId: current.saved.id,
+        expectedRevision: current.saved.revision,
+        clinicianConfirmed: { confirmationId: current.confirmationId },
+      });
+    } catch (error) {
+      // An expired or stale envelope surfaces as CONFLICT; re-prepare once
+      // and reopen the dialog (protocol §2.5). The mutation's onError
+      // already shows the server message.
+      if (
+        !aiReprepareTriedRef.current &&
+        (error as { data?: { code?: string } })?.data?.code === "CONFLICT"
+      ) {
+        aiReprepareTriedRef.current = true;
+        toast.info(
+          t(
+            "soap.aiConfirm.expired",
+            "The confirmation expired or became invalid. Review the note and confirm it again.",
+          ),
+        );
+        setAiConfirm(null);
+        await openAiConfirm(current.saved).catch(() => undefined);
+        return;
+      }
+    } finally {
+      setAiConfirmPending(false);
+    }
+  }
+
   async function finalizeNote() {
     if (!isOnline || !visitOpen || !hasContent || finalize.isPending) return;
     try {
       const saved = dirty ? await persistDraft() : draft;
       if (!saved) return;
+      if (draft?.aiAssisted) {
+        aiReprepareTriedRef.current = false;
+        await openAiConfirm({ id: saved.id, revision: saved.revision });
+        return;
+      }
       await finalize.mutateAsync({
         patientId,
         appointmentId,
@@ -374,6 +458,17 @@ export function AmbulatorySoapCard({
           </>
         )}
       </CardContent>
+
+      {/* Sprint 33: the vet's final, attributable click on AI content. */}
+      <AiSoapFinalizeDialog
+        open={aiConfirm !== null}
+        sections={aiConfirm?.sections ?? {}}
+        onConfirm={() => void handleAiConfirm()}
+        onCancel={() => {
+          if (!aiConfirmPending) setAiConfirm(null);
+        }}
+        pending={aiConfirmPending || finalize.isPending}
+      />
     </Card>
   );
 }

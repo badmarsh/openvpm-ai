@@ -8382,6 +8382,18 @@
       "respiratoryRate": "Dych. frekvencia",
       "weight": "Hmotnosť",
       "bodyCondition": "BCS skóre"
+    },
+    "aiConfirm": {
+      "title": "Potvrdenie SOAP záznamu vytvoreného s AI",
+      "body": "Tento SOAP záznam obsahuje text vygenerovaný AI. Skontrolujte pôvod jednotlivých sekcií a potvrďte ako zodpovedný veterinárny lekár.",
+      "acknowledge": "Obsah som skontroloval(a) a ako ošetrujúci veterinárny lekár za neho preberám zodpovednosť.",
+      "confirm": "Potvrdiť a autorizovať",
+      "cancel": "Zrušiť",
+      "section_ai_verbatim": "AI návrh, prevzatý bez úprav",
+      "section_ai_edited": "AI návrh, upravený vami",
+      "section_ai_removed": "AI návrh, odstránený vami",
+      "section_manual": "Napísané vami",
+      "expired": "Potvrdenie vypršalo alebo už nie je platné. Skontrolujte záznam a potvrďte ho znova."
     }
   },
   "copilot": {

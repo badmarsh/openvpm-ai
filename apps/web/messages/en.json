@@ -8382,6 +8382,18 @@
       "respiratoryRate": "Resp. Rate",
       "weight": "Weight",
       "bodyCondition": "BCS Score"
+    },
+    "aiConfirm": {
+      "title": "Confirm AI-assisted SOAP note",
+      "body": "This SOAP note contains AI-generated content. Review the origin of each section below, then confirm as the responsible veterinarian.",
+      "acknowledge": "I reviewed this content and take responsibility for it as the attending veterinarian.",
+      "confirm": "Confirm and finalize",
+      "cancel": "Cancel",
+      "section_ai_verbatim": "AI draft, accepted as-is",
+      "section_ai_edited": "AI draft, edited by you",
+      "section_ai_removed": "AI draft, removed by you",
+      "section_manual": "Written by you",
+      "expired": "The confirmation expired or became invalid. Review the note and confirm it again."
     }
   },
   "copilot": {
