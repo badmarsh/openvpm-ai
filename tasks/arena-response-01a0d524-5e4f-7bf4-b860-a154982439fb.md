@@ -1,1 +1,0 @@
-Now the care-reminders page — the full rewrite:

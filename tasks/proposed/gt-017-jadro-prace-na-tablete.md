@@ -1,3 +1,17 @@
+---
+id: GT-017
+kind: ticket
+title: Použiteľnosť jadra práce na tablete (F-X8-1)
+state: partial
+priority: P1
+---
+> **Verification 2026-09-27** · Status: **PARTIAL** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** Responsive markers are now present: `encounters/[appointmentId]` has 29, `new-soap` 3, `agent/voice` 5. No page uses `min-h-11` touch targets yet.  
+> **Notes:** Refresh the line numbers before dispatch; the encounter page grew from 5,409 to 5,938 lines. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Použiteľnosť jadra práce na tablete (F-X8-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, A11Y · Úsilie **L** · Vlastník: UI
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §5.8, register F-X8-1

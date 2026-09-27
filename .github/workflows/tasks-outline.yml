@@ -1,0 +1,43 @@
+name: Tasks → Outline
+
+# Mirrors the generated task tracker to the Outline page "Stav úloh".
+# The repo stays the source of truth (tasks/WORKFLOW.md § Outline).
+# Skips cleanly until the secrets OUTLINE_API_KEY and OUTLINE_TRACKER_DOC_ID exist.
+
+on:
+  push:
+    branches: [main]
+    paths: ["tasks/**", "scripts/tasks/**", "apps/web/**/__tests__/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tasks-outline
+  cancel-in-progress: true
+
+jobs:
+  publish-tracker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      OUTLINE_URL: ${{ vars.OUTLINE_URL || 'https://outline.dev.significa.sk' }}
+      OUTLINE_API_KEY: ${{ secrets.OUTLINE_API_KEY }}
+      OUTLINE_TRACKER_DOC_ID: ${{ secrets.OUTLINE_TRACKER_DOC_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Publish "Stav úloh"
+        run: |
+          if [ -z "$OUTLINE_API_KEY" ] || [ -z "$OUTLINE_TRACKER_DOC_ID" ]; then
+            echo "::notice::Outline secrets not configured; skipping (see tasks/WORKFLOW.md § Outline)."
+            exit 0
+          fi
+          node scripts/tasks/outline.mjs publish-tracker

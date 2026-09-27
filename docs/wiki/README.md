@@ -4,6 +4,8 @@ Tento adresár obsahuje kompletnú, zosynchronizovanú znalostnú bázu systému
 
 ---
 
+> Šablóna pre nahlasovanie problémov: [`templates/tiket.md`](templates/tiket.md) (v Outline ako šablóna **Tiket**; postup v `tasks/WORKFLOW.md` § Outline).
+
 ## book Používateľská príručka (Návody pre ambulanciu)
 
 - [🚀 1. Začíname s OpenVPM AI](01-pouzivatelska-prirucka/1.%20Začíname%20s%20OpenVPM%20AI.md)

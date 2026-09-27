@@ -1,3 +1,17 @@
+---
+id: GT-007
+kind: ticket
+title: Doplniť kontrolu roly na controlledSubstances.list (F-06-2)
+state: open
+priority: P1
+---
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `controlledSubstances.list` (`server/routers/controlled-substances.ts:344`) is still `protectedProcedure` with only `assertActivePractice`, so any role can read it.  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Doplniť kontrolu roly na `controlledSubstances.list` (F-06-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie SAFETY, DOCS · Úsilie **S** · Vlastník: API
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-06, §5.4, register F-06-2

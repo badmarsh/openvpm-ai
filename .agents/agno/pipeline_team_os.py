@@ -308,7 +308,7 @@ BOOT_LEARNINGS: List[Dict[str, Any]] = [
         "id": "dec_seed_sprints_truth",
         "decision": "SPRINT-INDEX.md a git log sú autoritatívne zdroje pravdy o stave sprintov",
         "reasoning": (
-            "Súbory v tasks/ obsahujú historické špecifikácie. To, že súbor existuje, "
+            "Súbory v tasks/sprints/ a tasks/archive/ obsahujú historické špecifikácie. To, že súbor existuje, "
             "neznamená, že sprint nebol vykonaný. Aktuálny stav zlúčených sprintov sa "
             "odvodzuje z tasks/SPRINT-INDEX.md pri bootovaní (viď merged_sprint_clause)."
         ),
@@ -1528,7 +1528,7 @@ github_manager = Agent(
         "git_push_origin_main / gh_pr_merge / deploy_to_production sú "
         "schvaľovacie brány (ApprovalType.required) — bez ľudského súhlasu ich nikdy neobídeš.",
         "Pre git/gh CLI príkazy použi run_shell_command (napr. git pull, git checkout, git log).",
-        "Pre čítanie súborov použi read_project_file (napr. SPRINT-INDEX.md, tasks/*.md).",
+        "Pre čítanie súborov použi read_project_file (napr. tasks/SPRINT-INDEX.md, tasks/sprints/*.md, tasks/VERIFICATION-LOG.md). tasks/archive/ je len história — nikdy ho nedispatchuj.",
         "Akcie s dopadom na veterinárnu legislatívu loguj ako compliance rozhodnutia.",
     ],
     add_history_to_context=True,

@@ -1,3 +1,17 @@
+---
+id: GT-011
+kind: ticket
+title: Verzovaný a povinný šifrovací kľúč pre AI nastavenia (F-17-2)
+state: open
+priority: P1
+---
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `lib/ai/ai-crypto.ts:28` still falls back to the public seed `openvpm-dev-ai-settings-default-secret-seed`.  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Verzovaný a povinný šifrovací kľúč pre AI nastavenia (F-17-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie DATA, SAFETY · Úsilie **M** · Vlastník: API + DB
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17, register F-17-2
