@@ -20,7 +20,15 @@ import {
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes-guard";
 import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
+import { AiSoapFinalizeDialog } from "@/components/records/ai-soap-finalize-dialog";
 import { useI18n } from "@/lib/i18n";
+import type { SoapSectionProvenance } from "@/lib/records/soap-ai-provenance";
+
+function trpcErrorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "data" in error
+    ? (error as { data?: { code?: string } }).data?.code
+    : undefined;
+}
 
 type SoapSections = {
   subjective: string;
@@ -157,7 +165,8 @@ export function AmbulatorySoapCard({
         initializedDraftRef.current = `${saved.draft.id}:${saved.draft.revision}`;
         utils.records.getSoapDraft.setData(
           { patientId, appointmentId },
-          saved.draft,
+          // This card never links AI receipts, so a save preserves the flag.
+          { ...saved.draft, aiAssisted: draft?.aiAssisted ?? false },
         );
         setDirty(false);
         toast.success(t("soap.toasts.saved", "SOAP draft saved"));
@@ -196,6 +205,15 @@ export function AmbulatorySoapCard({
     },
     onError: (error) => toast.error(error.message),
   });
+  const prepareFinalization = trpc.records.prepareSoapFinalization.useMutation({
+    onError: (error) => toast.error(error.message),
+  });
+  const [aiConfirm, setAiConfirm] = useState<{
+    savedRecord: { id: string; revision: number };
+    confirmationId: string;
+    sections: SoapSectionProvenance;
+  } | null>(null);
+  const [aiConfirmOpen, setAiConfirmOpen] = useState(false);
 
   const hasContent = Object.values(sections).some(
     (value) => value.trim().length > 0,
@@ -228,18 +246,111 @@ export function AmbulatorySoapCard({
   }
 
   async function finalizeNote() {
-    if (!isOnline || !visitOpen || !hasContent || finalize.isPending) return;
+    if (
+      !isOnline ||
+      !visitOpen ||
+      !hasContent ||
+      finalize.isPending ||
+      prepareFinalization.isPending
+    )
+      return;
     try {
       const saved = dirty ? await persistDraft() : draft;
       if (!saved) return;
-      await finalize.mutateAsync({
+      // Sprint 33: the vet confirms AI-assisted content explicitly. Re-read
+      // the flag — a receipt may have been linked since the draft was loaded.
+      // On a stale flag the server gate fails closed with a clear message.
+      let aiAssisted = saved.id === draft?.id && draft.aiAssisted === true;
+      try {
+        const fresh = await utils.records.getSoapDraft.fetch({
+          patientId,
+          appointmentId,
+        });
+        if (fresh && fresh.id === saved.id) {
+          aiAssisted = fresh.aiAssisted === true;
+        }
+      } catch {
+        // Keep the cached flag; the server gate is the source of truth.
+      }
+      if (!aiAssisted) {
+        await finalize.mutateAsync({
+          patientId,
+          appointmentId,
+          noteId: saved.id,
+          expectedRevision: saved.revision,
+        });
+        return;
+      }
+      const prepared = await prepareFinalization.mutateAsync({
         patientId,
         appointmentId,
         noteId: saved.id,
         expectedRevision: saved.revision,
       });
+      if (!prepared.required) {
+        await finalize.mutateAsync({
+          patientId,
+          appointmentId,
+          noteId: saved.id,
+          expectedRevision: saved.revision,
+        });
+        return;
+      }
+      setAiConfirm({
+        savedRecord: { id: saved.id, revision: saved.revision },
+        confirmationId: prepared.confirmationId,
+        sections: prepared.sections,
+      });
+      setAiConfirmOpen(true);
     } catch {
       // Mutation handlers surface the server error while preserving local text.
+    }
+  }
+
+  async function confirmAiFinalize() {
+    const confirmation = aiConfirm;
+    if (
+      !confirmation ||
+      finalize.isPending ||
+      prepareFinalization.isPending
+    )
+      return;
+    setAiConfirmOpen(false);
+    try {
+      await finalize.mutateAsync({
+        patientId,
+        appointmentId,
+        noteId: confirmation.savedRecord.id,
+        expectedRevision: confirmation.savedRecord.revision,
+        clinicianConfirmed: { confirmationId: confirmation.confirmationId },
+      });
+      setAiConfirm(null);
+    } catch (error) {
+      // The mutation onError already toasted the server message. On an
+      // expired or stale envelope, re-prepare once and let the vet confirm
+      // the fresh envelope; anything else closes the dialog for good.
+      if (trpcErrorCode(error) === "CONFLICT") {
+        try {
+          const prepared = await prepareFinalization.mutateAsync({
+            patientId,
+            appointmentId,
+            noteId: confirmation.savedRecord.id,
+            expectedRevision: confirmation.savedRecord.revision,
+          });
+          if (prepared.required) {
+            setAiConfirm({
+              savedRecord: confirmation.savedRecord,
+              confirmationId: prepared.confirmationId,
+              sections: prepared.sections,
+            });
+            setAiConfirmOpen(true);
+            return;
+          }
+        } catch {
+          // The prepare onError toasted; fall through to close.
+        }
+      }
+      setAiConfirm(null);
     }
   }
 
@@ -361,11 +472,12 @@ export function AmbulatorySoapCard({
                   !stateReady ||
                   !hasContent ||
                   saveDraft.isPending ||
-                  finalize.isPending
+                  finalize.isPending ||
+                  prepareFinalization.isPending
                 }
                 onClick={() => void finalizeNote()}
               >
-                {finalize.isPending ? (
+                {finalize.isPending || prepareFinalization.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 {t("soap.actions.finalize", "Finalize SOAP note")}
@@ -374,6 +486,16 @@ export function AmbulatorySoapCard({
           </>
         )}
       </CardContent>
+      <AiSoapFinalizeDialog
+        open={aiConfirmOpen}
+        sections={aiConfirm?.sections ?? {}}
+        onConfirm={() => void confirmAiFinalize()}
+        onCancel={() => {
+          setAiConfirmOpen(false);
+          setAiConfirm(null);
+        }}
+        pending={finalize.isPending || prepareFinalization.isPending}
+      />
     </Card>
   );
 }

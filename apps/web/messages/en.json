@@ -8376,6 +8376,18 @@
       "alreadyFinalized": "SOAP was already finalized in another session.",
       "finalized": "SOAP note finalized"
     },
+    "aiConfirm": {
+      "title": "Confirm AI-assisted content",
+      "body": "This note contains AI-generated text. Review each section, then confirm as the attending veterinarian to finalize it.",
+      "acknowledge": "I reviewed this content and take responsibility for it as the attending veterinarian.",
+      "confirm": "Confirm and finalize",
+      "cancel": "Cancel",
+      "section_ai_verbatim": "AI text, unchanged",
+      "section_ai_edited": "AI text, edited by clinician",
+      "section_ai_removed": "AI text, removed",
+      "section_manual": "Written manually",
+      "expired": "The confirmation expired. Review the note again to continue."
+    },
     "vitals": {
       "temperature": "Temp",
       "heartRate": "Heart Rate",
