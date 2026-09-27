@@ -48,7 +48,6 @@ Status legend: `merged (#PR)` = delivered and merged · `OPEN · READY` = premis
 
 | Id | File | Priority | Title | Status |
 |----|------|----------|-------|--------|
-| GT-001 | gt-001-ai-provenance-ledger-soap-finalization.md | P0 | Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1) | OPEN · PROMOTED |
 | GT-006 | gt-006-prijatie-ai-navrhu-po-sekciach.md | P1 | Prijatie AI návrhu po sekciách + viditeľné označenie AI textu (F-04-4) | OPEN · BACKLOG |
 | GT-007 | gt-007-kontrola-role-knihy-opl.md | P1 | Doplniť kontrolu roly na controlledSubstances.list (F-06-2) | OPEN · BACKLOG |
 | GT-010 | gt-010-ai-settings-getsettings-rola.md | P1 | Brána roly pre aiSettings.getSettings (F-17-1, alias F-X4-3) | OPEN · BACKLOG |
