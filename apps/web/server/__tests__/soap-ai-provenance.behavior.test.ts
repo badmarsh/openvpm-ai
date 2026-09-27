@@ -40,7 +40,8 @@ vi.mock("ai", () => ({ generateText: mocks.generateText }));
 
 const { recordsRouter } = await import("../routers/records");
 const { imagingRouter } = await import("../routers/extensions/imaging");
-const { extSoapAiProvenance, soapNotes } = await import("@openpims/db");
+const { extClinicianConfirmations, extSoapAiProvenance, soapNotes } =
+  await import("@openpims/db");
 const provenance = await import("@/lib/records/soap-ai-provenance");
 
 const PRACTICE_ID = "00000000-0000-4000-8000-0000000000aa";
@@ -51,6 +52,9 @@ const NOTE_ID = "00000000-0000-4000-8000-000000000004";
 const RECEIPT_ID = "00000000-0000-4000-8000-000000000005";
 const ANALYSIS_ID = "00000000-0000-4000-8000-000000000006";
 const AUDIT_EVENT_ID = "00000000-0000-4000-8000-0000000000e1";
+// Sprint 33: AI-assisted finalizations carry the vet's confirmation envelope.
+const CONFIRMATION_ID = "00000000-0000-4000-8000-000000000007";
+const CONSUMED_ENVELOPE = { id: CONFIRMATION_ID, status: "CONSUMED" };
 
 const IN_EXAM = { id: APPOINTMENT_ID, doctorId: USER_ID, status: "in_exam" };
 
@@ -234,13 +238,14 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
     const finalized = note({ ...saved, status: "finalized" });
     const fin = scriptedDb({
       selects: [[IN_EXAM], [], [saved], [receipt]],
-      updates: [[finalized], []],
+      updates: [[finalized], [CONSUMED_ENVELOPE], []],
     });
     const result = await records(fin.db).finalizeSoapNote({
       patientId: PATIENT_ID,
       appointmentId: APPOINTMENT_ID,
       noteId: NOTE_ID,
       expectedRevision: 2,
+      clinicianConfirmed: { confirmationId: CONFIRMATION_ID },
     });
     expect(result).toMatchObject({ outcome: "finalized", transitioned: true });
 
@@ -264,6 +269,12 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
       consumedAt: expect.any(Date),
       auditEventId: AUDIT_EVENT_ID,
     });
+    // Sprint 33: the envelope is consumed exactly once, before the append.
+    const envelopeConsumes = fin.updateCalls.filter(
+      (c) => c.table === extClinicianConfirmations,
+    );
+    expect(envelopeConsumes).toHaveLength(1);
+    expect(envelopeConsumes[0]?.set).toMatchObject({ status: "CONSUMED" });
     // Per-section provenance for this note.
     expect(
       provenance.buildSoapAiFinalizationEvent([receipt], edited)?.sections,
@@ -289,13 +300,14 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
     const saved = note({ revision: 2, ...html });
     const fin = scriptedDb({
       selects: [[IN_EXAM], [], [saved], [receipt]],
-      updates: [[note({ ...saved, status: "finalized" })], []],
+      updates: [[note({ ...saved, status: "finalized" })], [CONSUMED_ENVELOPE], []],
     });
     await records(fin.db).finalizeSoapNote({
       patientId: PATIENT_ID,
       appointmentId: APPOINTMENT_ID,
       noteId: NOTE_ID,
       expectedRevision: 2,
+      clinicianConfirmed: { confirmationId: CONFIRMATION_ID },
     });
     expect(mocks.appendAiAuditEvent).toHaveBeenCalledWith(
       fin.db,
@@ -356,13 +368,14 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
     const receipt = { id: RECEIPT_ID, source: "imaging_findings" as const, ...values };
     const fin = scriptedDb({
       selects: [[IN_EXAM], [], [saved], [receipt]],
-      updates: [[note({ ...saved, status: "finalized" })], []],
+      updates: [[note({ ...saved, status: "finalized" })], [CONSUMED_ENVELOPE], []],
     });
     await records(fin.db).finalizeSoapNote({
       patientId: PATIENT_ID,
       appointmentId: APPOINTMENT_ID,
       noteId: NOTE_ID,
       expectedRevision: 2,
+      clinicianConfirmed: { confirmationId: CONFIRMATION_ID },
     });
     expect(mocks.appendAiAuditEvent).toHaveBeenCalledTimes(1);
     expect(mocks.appendAiAuditEvent).toHaveBeenCalledWith(
@@ -457,7 +470,7 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
     const saved = note({ revision: 2, ...AI_DRAFT });
     const fin = scriptedDb({
       selects: [[IN_EXAM], [], [saved], [receipt]],
-      updates: [[note({ ...saved, status: "finalized" })]],
+      updates: [[note({ ...saved, status: "finalized" })], [CONSUMED_ENVELOPE]],
     });
     await expect(
       records(fin.db).finalizeSoapNote({
@@ -465,6 +478,7 @@ describe("Sprint 32 · SOAP AI provenance (behaviour)", () => {
         appointmentId: APPOINTMENT_ID,
         noteId: NOTE_ID,
         expectedRevision: 2,
+        clinicianConfirmed: { confirmationId: CONFIRMATION_ID },
       }),
     ).rejects.toThrow();
     expect(

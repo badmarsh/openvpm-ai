@@ -21,7 +21,7 @@ const GATE_MESSAGE =
   "This SOAP note contains AI-generated content. Review it and confirm as the responsible veterinarian before finalizing.";
 
 describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
-  it.fails("1 · records.prepareSoapFinalization issues an Option 1 envelope for soap_note", () => {
+  it("1 · records.prepareSoapFinalization issues an Option 1 envelope for soap_note", () => {
     const src = read("server/routers/records.ts");
     const proc = src.slice(src.indexOf("prepareSoapFinalization:"));
     expect(src).toContain("prepareSoapFinalization:");
@@ -31,7 +31,7 @@ describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
     expect(proc.slice(0, 4000)).toContain('entityType: "soap_note"');
   });
 
-  it.fails("2 · finalizeSoapNote accepts the envelope and consumes it in the finalize transaction", () => {
+  it("2 · finalizeSoapNote accepts the envelope and consumes it in the finalize transaction", () => {
     const records = read("server/routers/records.ts");
     const lifecycle = read("lib/records/soap-lifecycle.ts");
     const finalize = records.slice(records.indexOf("finalizeSoapNote:"), records.indexOf("discardSoapDraft:"));
@@ -39,19 +39,19 @@ describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
     expect(lifecycle).toContain("consumeClinicianConfirmation(");
   });
 
-  it.fails("3 · finalizing AI-assisted content without an envelope fails closed with the agreed message", () => {
+  it("3 · finalizing AI-assisted content without an envelope fails closed with the agreed message", () => {
     const lifecycle = read("lib/records/soap-lifecycle.ts");
     expect(lifecycle).toContain(GATE_MESSAGE);
     expect(lifecycle).toMatch(/new SoapLifecycleError\(\s*"PRECONDITION_FAILED"/);
   });
 
-  it.fails("4 · getSoapDraft tells the client whether the draft is AI-assisted", () => {
+  it("4 · getSoapDraft tells the client whether the draft is AI-assisted", () => {
     const records = read("server/routers/records.ts");
     const lifecycle = read("lib/records/soap-lifecycle.ts");
     expect(records + lifecycle).toContain("aiAssisted");
   });
 
-  it.fails("5 · a shared confirmation dialog exists and is used by both finalize callers", () => {
+  it("5 · a shared confirmation dialog exists and is used by both finalize callers", () => {
     const dialog = read("components/records/ai-soap-finalize-dialog.tsx");
     expect(dialog).toContain("export function AiSoapFinalizeDialog");
     expect(dialog).toContain('t("soap.aiConfirm.acknowledge"');
@@ -66,12 +66,12 @@ describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
     expect(page).toContain("const finalizeMutation = trpc.records.finalizeSoapNote.useMutation()");
   });
 
-  it.fails("6 · the confirm button stays disabled until the vet acknowledges responsibility", () => {
+  it("6 · the confirm button stays disabled until the vet acknowledges responsibility", () => {
     const dialog = read("components/records/ai-soap-finalize-dialog.tsx");
     expect(dialog).toMatch(/disabled=\{[^}]*!acknowledged/);
   });
 
-  it.fails("7 · i18n: confirmation copy exists in en and sk", () => {
+  it("7 · i18n: confirmation copy exists in en and sk", () => {
     const en = JSON.parse(read("messages/en.json"));
     const sk = JSON.parse(read("messages/sk.json"));
     for (const key of [
@@ -89,7 +89,7 @@ describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
     }
   });
 
-  it.fails("8 · the protocol doc lists the SOAP path under Option 1", () => {
+  it("8 · the protocol doc lists the SOAP path under Option 1", () => {
     const doc = readFileSync(join(WEB, "..", "..", "docs/confirmation-protocol.md"), "utf8");
     expect(doc).toContain("records.prepareSoapFinalization");
   });
