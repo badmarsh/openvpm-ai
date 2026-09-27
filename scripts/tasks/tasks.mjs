@@ -125,7 +125,7 @@ export function contractState(path, root = ROOT) {
   return /\b(it|test)\.fails\s*\(/.test(readFileSync(p, "utf8")) ? "armed" : "live";
 }
 
-export function computeStatus(spec, root = ROOT, { withGit = true, withPremises = true } = {}) {
+export function computeStatus(spec, root = ROOT, { withGit = true, withPremises = true, specs = null } = {}) {
   const d = spec.data;
   if (!d) return { status: "NO-FRONTMATTER", notes: [spec.error ?? "no frontmatter"], premises: [] };
   const state = d.state;
@@ -160,6 +160,16 @@ export function computeStatus(spec, root = ROOT, { withGit = true, withPremises 
       premises,
       contract,
     };
+  }
+  // depends_on: [N, ...] — a sprint is BLOCKED until every dependency is done.
+  if (specs && asList(d.depends_on).length) {
+    const unmet = asList(d.depends_on).filter((dep) => {
+      const other = specs.find((s) => s.data && String(s.data.id) === String(dep));
+      return !other || other.data.state !== "done";
+    });
+    if (unmet.length) {
+      return { status: "BLOCKED", notes: [`waiting for ${unmet.map((u) => `sprint ${u}`).join(", ")}`, ...notes], premises, contract };
+    }
   }
   if (contract === "live") {
     return { status: "LIKELY-DONE", notes: ["contract test is live: flip state to done", ...notes], premises, contract };
@@ -216,6 +226,9 @@ export function lintSpecs(specs, root = ROOT) {
         if (!/^(exists|missing|contains|lacks|lines):\s*\S/.test(String(p))) errors.push(`${where}: bad premise "${p}"`);
       }
     }
+    for (const dep of asList(d.depends_on)) {
+      if (!specs.some((o) => o.data && String(o.data.id) === String(dep))) errors.push(`${where}: depends_on ${dep} does not exist`);
+    }
     if (d.state === "done" && d.kind !== "meta" && !asList(d.prs).length && !d.delivered_by) {
       warnings.push(`${where}: done without prs or delivered_by`);
     }
@@ -241,7 +254,7 @@ export function renderIndex(specs, root = ROOT) {
     const d = s.data;
     // No git and no premises here: the committed index must not flip just
     // because an unrelated PR touched a target file. `check` is the gate.
-    const c = computeStatus(s, root, { withGit: false, withPremises: false });
+    const c = computeStatus(s, root, { withGit: false, withPremises: false, specs });
     const prs = prList(d);
     const base =
       d.state === "done" ? `merged (${prs || "?"})` :
@@ -318,7 +331,7 @@ export function main(argv = process.argv.slice(2), root = ROOT, log = console.lo
   if (cmd === "status") {
     const showAll = rest.includes("--all");
     for (const s of specs) {
-      const c = computeStatus(s, root);
+      const c = computeStatus(s, root, { specs });
       if (!showAll && ["DONE", "DROPPED", "REFERENCE"].includes(c.status)) continue;
       const id = s.data ? s.data.id : "?";
       log(`${pad(id, 8)} ${pad(c.status, 15)} ${pad(s.data?.priority ?? "", 3)} ${s.data?.title ?? s.file}`);
@@ -333,7 +346,7 @@ export function main(argv = process.argv.slice(2), root = ROOT, log = console.lo
       log(`no spec with id ${rest[0]}`);
       return 2;
     }
-    const c = computeStatus(s, root);
+    const c = computeStatus(s, root, { specs });
     log(`${s.data.id} · ${s.file}`);
     log(`status: ${c.status} · contract: ${c.contract ?? "none"}`);
     for (const p of c.premises) log(`  ${p.ok ? "ok  " : "FAIL"} ${p.premise} (${p.detail})`);
@@ -343,7 +356,7 @@ export function main(argv = process.argv.slice(2), root = ROOT, log = console.lo
 
   if (cmd === "next") {
     const ready = specs
-      .map((s) => ({ s, c: computeStatus(s, root) }))
+      .map((s) => ({ s, c: computeStatus(s, root, { specs }) }))
       .filter(({ c }) => c.status === "READY")
       .sort((a, b) => (PRIORITY_RANK[a.s.data.priority] ?? 9) - (PRIORITY_RANK[b.s.data.priority] ?? 9) || String(a.s.data.id).localeCompare(String(b.s.data.id), undefined, { numeric: true }));
     if (!ready.length) {

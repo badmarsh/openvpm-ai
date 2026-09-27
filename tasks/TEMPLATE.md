@@ -5,6 +5,7 @@ title: "<Short title> /route"
 state: open
 priority: P2               # P0 safety/legal · P1 security/correctness · P2 workflow · P3 polish
 source: GT-000             # optional: ticket or audit finding this came from
+depends_on: []             # optional: sprint ids that must be `state: done` first (else BLOCKED)
 targets:                   # every file the implementer may change
   - apps/web/app/(dashboard)/<route>/page.tsx
 creates: []                # new files (targets that don't exist yet)

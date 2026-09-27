@@ -31,6 +31,7 @@ title: "AI provenance on SOAP finalization"
 state: open                 # open | partial | done | dropped | reference
 priority: P0                # P0..P3
 source: GT-001              # optional (sprints)
+depends_on: [31]            # optional: sprints that must be `state: done` first
 promoted_to: 32             # tickets only: the sprint that implements it
 prs: [74]                   # once merged (or delivered_by: "<sha> in #61")
 targets: [...]              # files the implementer may change (sprints: required while open)
@@ -55,6 +56,7 @@ note: "free text shown in the index"
 | `NEEDS-CONTRACT` | Sprint without an armed contract test | The writer commits the `it.fails` contract test |
 | `READY` | Premises hold and the contract is armed | Dispatch or implement |
 | `STALE` | A premise failed: the code moved under the spec | Re-measure and rewrite the spec, or drop it |
+| `BLOCKED` | Premises hold but a `depends_on` sprint isn't `state: done` yet | Finish the dependency first. Premises may describe the code *after* the dependency lands |
 | `LIKELY-DONE` | The contract test is live (no `.fails`) but the state is still open | Verify it, set `state: done` and `prs:` |
 | `DONE` / `DONE?` | Declared done (`?` = the contract still has `.fails`) | Nothing, or investigate `?` |
 

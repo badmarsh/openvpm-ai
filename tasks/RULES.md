@@ -21,6 +21,7 @@ Every sprint spec inherits these rules **by reference**. Specs don't copy them. 
 4. Presentation-only specs say so explicitly: no change to logic, amounts, statuses, mutations or routers.
 5. Out-of-scope discoveries go under "Follow-ups". Scope never grows silently.
 6. Before writing a spec for a target, check it hasn't moved already: `gh pr list --state all --search "<route>"` and `git log --oneline -5 -- <target>`.
+7. When a spec builds on another unmerged sprint, declare it with `depends_on: [N]`. The spec stays BLOCKED until N is done. Premises that only become true once N lands aren't allowed. Premises have to hold today and still hold after N.
 
 ## 3. Delivery rules (for whoever implements)
 

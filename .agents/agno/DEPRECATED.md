@@ -17,7 +17,7 @@ The 2026-09-27 audit (`tasks/VERIFICATION-LOG.md`) traced most spec failures to 
 
 | Place | What | Suggested follow-up |
 |---|---|---|
-| `apps/web/app/(dashboard)/admin/ai-swarm/page.tsx`, `server/routers/extensions/ai-swarm.ts` | Admin telemetry page probing AgentOS on `:7777` (`AGENT_OS_URL`) | Owner decision: hide the page behind a flag or remove it. Not changed here because it's product surface |
+| `apps/web/app/(dashboard)/admin/ai-swarm/page.tsx`, `server/routers/extensions/ai-swarm.ts` | Admin telemetry page probing AgentOS on `:7777` (`AGENT_OS_URL`) | **Decided 2026-09-27:** rename it to *AI team*, a roster of the practice's models and endpoints. Specified as Sprint 34 (`tasks/sprints/arena-sprint-34-admin-ai-team.md`) |
 | `CLOUDFLARE_TUNNEL.md` | Tunnel runbook for the AgentOS port | Archive once the admin page is gone |
 | `package.json` → `agent-ui` | Starts the Agno agent UI | Remove together with the admin page |
 | `.agents/skills/agno/` | Agno framework reference skill | Harmless. Keep it only while code here is maintained |

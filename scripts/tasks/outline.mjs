@@ -33,12 +33,12 @@ const link = (s) => `[${s.name}](${REPO_URL}/${s.file.split("/").map(encodeURICo
 export function renderTracker(specs, { root = ROOT, now = new Date() } = {}) {
   const rows = specs
     .filter((s) => s.data)
-    .map((s) => ({ ...s, c: computeStatus(s, root, { withGit: false }) }));
+    .map((s) => ({ ...s, c: computeStatus(s, root, { withGit: false, specs }) }));
   const sprints = rows.filter((s) => s.data.kind === "sprint");
   const tickets = rows.filter((s) => s.data.kind === "ticket");
   const ready = sprints.filter((s) => s.c.status === "READY").sort(byPriority);
   const blocked = sprints
-    .filter((s) => ["STALE", "NEEDS-CONTRACT", "LIKELY-DONE"].includes(s.c.status))
+    .filter((s) => ["STALE", "NEEDS-CONTRACT", "LIKELY-DONE", "BLOCKED"].includes(s.c.status))
     .sort(byPriority);
   const backlog = tickets.filter((s) => ["BACKLOG", "PROMOTED"].includes(s.c.status) || s.data.state === "partial").sort(byPriority);
   const done = sprints.filter((s) => s.data.state === "done").sort((a, b) => b.data.id - a.data.id);
@@ -47,6 +47,7 @@ export function renderTracker(specs, { root = ROOT, now = new Date() } = {}) {
     "NEEDS-CONTRACT": "chýba kontraktový test",
     "LIKELY-DONE": "test prechádza, overiť a uzavrieť",
   };
+  const reason = (s) => (s.c.status === "BLOCKED" ? `čaká na sprint ${[].concat(s.data.depends_on).join(", ")}` : why[s.c.status]);
 
   const out = [];
   out.push("> ⚠️ **Generovaná stránka. Needitovať.** Zdroj pravdy je repozitár (`tasks/`). Stránku prepisuje `node scripts/tasks/outline.mjs publish-tracker`. Nový problém nahlás cez šablónu **Tiket**.");
@@ -66,7 +67,7 @@ export function renderTracker(specs, { root = ROOT, now = new Date() } = {}) {
   if (blocked.length) {
     out.push("| Sprint | Priorita | Názov | Prečo čaká | Zadanie |");
     out.push("|---|---|---|---|---|");
-    for (const s of blocked) out.push(`| ${s.data.id} | ${s.data.priority ?? ""} | ${cell(s.data.title)} | ${why[s.c.status]} | ${link(s)} |`);
+    for (const s of blocked) out.push(`| ${s.data.id} | ${s.data.priority ?? ""} | ${cell(s.data.title)} | ${reason(s)} | ${link(s)} |`);
   } else out.push("_Nič._");
   out.push("");
   out.push("## Backlog (tikety)");

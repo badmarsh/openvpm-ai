@@ -143,3 +143,20 @@ test("check exits 0 only for READY specs", () => {
   assert.equal(main(["next"], root, (l) => logs.push(l)), 0);
   assert.match(logs[0], /^32 /);
 });
+
+test("depends_on blocks a sprint until the dependency is done", () => {
+  const root = fixture({
+    "page.tsx": "x\n",
+    "c.test.ts": 'it.fails("x", () => {})',
+    "tasks/sprints/arena-sprint-32-a.md": spec("id: 32\nkind: sprint\ntitle: A\nstate: open\ntargets: [page.tsx]\ncontract_test: c.test.ts"),
+    "tasks/sprints/arena-sprint-33-b.md": spec("id: 33\nkind: sprint\ntitle: B\nstate: open\ndepends_on: [32]\ntargets: [page.tsx]\ncontract_test: c.test.ts"),
+    "tasks/sprints/arena-sprint-34-c.md": spec("id: 34\nkind: sprint\ntitle: C\nstate: open\ndepends_on: [99]\ntargets: [page.tsx]\ncontract_test: c.test.ts"),
+  });
+  const specs = loadSpecs(root);
+  const b = specs.find((s) => s.data.id === 33);
+  assert.equal(computeStatus(b, root, { withGit: false, specs }).status, "BLOCKED");
+  assert.equal(main(["check", "33"], root, () => {}), 1);
+  assert.match(lintSpecs(specs, root).errors.join("\n"), /depends_on 99 does not exist/);
+  writeFileSync(join(root, "tasks/sprints/arena-sprint-32-a.md"), spec("id: 32\nkind: sprint\ntitle: A\nstate: done\nprs: [1]"));
+  assert.equal(computeStatus(b, root, { withGit: false, specs: loadSpecs(root) }).status, "READY");
+});

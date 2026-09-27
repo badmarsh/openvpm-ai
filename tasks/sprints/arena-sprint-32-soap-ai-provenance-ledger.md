@@ -47,7 +47,7 @@ note: "promoted from GT-001; armed contract committed with the spec"
 - `apps/web/server/routers/records.ts` `finalizeSoapNote` (≈L1763) is gated by `requireRole("admin", "veterinarian")`, calls the lifecycle in `ctx.db.transaction`, and afterwards dispatches the `soap_note.created` webhook.
 - `apps/web/server/routers/ai.ts` `draftSoapNote` (≈L360–560) returns the bare `SoapDraft` (`{subjective, objective, assessment, plan}` strings) from `lib/ai/soap-draft.ts`, and records only `recordUsage(ai_run)`. It knows the model: `resolvePracticeLanguageModel(... "deepThinking")` or `configuredModel()`.
 - `apps/web/app/(dashboard)/records/new-soap/[patientId]/page.tsx` ≈L492: `onSuccess: (draft) => { setSubjective(draftTextToHtml(draft.subjective)); … }`. Draft text becomes **HTML** in the editor and is persisted later by `saveSoapDraft`, so a verbatim comparison must be HTML-insensitive.
-- `apps/web/app/(dashboard)/encounters/[appointmentId]/page.tsx` ≈L1203: the AI draft goes through `ClinicalDiffConfirmModal`, and only the confirmed **Plan** is copied into `setAmbulatorySoapPlan`. Verify during implementation whether that value ever reaches `soap_notes` via `saveSoapDraft`. If it does, send the receipt there too; otherwise record it as a follow-up.
+- `apps/web/app/(dashboard)/encounters/[appointmentId]/page.tsx` ≈L1203: the AI draft goes through `ClinicalDiffConfirmModal`, and only the confirmed **Plan** is copied into `setAmbulatorySoapPlan`. That state feeds `<VisitCloseout soapPlan={ambulatorySoapPlan}>` (≈L1498), **not** `soap_notes`. `AmbulatorySoapCard` only reports plan edits upward through `onPlanChange`. So this path is out of scope here (verified 2026-09-27, see Follow-ups).
 - `apps/web/server/routers/extensions/imaging.ts` `injectFindingsIntoSoap` (≈L699): appends `[AI Rádiológia (<TYPE>) – návrh na overenie lekárom]:\n<result>` to `objective` through `saveAppointmentSoapDraft` inside a transaction. `aiImagingAnalyses.modelId` is available.
 - `apps/web/lib/ai/audit-ledger.ts`: `appendAiAuditEvent(tx, {practiceId, actorId, actorName, actorRole, entityType: "soap_note" | …7 types, entityId, actionType, originalDraftHash, confirmedContentHash, wasEditedByClinician?})` is fail-closed on role (admin/veterinarian for `soap_note`) and advisory-locked per practice.
 - `apps/web/lib/ai/draft-safety.ts` ≈L128: `AiConfirmationAuditRecord.entityType` lists only 5 of the ledger's 7 types (F-20-3).
@@ -86,7 +86,7 @@ Presentation-only? **No.** This is a clinical-evidence write path.
 ## 3. Frozen (DO NOT TOUCH)
 
 - `ClinicalDiffConfirmModal`, `lib/ai/clinician-confirmation.ts` (the envelope protocol), `lib/ai/audit-chain.ts` (canonical hash, v1) and the `ext_ai_audit_log` schema.
-- `records.finalizeSoapNote` does **not** start requiring a confirmation envelope. That would change the clinician UX and is a separate decision (see follow-ups).
+- `records.finalizeSoapNote` does **not** start requiring a confirmation envelope in this sprint. **Sprint 33** adds that gate on top of the receipts introduced here (owner decision 2026-09-27: the veterinarian must make the final, attributable click on AI content).
 - The existing lifecycle outcomes (`finalized` / `conflict`, `transitioned`), the conflict and revision semantics, and the post-commit `soap_note.created` webhook ordering.
 - Tests that must stay green: `lib/records/__tests__/soap-lifecycle.test.ts`, `server/__tests__/pilot-clinical-flow.test.ts`, `server/__tests__/extensions-ai-finalization.test.ts`, `server/__tests__/ai-draft-safety.test.ts`, `lib/__tests__/i18n-structure.test.ts`, plus every `lib/ai/__tests__/*audit*` test.
 - No draft text in the new table. Hashes only.
@@ -112,7 +112,7 @@ If a Postgres is available, extend `ai-clinical-finalization.integration.test.ts
 
 ## 5. Follow-ups (report only)
 
-- Should `records.finalizeSoapNote` require an Option 1 confirmation envelope when AI receipts are linked? That is a product and UX decision for the owner.
+- ~~Should finalization require a confirmation envelope when AI receipts are linked?~~ Decided 2026-09-27 (yes, as a legal requirement for the vet's final click). Specified as Sprint 33.
 - GT-006 (per-section acceptance plus a visible AI marker) can read `ext_soap_ai_provenance` directly.
 - Retroactive provenance for existing notes is explicitly out of scope (GT-001).
-- The encounter page's AI draft may only feed the ambulatory plan (§1). If so, spec it separately.
+- The encounter page's AI draft feeds the visit closeout plan (`VisitCloseout soapPlan`), not `soap_notes` (§1). Does the closeout write that AI text anywhere persistent without a ledger row? Check it and spec it separately if so.
