@@ -19,9 +19,11 @@ import {
   clinicalRecordCorrections,
   invoices,
   practices,
+  extSoapAiProvenance,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { AgentNotConfiguredError } from "@/lib/agent";
+import { configuredModel } from "@/lib/agent/runner";
 import { requireClinicalActorRole } from "@/lib/authorization";
 import {
   SOAP_DRAFT_VISIT_CONTEXT_MAX_LENGTH,
@@ -65,6 +67,11 @@ import {
   createFinalizedAppointmentSoapNote,
   SoapLifecycleError,
 } from "@/lib/records/soap-lifecycle";
+import {
+  describeAiModel,
+  soapAiReceiptHashes,
+} from "@/lib/records/soap-ai-provenance";
+import { randomUUID } from "node:crypto";
 
 export { AI_SOURCE_MAX_LENGTH };
 
@@ -513,6 +520,7 @@ export const aiRouter = createRouter({
           }
         }
 
+        const model = customModel ?? configuredModel();
         const draft = await draftSoapNote(
           {
             patient,
@@ -521,11 +529,30 @@ export const aiRouter = createRouter({
             latestVitals: latestVitals ?? null,
             visitContext: input.visitContext,
           },
-          customModel,
+          model,
         );
+        // Sprint 32: issue a provenance receipt (hashes only, never text).
+        // The editor sends it back with its next saveSoapDraft, which links it
+        // to the draft; finalization then writes the AI audit ledger event.
+        const provenanceReceiptId = randomUUID();
+        const { modelId, provider } = describeAiModel(model);
+        const { draftHash, sectionHashes } = soapAiReceiptHashes(draft);
+        await ctx.db.insert(extSoapAiProvenance).values({
+          id: provenanceReceiptId,
+          practiceId: ctx.practiceId,
+          patientId: input.patientId,
+          soapNoteId: null,
+          issuedTo: ctx.user.id,
+          source: "soap_draft",
+          modelId,
+          provider,
+          featureKey: "soap_draft",
+          draftHash,
+          sectionHashes,
+        });
         // Meter successful drafts like agent runs (no-op on self-host).
         await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
-        return draft;
+        return { ...draft, provenanceReceiptId };
       } catch (e) {
         if (e instanceof AgentNotConfiguredError) {
           throw new TRPCError({

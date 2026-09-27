@@ -2,9 +2,10 @@
 id: 32
 kind: sprint
 title: AI provenance ledger on SOAP finalization (records, ai, imaging)
-state: open
+state: done
 priority: P0
 source: GT-001
+prs: [74]
 targets:
   - packages/db/schema/ext_soap_ai_provenance.ts
   - packages/db/schema/index.ts
@@ -33,7 +34,7 @@ premises:
   - "exists: packages/db/drizzle/0113_cheerful_khan.sql"
   - "missing: packages/db/drizzle/meta/0114_snapshot.json"
   - "lines: apps/web/lib/records/soap-lifecycle.ts | 1000..1070"
-note: "promoted from GT-001; armed contract committed with the spec"
+note: "promoted from GT-001; delivered in #74 (migration 0114_regular_doctor_doom)"
 ---
 
 # Sprint 32: AI provenance ledger on SOAP finalization

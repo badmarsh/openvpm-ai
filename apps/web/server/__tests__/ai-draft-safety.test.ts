@@ -77,6 +77,7 @@ const {
   AiDraftSafetyError,
 } = await import("@/lib/ai/draft-safety");
 const { SoapNoteCreateSchema } = await import("@/lib/compat/openvpm/schema");
+const { soapNotes, extSoapAiProvenance } = await import("@openpims/db");
 
 const PRACTICE_ID = "00000000-0000-0000-0000-0000000000aa";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -361,7 +362,7 @@ describe("a) unapproved AI drafts remain in draft status", () => {
       assessment: null,
       plan: null,
     };
-    const { db, updateSet, insertValues } = createDb({
+    const { db, updateSet, insert, insertValues } = createDb({
       selectResults: [
         [{ id: ANALYSIS_ID, patientId: PATIENT_ID, imageType: "ct", result: "Nález" }],
         [existingDraft],
@@ -378,7 +379,20 @@ describe("a) unapproved AI drafts remain in draft status", () => {
     });
 
     expect(result.status).toBe("draft");
-    expect(insertValues).not.toHaveBeenCalled();
+    // Sprint 32: appending never inserts a new soap_notes row. The only insert
+    // is the AI provenance receipt (hashes only) in the same transaction.
+    expect(insert).not.toHaveBeenCalledWith(soapNotes);
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith(extSoapAiProvenance);
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "imaging_findings",
+        sourceEntityId: ANALYSIS_ID,
+        soapNoteId: NOTE_ID,
+        featureKey: "imaging",
+        draftHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
     expect(updateSet).toHaveBeenCalledWith(
       expect.objectContaining({
         revision: 3,
@@ -452,7 +466,7 @@ describe("a) unapproved AI drafts remain in draft status", () => {
         plan: "Bland diet",
       }),
     });
-    const { db, insert, update } = createDb({
+    const { db, insert, insertValues, update } = createDb({
       selectResults: [
         [{ id: PRACTICE_ID }], // assertActivePractice
         [{ id: PATIENT_ID }], // assertPatientBelongsToPractice
@@ -471,7 +485,27 @@ describe("a) unapproved AI drafts remain in draft status", () => {
       plan: "Bland diet",
     });
     expect(mocks.generateText).toHaveBeenCalledTimes(1);
-    expect(insert).not.toHaveBeenCalled();
+    // Sprint 32: soap_notes is never written. The only insert is the
+    // server-issued AI provenance receipt, which stores hashes, not text.
+    expect(insert).not.toHaveBeenCalledWith(soapNotes);
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith(extSoapAiProvenance);
+    expect(draft.provenanceReceiptId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    const receipt = (insertValues.mock.calls as unknown[][])[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(receipt).toMatchObject({
+      id: draft.provenanceReceiptId,
+      source: "soap_draft",
+      featureKey: "soap_draft",
+      issuedTo: USER_ID,
+      patientId: PATIENT_ID,
+      soapNoteId: null,
+    });
+    expect(JSON.stringify(receipt)).not.toContain("Owner reports lethargy");
     expect(update).not.toHaveBeenCalled();
   });
 });

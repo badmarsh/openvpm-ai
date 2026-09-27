@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import {
   appointments,
   clinicalRecordCorrections,
+  extSoapAiProvenance,
   practices,
   soapNoteAddenda,
   soapNoteReplacements,
@@ -15,6 +16,12 @@ import {
 } from "@/lib/records/soap-content";
 import { hasUnresolvedSoapTemplatePrompts } from "@/lib/records/soap-templates";
 import { lockOpenVisitForClinicalAppend } from "@/lib/records/visit-integrity";
+import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
+import { requireClinicalActorRole } from "@/lib/authorization";
+import {
+  buildSoapAiFinalizationEvent,
+  type SoapAiFinalizationEvent,
+} from "@/lib/records/soap-ai-provenance";
 
 export interface SoapSections {
   subjective?: string | null;
@@ -26,6 +33,11 @@ export interface SoapSections {
 export interface SoapActor {
   id: string;
   name: string;
+  /**
+   * Trusted session role. Required only when finalizing a note that has AI
+   * provenance receipts: the ledger append fails closed without a clinical role.
+   */
+  role?: string | null;
 }
 
 export type SoapDraft = typeof soapNotes.$inferSelect;
@@ -465,7 +477,144 @@ export async function finalizeAppointmentSoapDraft(
     }
     return { outcome: "conflict", note: latest };
   }
+  await recordSoapAiFinalization(db, {
+    practiceId: input.practiceId,
+    note: finalized,
+    actor: input.actor,
+  });
   return { outcome: "finalized", note: finalized, transitioned: true };
+}
+
+/** A receipt must be linked within this window of being issued. */
+export const SOAP_AI_RECEIPT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export const SOAP_AI_RECEIPT_INVALID_MESSAGE =
+  "AI draft receipt is not valid for this note.";
+
+/**
+ * Link an AI provenance receipt (issued by `ai.draftSoapNote`) to the draft it
+ * was saved into. Runs inside the save transaction. The receipt must belong to
+ * the same practice, patient and clinician, be unconsumed, unlinked (or already
+ * linked to this note, which makes a retried save idempotent) and fresh.
+ */
+export async function linkSoapAiProvenanceReceipt(
+  db: Database,
+  input: {
+    practiceId: string;
+    patientId: string;
+    appointmentId: string;
+    noteId: string;
+    receiptId: string;
+    actorId: string;
+    now?: Date;
+  },
+) {
+  const now = input.now ?? new Date();
+  const [receipt] = await db
+    .select({ id: extSoapAiProvenance.id })
+    .from(extSoapAiProvenance)
+    .where(
+      and(
+        eq(extSoapAiProvenance.id, input.receiptId),
+        eq(extSoapAiProvenance.practiceId, input.practiceId),
+        eq(extSoapAiProvenance.patientId, input.patientId),
+        eq(extSoapAiProvenance.issuedTo, input.actorId),
+        isNull(extSoapAiProvenance.consumedAt),
+        isNull(extSoapAiProvenance.deletedAt),
+        or(
+          isNull(extSoapAiProvenance.soapNoteId),
+          eq(extSoapAiProvenance.soapNoteId, input.noteId),
+        ),
+        gte(
+          extSoapAiProvenance.createdAt,
+          new Date(now.getTime() - SOAP_AI_RECEIPT_MAX_AGE_MS),
+        ),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  if (!receipt) {
+    throw new SoapLifecycleError(
+      "PRECONDITION_FAILED",
+      SOAP_AI_RECEIPT_INVALID_MESSAGE,
+    );
+  }
+  await db
+    .update(extSoapAiProvenance)
+    .set({ soapNoteId: input.noteId, appointmentId: input.appointmentId })
+    .where(
+      and(
+        eq(extSoapAiProvenance.id, receipt.id),
+        eq(extSoapAiProvenance.practiceId, input.practiceId),
+      ),
+    );
+}
+
+/**
+ * On the transitioned finalize branch: consume the note's AI receipts and
+ * append one `soap_note_finalized` event to the AI audit ledger, in the same
+ * transaction. No receipts means a manual note: nothing is written. If the
+ * append throws, the whole finalization rolls back (fail closed, RULES §1.8).
+ */
+async function recordSoapAiFinalization(
+  db: Database,
+  input: { practiceId: string; note: SoapDraft; actor: SoapActor },
+): Promise<SoapAiFinalizationEvent | null> {
+  const receipts = await db
+    .select({
+      id: extSoapAiProvenance.id,
+      source: extSoapAiProvenance.source,
+      draftHash: extSoapAiProvenance.draftHash,
+      sectionHashes: extSoapAiProvenance.sectionHashes,
+    })
+    .from(extSoapAiProvenance)
+    .where(
+      and(
+        eq(extSoapAiProvenance.practiceId, input.practiceId),
+        eq(extSoapAiProvenance.soapNoteId, input.note.id),
+        isNull(extSoapAiProvenance.consumedAt),
+        isNull(extSoapAiProvenance.deletedAt),
+      ),
+    )
+    .for("update");
+
+  const event = buildSoapAiFinalizationEvent(
+    receipts ?? [],
+    normalizeSoapSections(input.note),
+  );
+  if (!event) return null;
+
+  const actorRole = requireClinicalActorRole(
+    input.actor.role,
+    "Finalizing an AI-assisted SOAP note requires a clinical role (admin or veterinarian).",
+  );
+  const appended = await appendAiAuditEvent(db, {
+    practiceId: input.practiceId,
+    actorId: input.actor.id,
+    actorName: input.actor.name || "Clinician",
+    actorRole,
+    entityType: "soap_note",
+    entityId: input.note.id,
+    actionType: "soap_note_finalized",
+    originalDraftHash: event.originalDraftHash,
+    confirmedContentHash: event.confirmedContentHash,
+    wasEditedByClinician: event.wasEditedByClinician,
+  });
+
+  await db
+    .update(extSoapAiProvenance)
+    .set({ consumedAt: new Date(), auditEventId: appended.row.id })
+    .where(
+      and(
+        inArray(
+          extSoapAiProvenance.id,
+          receipts.map((receipt) => receipt.id),
+        ),
+        eq(extSoapAiProvenance.practiceId, input.practiceId),
+        isNull(extSoapAiProvenance.consumedAt),
+      ),
+    );
+  return event;
 }
 
 export type DiscardSoapDraftResult =

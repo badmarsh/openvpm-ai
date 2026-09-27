@@ -25,6 +25,7 @@ import {
   soapNotes,
   extMarketingContentItems,
   extAiAuditLog,
+  extSoapAiProvenance,
 } from "@openpims/db";
 import type { Database } from "@openpims/db/client";
 import { configuredModel } from "@/lib/agent/runner";
@@ -44,6 +45,7 @@ import {
   saveAppointmentSoapDraft,
   SoapLifecycleError,
 } from "@/lib/records/soap-lifecycle";
+import { soapAiReceiptHashes } from "@/lib/records/soap-ai-provenance";
 import {
   AiDraftSafetyError,
   assertAiMayWriteToSoapNote,
@@ -735,6 +737,28 @@ export const imagingRouter = createRouter({
 
       const imagingFinding = `[AI Rádiológia (${analysis.imageType.toUpperCase()}) – návrh na overenie lekárom]:\n${analysis.result}`;
       const actor = { id: ctx.user.id, name: ctx.user.name ?? "Veterinárny lekár" };
+      // Sprint 32: the AI provenance receipt is written in the same
+      // transaction as the draft, linked to it, and consumed on finalization.
+      // Hashes only: the finding text already lives in the note.
+      const receiptHashes = soapAiReceiptHashes({ objective: imagingFinding });
+      const recordImagingReceipt = async (
+        db: Database,
+        draft: { id: string; appointmentId: string | null },
+      ) => {
+        await db.insert(extSoapAiProvenance).values({
+          practiceId: ctx.practiceId,
+          patientId: analysis.patientId,
+          soapNoteId: draft.id,
+          appointmentId: draft.appointmentId ?? input.appointmentId,
+          issuedTo: ctx.user.id,
+          source: "imaging_findings",
+          sourceEntityId: analysis.id,
+          modelId: analysis.modelId ?? null,
+          featureKey: "imaging",
+          draftHash: receiptHashes.draftHash,
+          sectionHashes: { objective: receiptHashes.sectionHashes.objective },
+        });
+      };
 
       try {
         if (existingSoap) {
@@ -743,8 +767,9 @@ export const imagingRouter = createRouter({
             ? `${existingSoap.objective}\n\n${imagingFinding}`
             : imagingFinding;
 
-          const result = await ctx.db.transaction((tx) =>
-            saveAppointmentSoapDraft(tx as unknown as Database, {
+          const result = await ctx.db.transaction(async (tx) => {
+            const db = tx as unknown as Database;
+            const saved = await saveAppointmentSoapDraft(db, {
               practiceId: ctx.practiceId,
               patientId: analysis.patientId,
               appointmentId: input.appointmentId,
@@ -752,8 +777,12 @@ export const imagingRouter = createRouter({
               expectedRevision: existingSoap.revision,
               actor,
               sections: { ...existingSoap, objective: updatedObjective },
-            }),
-          );
+            });
+            if (saved.outcome === "saved") {
+              await recordImagingReceipt(db, saved.draft);
+            }
+            return saved;
+          });
           if (result.outcome !== "saved") {
             throw new TRPCError({
               code: "CONFLICT",
@@ -763,16 +792,21 @@ export const imagingRouter = createRouter({
           return { success: true, updatedSoapId: result.draft.id, status: result.draft.status };
         }
 
-        const result = await ctx.db.transaction((tx) =>
-          saveAppointmentSoapDraft(tx as unknown as Database, {
+        const result = await ctx.db.transaction(async (tx) => {
+          const db = tx as unknown as Database;
+          const saved = await saveAppointmentSoapDraft(db, {
             practiceId: ctx.practiceId,
             patientId: analysis.patientId,
             appointmentId: input.appointmentId,
             expectedRevision: 0,
             actor,
             sections: { objective: imagingFinding },
-          }),
-        );
+          });
+          if (saved.outcome === "saved") {
+            await recordImagingReceipt(db, saved.draft);
+          }
+          return saved;
+        });
         if (result.outcome !== "saved") {
           throw new TRPCError({
             code: "CONFLICT",

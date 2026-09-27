@@ -37,7 +37,7 @@ The chain is **practice-scoped**: each `practiceId` maintains an independent, mo
 | `sequenceNumber` | integer | ✅ | Monotonic per practice chain |
 | `actorId` | UUID | ✅ | Clinician who confirmed |
 | `actorRole` | text | ✅ | Role at confirmation time |
-| `entityType` | enum | ✅ | soap_note / discharge_report / imaging_analysis / treatment_plan / prescription |
+| `entityType` | enum | ✅ | soap_note / discharge_report / imaging_analysis / treatment_plan / prescription / marketing_content / marketing_media |
 | `entityId` | UUID | ✅ | UUID of the confirmed record |
 | `actionType` | text | ✅ | e.g. "soap_note_finalized", "imaging_confirmed" |
 | `originalDraftHash` | text | ✅ | SHA-256 of raw AI draft |
@@ -93,6 +93,29 @@ To guarantee zero race conditions and strictly monotonic `sequenceNumber` alloca
 - AI SOAP generation (`apps/web/server/routers/ai.ts`)
 
 **Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../apps/web/lib/ai/__tests__/audit-ledger.test.ts), the real-DB contract [`apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts`](../apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts) (16 tests, run in the CI RLS job), and the pilot smoke [`e2e/ai-finalization-pilot.spec.ts`](../e2e/ai-finalization-pilot.spec.ts).
+
+### 2.6 Surfaces that write
+
+Every row is appended through `appendAiAuditEvent` inside the transaction that persists the confirmed record. Measured 2026-09-27 (Sprint 32).
+
+| Surface | Router procedure | `actionType` | `entityType` |
+|---|---|---|---|
+| Voice dictation → SOAP | `extensions.voice.saveAsSoapNote` (confirmed) | `soap_note_finalized` | `soap_note` |
+| External scribe | `ai.createSoapFromAI` | `soap_note_finalized` | `soap_note` |
+| In-app SOAP editor ("Draft with AI") and imaging findings injected into SOAP | `records.finalizeSoapNote` (new in Sprint 32; only when the note has AI provenance receipts) | `soap_note_finalized` | `soap_note` |
+| Discharge report | `extensions.discharge.save` (finalized) | `discharge_finalized` | `discharge_report` |
+| Imaging confirm | `extensions.imaging.confirmAnalysis` | `imaging_confirmed` | `imaging_analysis` |
+| Agent prescription | `agent.savePrescription` → `createConfirmedPrescription` | `prescription_create` | `prescription` |
+| Marketing | `extensions.discharge.createMarketingPostFromCase`, `extensions.imaging.createMarketingQuizFromImaging`, `extensions.marketing.createPostFromBulletin`, review replies in `extensions.marketing` | `create_marketing_post_from_case`, `create_marketing_quiz_from_imaging`, `create_post_from_bulletin`, `generate_review_reply` | `marketing_content` |
+| Marketing media | `extensions.marketing.generateImageForPost` | `generate_image_for_post` | `marketing_media` |
+
+**SOAP provenance receipts (Sprint 32).** The ledger has no model, provider or per-section columns, and its canonical hash (§2.3) is frozen. Per-section provenance therefore lives in the side table `ext_soap_ai_provenance`, linked to the ledger row by `audit_event_id`:
+
+1. `ai.draftSoapNote` and `extensions.imaging.injectFindingsIntoSoap` insert a receipt server-side: model id, provider, `draft_hash` and per-section `section_hashes` (sha256 of the plain text). **Hashes only, never text.**
+2. `records.saveSoapDraft({ aiProvenanceReceiptId })` links a draft receipt to the saved note (same practice, patient and issuing clinician, unconsumed, at most 24 h old; otherwise `PRECONDITION_FAILED` "AI draft receipt is not valid for this note."). Imaging receipts are linked when they are issued.
+3. `records.finalizeSoapNote` locks the note's unconsumed receipts, classifies each section as `ai_verbatim`, `ai_edited`, `ai_removed` or `manual` (`apps/web/lib/records/soap-ai-provenance.ts`), appends one `soap_note_finalized` event and marks the receipts consumed, all in the finalize transaction. `originalDraftHash` is the receipt's `draft_hash` (or the sha256 of the sorted receipt hashes joined by `\n` when there are several), and `confirmedContentHash` is the hash of the finalized plain-text sections. A note without receipts writes no ledger row.
+
+Known gap: the encounter page's AI draft feeds the visit closeout plan (`VisitCloseout soapPlan`), not `soap_notes`, so it isn't covered by receipts yet (Sprint 32 follow-up).
 
 ---
 
