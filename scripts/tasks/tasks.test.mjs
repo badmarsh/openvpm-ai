@@ -65,6 +65,9 @@ test("premises: exists, missing, contains, lacks, lines", () => {
   assert.equal(evalPremise("lines: a.txt | 3..3", root).ok, true);
   assert.equal(evalPremise("lines: a.txt | 4..", root).ok, false);
   assert.equal(evalPremise("rm -rf /", root).ok, false);
+  const r2 = fixture({ "t.ts": 'type A = "x" | "y";\n' });
+  assert.equal(evalPremise('contains: t.ts | type A = "x" | "y";', r2).ok, true);
+  assert.equal(evalPremise('contains: t.ts | type A = "x" | "z";', r2).ok, false);
 });
 
 test("contract state: none, missing, armed, live", () => {

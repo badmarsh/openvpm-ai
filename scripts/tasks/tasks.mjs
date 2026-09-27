@@ -68,7 +68,10 @@ export function evalPremise(premise, root = ROOT) {
   const m = /^(exists|missing|contains|lacks|lines):\s*(.+)$/.exec(String(premise).trim());
   if (!m) return { ok: false, premise, detail: "unparseable premise" };
   const [, op, rest] = m;
-  const [pathPart, arg] = rest.split(/\s+\|\s+/, 2);
+  // Split at the FIRST " | " only: the literal itself may contain pipes.
+  const sep = /\s+\|\s+/.exec(rest);
+  const pathPart = sep ? rest.slice(0, sep.index) : rest;
+  const arg = sep ? rest.slice(sep.index + sep[0].length) : undefined;
   const p = join(root, pathPart.trim());
   const present = existsSync(p);
   const read = () => readFileSync(p, "utf8");
@@ -162,6 +165,9 @@ export function computeStatus(spec, root = ROOT, { withGit = true, withPremises 
     return { status: "LIKELY-DONE", notes: ["contract test is live: flip state to done", ...notes], premises, contract };
   }
   if (contract === "armed") return { status: "READY", notes, premises, contract };
+  if (d.kind === "ticket" && d.promoted_to !== undefined && d.promoted_to !== null) {
+    return { status: "PROMOTED", notes: [`implemented via sprint ${d.promoted_to}`, ...notes], premises, contract };
+  }
   if (d.kind === "ticket") {
     return { status: "BACKLOG", notes: ["promote to a numbered sprint spec before dispatch", ...notes], premises, contract };
   }

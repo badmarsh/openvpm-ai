@@ -4,6 +4,7 @@ kind: ticket
 title: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
 state: open
 priority: P0
+promoted_to: 32
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `lib/records/soap-lifecycle.ts` (finalizeAppointmentSoapDraft) still writes nothing to the AI audit ledger. Only discharge/imaging/voice routers use `extAiAuditLog`.  

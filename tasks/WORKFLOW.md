@@ -30,7 +30,8 @@ kind: sprint                # sprint | ticket | meta
 title: "AI provenance on SOAP finalization"
 state: open                 # open | partial | done | dropped | reference
 priority: P0                # P0..P3
-source: GT-001              # optional
+source: GT-001              # optional (sprints)
+promoted_to: 32             # tickets only: the sprint that implements it
 prs: [74]                   # once merged (or delivered_by: "<sha> in #61")
 targets: [...]              # files the implementer may change (sprints: required while open)
 creates: [...]              # targets that don't exist yet
@@ -49,7 +50,8 @@ note: "free text shown in the index"
 
 | Status | Meaning | Next action |
 |---|---|---|
-| `BACKLOG` | Ticket, not yet a sprint | Promote it: write a sprint spec with `source: GT-NNN` |
+| `BACKLOG` | Ticket, not yet a sprint | Promote it: write a sprint spec with `source: GT-NNN`, then set `promoted_to: <N>` on the ticket |
+| `PROMOTED` | Ticket that has a sprint (`promoted_to`) | Track the sprint. Archive the ticket when the sprint is done |
 | `NEEDS-CONTRACT` | Sprint without an armed contract test | The writer commits the `it.fails` contract test |
 | `READY` | Premises hold and the contract is armed | Dispatch or implement |
 | `STALE` | A premise failed: the code moved under the spec | Re-measure and rewrite the spec, or drop it |
