@@ -132,6 +132,7 @@ import {
   discardAppointmentSoapDraft,
   finalizeAppointmentSoapDraft,
   getAppointmentSoapDraft,
+  linkSoapAiProvenanceReceipt,
   replaceFinalizedSoapNote,
   saveAppointmentSoapDraft,
   SoapLifecycleError,
@@ -1742,19 +1743,38 @@ export const recordsRouter = createRouter({
         appointmentId: z.string().uuid(),
         noteId: z.string().uuid().optional(),
         expectedRevision: z.number().int().min(0),
+        /**
+         * Sprint 32: the receipt `ai.draftSoapNote` returned. Linked to the
+         * saved draft inside this transaction so finalization can write the
+         * AI audit ledger event. Server-issued; the client never sends hashes.
+         */
+        aiProvenanceReceiptId: z.string().uuid().optional(),
         ...soapSectionsInput,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { aiProvenanceReceiptId, ...draftInput } = input;
       try {
-        return await ctx.db.transaction((tx) =>
-          saveAppointmentSoapDraft(tx as unknown as Database, {
+        return await ctx.db.transaction(async (tx) => {
+          const db = tx as unknown as Database;
+          const result = await saveAppointmentSoapDraft(db, {
             practiceId: ctx.practiceId,
-            ...input,
+            ...draftInput,
             actor: { id: ctx.user.id, name: ctx.user.name },
-            sections: input,
-          }),
-        );
+            sections: draftInput,
+          });
+          if (aiProvenanceReceiptId && result.outcome === "saved") {
+            await linkSoapAiProvenanceReceipt(db, {
+              practiceId: ctx.practiceId,
+              patientId: input.patientId,
+              appointmentId: input.appointmentId,
+              noteId: result.draft.id,
+              receiptId: aiProvenanceReceiptId,
+              actorId: ctx.user.id,
+            });
+          }
+          return result;
+        });
       } catch (error) {
         rethrowSoapLifecycleError(error);
       }
@@ -1777,7 +1797,9 @@ export const recordsRouter = createRouter({
           finalizeAppointmentSoapDraft(tx as unknown as Database, {
             practiceId: ctx.practiceId,
             ...input,
-            actor: { id: ctx.user.id, name: ctx.user.name },
+            // The role is validated with requireClinicalActorRole inside the
+            // lifecycle, only when AI receipts make a ledger event necessary.
+            actor: { id: ctx.user.id, name: ctx.user.name, role: ctx.user.role },
           }),
         );
       } catch (error) {

@@ -215,6 +215,9 @@ export default function NewSoapNotePage() {
     typeof draftQuery.data
   > | null>(null);
   const draftIdRef = useRef<string | null>(null);
+  // Sprint 32: server-issued AI provenance receipt from the last "Draft with
+  // AI". Sent as aiProvenanceReceiptId with the next save, cleared once linked.
+  const aiProvenanceReceiptRef = useRef<string | null>(null);
   const revisionRef = useRef(0);
   const lastSavedFingerprintRef = useRef("");
   const savePromiseRef = useRef<Promise<unknown> | null>(null);
@@ -298,7 +301,13 @@ export default function NewSoapNotePage() {
       }
       const sections = { ...sectionsRef.current };
       const fingerprint = soapDraftFingerprint(sections);
-      if (fingerprint === lastSavedFingerprintRef.current) {
+      const aiProvenanceReceiptId = aiProvenanceReceiptRef.current;
+      // An unlinked AI receipt forces one save even when the text is unchanged
+      // (a repeated deterministic draft); the server treats it as idempotent.
+      if (
+        fingerprint === lastSavedFingerprintRef.current &&
+        !(aiProvenanceReceiptId && draftIdRef.current)
+      ) {
         return draftIdRef.current
           ? { id: draftIdRef.current, revision: revisionRef.current }
           : null;
@@ -309,6 +318,7 @@ export default function NewSoapNotePage() {
         appointmentId,
         noteId: draftIdRef.current ?? undefined,
         expectedRevision: revisionRef.current,
+        aiProvenanceReceiptId: aiProvenanceReceiptId ?? undefined,
         ...sections,
       });
       savePromiseRef.current = request;
@@ -329,6 +339,9 @@ export default function NewSoapNotePage() {
         }
         draftIdRef.current = result.draft.id;
         revisionRef.current = result.draft.revision;
+        if (aiProvenanceReceiptRef.current === aiProvenanceReceiptId) {
+          aiProvenanceReceiptRef.current = null;
+        }
         lastSavedFingerprintRef.current = fingerprint;
         setLastSavedAt(result.draft.updatedAt);
         setSaveState("saved");
@@ -492,6 +505,7 @@ export default function NewSoapNotePage() {
   const draftWithAi = trpc.ai.draftSoapNote.useMutation({
     onSuccess: (draft) => {
       if (finalizedElsewhereRef.current) return;
+      aiProvenanceReceiptRef.current = draft.provenanceReceiptId ?? null;
       setSubjective(draftTextToHtml(draft.subjective));
       setObjective(draftTextToHtml(draft.objective));
       setAssessment(draftTextToHtml(draft.assessment));
