@@ -77,6 +77,19 @@ node scripts/tasks/tasks.mjs index [--check] # regenerate / verify SPRINT-INDEX 
 node --test scripts/tasks/tasks.test.mjs     # tooling tests (CI)
 ```
 
+## Outline (front door and dashboard, not the source of truth)
+
+The owner and the clinic work in Outline (`outline.dev.significa.sk`), and the agent works in the repo. The bridge is `scripts/tasks/outline.mjs`:
+
+| Direction | What | How |
+|---|---|---|
+| Outline → repo | New problem | Fill in a page from the **Tiket** template ([`docs/wiki/templates/tiket.md`](../docs/wiki/templates/tiket.md)) and set *Stav: Na triáž*. The agent runs `outline.mjs import --doc <id>` (or `import <exported.md>`), which validates the page and writes `tasks/proposed/gt-NNN-*.md` with frontmatter. Then write *GT-NNN / Prevzaté* back on the page |
+| repo → Outline | Status | `outline.mjs publish-tracker` overwrites the **Stav úloh** page (READY / blocked / backlog / recently done, with links to the specs and PRs). The `Tasks → Outline` workflow does this on every push to `main` once the secrets exist |
+
+Why not track the tickets themselves in Outline: pages have no computed state, so status there would be hand-typed and drift. That is exactly the failure the 2026-09-27 audit found in `SPRINT-INDEX.md` (Sprints 15 and 18 "running" for days). Outline gets the *intake* and a *generated view*, and it never gets the authority.
+
+Setup (once): create an API key in Outline → Settings → API with scopes `documents.*` and `templates.*`. Store it as the repo secret `OUTLINE_API_KEY`, along with `OUTLINE_TRACKER_DOC_ID` (an empty page named *Stav úloh*) and optionally `OUTLINE_COLLECTION_ID`. Then run `OUTLINE_API_KEY=… OUTLINE_COLLECTION_ID=… node scripts/tasks/outline.mjs create-template` once. **Never commit a key.**
+
 ## Numbering
 
 Take the next free number from the generated index. **31 is reserved** (commit `fcfc18e` used it informally). Numbers are never reused. The `G-24`, `G-26…30` collisions from the Agno swarm are recorded by hand in `SPRINT-INDEX.md`.

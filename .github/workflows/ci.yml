@@ -60,7 +60,7 @@ jobs:
 
       # Zero-dependency tooling: no install step. See tasks/WORKFLOW.md.
       - name: Unit tests for the task tooling
-        run: node --test scripts/tasks/tasks.test.mjs
+        run: node --test scripts/tasks/tasks.test.mjs scripts/tasks/outline.test.mjs
 
       - name: Lint spec frontmatter
         run: node scripts/tasks/tasks.mjs lint

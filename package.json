@@ -34,7 +34,8 @@
     "audit:verify-ai": "pnpm --filter @openpims/db audit:verify-ai",
     "agent-ui": "pnpm --dir .agents/agno/agent-ui dev",
     "tasks": "node scripts/tasks/tasks.mjs",
-    "test:tasks": "node --test scripts/tasks/tasks.test.mjs"
+    "test:tasks": "node --test scripts/tasks/tasks.test.mjs scripts/tasks/outline.test.mjs",
+    "tasks:outline": "node scripts/tasks/outline.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
