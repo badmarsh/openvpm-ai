@@ -1,3 +1,10 @@
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `aiSettings.getSettings` is still `protectedProcedure` (`server/routers/extensions/ai-settings.ts:22`).  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Brána roly pre `aiSettings.getSettings` (F-17-1, alias F-X4-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie SAFETY, DATA · Úsilie **S** · Vlastník: API
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17, §5.4, register F-17-1

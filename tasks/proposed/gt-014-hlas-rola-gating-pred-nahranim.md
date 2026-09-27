@@ -1,3 +1,10 @@
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `/agent/voice` nav still lists all 5 roles (`config/custom-nav.ts:180`). `ScribeWidget` is still mounted for everyone (`app/(dashboard)/layout.tsx:119`) and has no role check.  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Skryť/zablokovať hlasový AI vstup pre roly bez oprávnenia (F-18-2, aliasy F-X4-1, F-X4-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, SAFETY · Úsilie **S** · Vlastník: UI
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-18, §5.4, register F-18-2

@@ -1,3 +1,10 @@
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `docs/authorization-matrix.md` was last changed 2026-09-09 and still gives technicians 'Create/Edit' on SOAP drafts.  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Zosúladiť `docs/authorization-matrix.md` s kódom (F-20-1, alias F-X4-8)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie DOCS, SAFETY · Úsilie **S** · Vlastník: DOCS (+ API)
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-20, §5.4, register F-20-1

@@ -1,3 +1,10 @@
+> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** `labParser` and `marketingCopy` appear only in the type union (`lib/ai/ai-config-resolver.ts:21,24`). No call site resolves them.  
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+
+---
+
 # TASK: Feature mapping musí platiť pre všetky AI funkcie (F-17-3, aliasy F-14-1, F-X2-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie AI, DOCS · Úsilie **M** · Vlastník: AI + UI
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17/J-14, register F-17-3
