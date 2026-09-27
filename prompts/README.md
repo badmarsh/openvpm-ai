@@ -4,15 +4,17 @@ This folder holds only **reusable, currently valid** prompt templates (target: �
 
 | File | Role | State (2026-09-27) |
 |---|---|---|
-| [`arena-sprint-writer-prompt.md`](arena-sprint-writer-prompt.md) | Meta-prompt that writes one Arena sprint spec + one index row | KEEP. Paths updated; §3 snapshot, §5 backlog and the Windows-only recon are stale. See the options below. |
+| [`arena-sprint-writer-prompt.md`](arena-sprint-writer-prompt.md) | v2: one session plans, writes, gates (`tasks.mjs check`) and implements one sprint | **Current.** Built on option B below plus the executable workflow in `tasks/WORKFLOW.md`. v1 is archived as `tasks/archive/2026-09-24-arena-sprint-writer-prompt-v1.md`. |
 
 Candidates to bring back here (currently archived):
-- `tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md`: verdict REWRITE. Workstreams A and B are now covered by the verification log; trim it to C (Agno workflow), D (`:7777` tunnel) and E before running it.
+- `tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md`: verdict REWRITE. Workstreams A and B are now covered by the verification log; Agno is now deprecated (`.agents/agno/DEPRECATED.md`), so only its D (`:7777` tunnel) part could still matter.
 - `tasks/archive/2026-09-14-bug-and-implementation-audit-prompt.md` / `2026-09-17-docs-update-prompt.md`: reusable audit templates. Bring one back only when you schedule a recurring pass, and replace the Windows paths first.
 
 ---
 
-## Options for the sprint-writer prompt
+## Options for the sprint-writer prompt (decided 2026-09-27)
+
+**Decision:** the owner deprecated the Agno swarm and made one agent session writer, dispatcher and implementer. v2 implements **B**. C is replaced by `scripts/tasks/tasks.mjs lint` plus the `Task specs` CI job, since there is no swarm left to validate. D is folded into v2 §3 (Pick) and §4 (Write). The analysis is kept below for history.
 
 Why it needs work (from the verification): only Sprints 7–10 follow its full 10-section structure. Sprints 11–20 dropped three sections, and Sprints 21–30 were 38-line swarm stubs that skipped its §4 recon. Two of those (25, 29) were built on false "stub 0 lines" premises, and numbers 24 and 26–30 were used twice. The index also said Sprints 15 and 18 were running when they never were.
 

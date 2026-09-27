@@ -1,6 +1,6 @@
 """Prompt-template tests for the Arena Golden Ticket generators.
 
-Closes the gap left by ``tasks/sprints/arena-sprint-prompt-engineering-audit.md``, which
+Closes the gap left by ``tasks/archive/2026-09-25-arena-sprint-prompt-engineering-audit.md``, which
 identified three chronic defects and was never implemented:
 
 1. **Prompt bloat / nesting** — when ``requirements`` (or a sprint assignment)

@@ -96,8 +96,8 @@ Na konci výstupu vyzvi používateľa na akceptáciu:
 
 ## 4. Ukladanie akceptovaných taskov
 Keď používateľ zadanie akceptuje:
-- Ulož schválený task do priečinka `tasks/<slug-nazov-tasku>.md` (alebo `artifacts/tasks/<slug-nazov-tasku>.md`).
-- Nastav stav na `[STATUS: READY_FOR_IMPLEMENTATION]`.
+- Backlog tiket ulož ako `tasks/proposed/gt-<NNN>-<slug>.md` s frontmatter `kind: ticket`, `state: open`, `priority: P0..P3`.
+- Pred implementáciou ho povýš na sprint `tasks/sprints/arena-sprint-<N>-<slug>.md` (šablóna `tasks/TEMPLATE.md`, `source: GT-<NNN>`) s premisami a `it.fails` kontraktovým testom; implementuje sa až keď `node scripts/tasks/tasks.mjs check <N>` vráti READY.
 - Následne môže agent začať čistú implementáciu podľa schválených acceptance criteria bez odbiehania od témy.
 
 > **Kontrakt priečinka `tasks/` (dodržuj!).** `tasks/` je verzovaný zdroj pravdy —
@@ -109,5 +109,8 @@ Keď používateľ zadanie akceptuje:
 > zmazaniu v commite `dab4d05` a k rozbitiu nástroja `list_arena_sprints()`.
 > Nikdy necommituj pracovný priečinok sprintu ani patch, ktorý si sám vygeneroval.
 >
-> Stav sprintu zapisuj do `tasks/SPRINT-INDEX.md` (stĺpec `Status`), aby ho Agno
-> runtime vedel prečítať pri bootovaní. Bez toho líder tímu nevie, čo je hotové.
+> Stav sa **nezapisuje ručne** do `tasks/SPRINT-INDEX.md`: nastav `state:` vo
+> frontmatter zadania a spusti `node scripts/tasks/tasks.mjs index` (tabuľka je
+> generovaná, CI kontroluje aktuálnosť). Nové zadanie začni z `tasks/TEMPLATE.md`
+> a postupuj podľa `tasks/WORKFLOW.md`. Agno swarm je deprecated
+> (`.agents/agno/DEPRECATED.md`).

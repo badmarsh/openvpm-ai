@@ -1,33 +1,24 @@
-# Tasks / Golden Tickets
+# Tasks
 
-This folder holds the approved task specs (Golden Tickets and Arena sprint assignments) created with the [`new-task`](../.agents/skills/new-task/SKILL.md) skill and the sprint-writer prompt ([`../prompts/arena-sprint-writer-prompt.md`](../prompts/arena-sprint-writer-prompt.md)).
+Specs, backlog tickets and their history. **How work flows through this folder is described in [`WORKFLOW.md`](WORKFLOW.md)**, and the rules every spec inherits are in [`RULES.md`](RULES.md). The Agno swarm that used to manage this folder is deprecated ([`.agents/agno/DEPRECATED.md`](../.agents/agno/DEPRECATED.md)).
 
-## Layout (reorganised 2026-09-27)
+## Layout
 
 | Path | Contents | Rule |
 |---|---|---|
-| [`SPRINT-INDEX.md`](SPRINT-INDEX.md) | Status table of numbered sprints | Parsed by the Agno runtime (`_parse_sprint_index`). **git outranks it.** |
-| [`VERIFICATION-LOG.md`](VERIFICATION-LOG.md) | Chronological ledger: every prompt/spec checked against git and code | Update it whenever a file's status changes. |
-| [`sprints/`](sprints/) | Numbered sprint specs `arena-sprint-<N>-<slug>.md` (1–30) + unnumbered Agno sprint specs | `read_sprint_assignment(N)` reads from here (falls back to `tasks/`). |
-| [`proposed/`](proposed/) | **Open** Golden Tickets `gt-0xx-*.md` | When a ticket reaches DONE, move it to `archive/`. |
-| [`archive/`](archive/) | Finished or superseded prompts, Agno dispatch copies, Arena responses, PR notes | Read-only history, date-prefixed (`YYYY-MM-DD-name`). **Never dispatch from here.** |
+| [`WORKFLOW.md`](WORKFLOW.md) | Lifecycle: write → gate → implement → close | Start here |
+| [`RULES.md`](RULES.md) | Standing rules (codebase non-negotiables, grounding, delivery) | Specs reference them instead of copying them |
+| [`TEMPLATE.md`](TEMPLATE.md) | Thin spec template with frontmatter | Copy it for every new sprint |
+| [`SPRINT-INDEX.md`](SPRINT-INDEX.md) | Table **generated** from spec frontmatter plus a hand-written collisions note | `node scripts/tasks/tasks.mjs index`. CI checks it's current. **git outranks it.** |
+| [`sprints/`](sprints/) | Numbered sprint specs `arena-sprint-<N>-<slug>.md` (`kind: sprint`) | Dispatch only when `tasks.mjs check <N>` says READY |
+| [`proposed/`](proposed/) | Backlog tickets `gt-<NNN>-*.md` (`kind: ticket`) | Promote to a sprint (`source: GT-NNN`) before implementing. Archive when done |
+| [`archive/`](archive/) | Finished or superseded prompts, dispatch copies, Arena responses, PR notes | Read-only history, date-prefixed (`YYYY-MM-DD-name`). **Never dispatch from here** |
+| [`VERIFICATION-LOG.md`](VERIFICATION-LOG.md) | 2026-09-27 audit of all 113 historical prompt/spec files | Historical. Live status lives in frontmatter now |
 
-Every file carries a verification header at the top:
+Specs from before 2026-09-27 also carry a blockquote verification header under their frontmatter (`Verification YYYY-MM-DD · Status · Verdict · Evidence · Origin`). New specs don't need one, because the frontmatter plus `tasks.mjs status` replace it.
 
-```
-> **Verification YYYY-MM-DD** · Status: **DONE|PARTIAL|NOT DONE|…** · Verdict: **KEEP|ARCHIVE|REWRITE|DELETE**
-> **Evidence:** PR / commit / file:line that proves the status
-> **Notes:** caveats, collisions, what is still open
-> **Origin:** previous path · first commit
-```
+Old Agno runtime churn (`run-*.json`, `repair-*.md`, `*.patch`) stays git-ignored (see `.gitignore`).
 
-Runtime churn written by the Agno swarm (`run-*.json`, `repair-*.md`, `*.patch`, fresh `arena-*.md` dispatch copies) lands in the `tasks/` root. Most of it is git-ignored (see `.gitignore`). Move any dispatch copy you want to keep into `archive/` with a date prefix and a verification header.
+## Definition of done
 
-## Task lifecycle
-1. **[STATUS: PROPOSED]**: the task is drafted and waiting for comments or human approval.
-2. **[STATUS: READY_FOR_IMPLEMENTATION]**: acceptance criteria are approved, scope is bounded, ready to code (WIP = 1).
-3. **[STATUS: IN_PROGRESS]**: a developer or AI agent is working on it.
-4. **[STATUS: IN_REVIEW]**: code is written, acceptance criteria ticked, tests verified.
-5. **[STATUS: DONE]**: changes are merged and tested → move the file to `archive/`, and add a row to `VERIFICATION-LOG.md`.
-
-A sprint or ticket is **DONE** only if its target files changed in a commit reachable from `main` (and its named source-contract test exists). A PR title or an existing `.md` file doesn't count as evidence.
+A sprint is **done** when its `contract_test` has no `it.fails` left and passes in CI, its target files changed in a commit reachable from `main`, and its frontmatter says `state: done` with `prs:` filled in. A PR title, a table row or an existing `.md` file isn't evidence.
