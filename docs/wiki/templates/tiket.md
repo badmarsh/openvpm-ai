@@ -1,18 +1,26 @@
 # Tiket: <krátky názov problému>
 
-> 📝 **Ako vyplniť:** doplň tabuľku a sekcie nižšie. Stačí pár viet, dôležitejšie je *čo sa deje* a *kedy je to hotové* než riešenie. Keď je tiket vyplnený, nastav **Stav** na `Na triáž`. Agent ho prevezme do repozitára (`tasks/proposed/gt-NNN-*.md`) a doplní číslo GT. **Od tej chvíle platí stav v repozitári**: priebeh sleduj na stránke **Stav úloh** a túto stránku už needituj.
+:::info
+**Ako vyplniť:** prepíš názov a hodnoty v *Základných údajoch*, potom vyplň sekcie nižšie. Stačí pár viet. Dôležitejšie je *čo sa deje* a *kedy je to hotové* než riešenie. Keď je tiket hotový, nastav **Stav** na `Na triáž`. Agent ho prevezme do repozitára a doplní číslo GT. **Potom už stránku needituj**: priebeh sleduj na stránke **Stav úloh**.
+:::
 
-| Pole | Hodnota |
-|---|---|
-| Priorita | P2 |
-| Typ | chyba |
-| Obrazovka / modul | /records/new-soap |
-| Nahlásil | MVDr. |
-| Dátum | 2026-01-01 |
-| Stav | Nový |
-| GT | (doplní agent) |
+## Základné údaje
 
-> 💡 **Priorita:** **P0**: ohrozenie pacienta, zákonnosti alebo dát (neúplný zdravotný záznam, e-Kasa, OPL, únik údajov) · **P1**: bezpečnosť, oprávnenia alebo chybný výsledok bez okamžitého rizika · **P2**: zdržuje dennú prácu ambulancie · **P3**: kozmetika. **Typ:** `chyba` · `bezpečnosť` · `legislatíva` · `funkcia` · `UX`. **Stav:** `Nový` → `Na triáž` → `Prevzaté (GT-NNN)`.
+- **Priorita:** P2
+- **Typ:** chyba
+- **Obrazovka / modul:** /records/new-soap
+- **Nahlásil:** MVDr.
+- **Dátum:** 2026-01-01
+- **Stav:** Nový
+- **GT:** (doplní agent)
+
+:::tip
+**Priorita:** `P0` ohrozenie pacienta, zákonnosti alebo dát (zdravotný záznam, e-Kasa, OPL, únik údajov) · `P1` bezpečnosť, oprávnenia, chybný výsledok · `P2` zdržuje dennú prácu · `P3` kozmetika
+
+**Typ:** `chyba` · `bezpečnosť` · `legislatíva` · `funkcia` · `UX`
+
+**Stav:** `Nový` → `Na triáž` → `Prevzaté (GT-NNN)`
+:::
 
 ## Problém
 

@@ -90,7 +90,7 @@ The owner and the clinic work in Outline (`outline.dev.significa.sk`), and the a
 
 Why not track the tickets themselves in Outline: pages have no computed state, so status there would be hand-typed and drift. That is exactly the failure the 2026-09-27 audit found in `SPRINT-INDEX.md` (Sprints 15 and 18 "running" for days). Outline gets the *intake* and a *generated view*, and it never gets the authority.
 
-Setup (once): create an API key in Outline → Settings → API with scopes `documents.*` and `templates.*`. Store it as the repo secret `OUTLINE_API_KEY`, along with `OUTLINE_TRACKER_DOC_ID` (an empty page named *Stav úloh*) and optionally `OUTLINE_COLLECTION_ID`. Then run `OUTLINE_API_KEY=… OUTLINE_COLLECTION_ID=… node scripts/tasks/outline.mjs create-template` once. **Never commit a key.**
+Setup (once): create an API key in Outline → Settings → API with scopes `documents.*` and `templates.*`. Store it as the repo secret `OUTLINE_API_KEY`, along with `OUTLINE_TRACKER_DOC_ID` (an empty page named *Stav úloh*) and optionally `OUTLINE_COLLECTION_ID`. Then run `OUTLINE_API_KEY=… OUTLINE_COLLECTION_ID=… node scripts/tasks/outline.mjs create-template` once. The script sends the markdown through `documents.create` (which Outline parses: notices, lists, checklists), converts the result with `documents.templatize`, and deletes the temporary draft. After changing `tiket.md`, delete the old *Tiket* template in Outline and run it again. You can also paste the raw file into a new template page by hand. **Never commit a key.**
 
 ## Numbering
 

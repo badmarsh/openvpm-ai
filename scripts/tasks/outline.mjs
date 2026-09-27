@@ -106,16 +106,36 @@ const FIELD_KEYS = {
   gt: "gt",
 };
 
+const cleanValue = (v) =>
+  v
+    .replace(/\\$/, "") // Outline hard break
+    .replace(/\\([\\`*_{}\[\]()#+\-.!/|])/g, "$1") // markdown escapes added on export
+    .replace(/^`(.*)`$/, "$1")
+    .trim();
+
+/**
+ * Field block of a ticket. Current template: a list of `- **Priorita:** P1` lines
+ * (Outline may export `**Priorita**: P1` or drop the bullet). Tickets filled from
+ * the first template version use a `| Priorita | P1 |` table; both are accepted.
+ * Table rows are read first and the first occurrence of a field wins, so the
+ * bold help text in the legend can't override a real value.
+ */
+function parseFields(block) {
+  const fields = {};
+  const put = (label, value) => {
+    const key = FIELD_KEYS[label.trim().replace(/:$/, "").trim().toLowerCase()];
+    if (key && !(key in fields)) fields[key] = cleanValue(value);
+  };
+  for (const m of block.matchAll(/^\|\s*([^|\n]+?)\s*\|\s*([^|\n]*?)\s*\|\s*$/gm)) put(m[1], m[2]);
+  for (const m of block.matchAll(/^[ \t]*(?:[-*+][ \t]+)?\*\*([^*\n]+?)\*\*[ \t]*:?[ \t]*(.*)$/gm)) put(m[1], m[2]);
+  return fields;
+}
+
 /** Parse a ticket written from docs/wiki/templates/tiket.md (markdown as exported by Outline). */
 export function parseIntake(markdown, { title } = {}) {
   const text = markdown.replace(/\r\n/g, "\n");
   const h1 = /^#\s+(.+)$/m.exec(text);
   let t = (title ?? (h1 ? h1[1] : "")).trim().replace(/^Tiket:\s*/i, "");
-  const fields = {};
-  for (const m of text.matchAll(/^\|\s*([^|\n]+?)\s*\|\s*([^|\n]*?)\s*\|\s*$/gm)) {
-    const key = FIELD_KEYS[m[1].trim().toLowerCase()];
-    if (key) fields[key] = m[2].replace(/\\$/, "").trim();
-  }
   const sections = {};
   const parts = text.split(/^##\s+/m).slice(1);
   for (const p of parts) {
@@ -124,6 +144,7 @@ export function parseIntake(markdown, { title } = {}) {
     const body = (nl === -1 ? "" : p.slice(nl + 1)).trim();
     sections[head] = body;
   }
+  const fields = parseFields(sections["Základné údaje"] ?? text);
   const priority = /^P[0-3]$/.test(fields.priority ?? "") ? fields.priority : null;
   const errors = [];
   if (!t || /<krátky názov/.test(t)) errors.push("missing title (replace '<krátky názov problému>')");
@@ -303,16 +324,21 @@ export async function main(argv = process.argv.slice(2), root = ROOT, log = cons
       log(body);
       return 0;
     }
+    // Markdown goes through documents.create, which Outline parses server-side
+    // (tables, notices, checklists). templates.create only takes ProseMirror JSON
+    // and would drop a `text` field silently.
+    const draft = await outline("documents.create", { title, text: body, ...(collectionId ? { collectionId } : {}), publish: false });
     try {
-      // Outline ≥ 0.83: dedicated templates API.
-      const t = await outline("templates.create", { title, text: body, ...(collectionId ? { collectionId } : {}) });
-      log(`template created: ${t.id}`);
+      const t = await outline("documents.templatize", { id: draft.id, collectionId: collectionId ?? null, publish: true });
+      log(`template created: ${t.id}${collectionId ? ` (collection ${collectionId})` : " (workspace-wide)"}`);
     } catch (e) {
       if (e.status !== 404 && e.status !== 400) throw e;
-      // Older self-hosted Outline: templates are documents with template: true.
+      // Very old Outline without documents.templatize: templates are documents with template: true.
       if (!collectionId) throw new Error("this Outline version needs OUTLINE_COLLECTION_ID to create a template");
       const d = await outline("documents.create", { title, text: body, collectionId, template: true, publish: true });
       log(`template created (legacy documents API): ${d.id}`);
+    } finally {
+      await outline("documents.delete", { id: draft.id }).catch(() => {});
     }
     return 0;
   }

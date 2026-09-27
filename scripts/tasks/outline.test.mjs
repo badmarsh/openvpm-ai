@@ -21,7 +21,7 @@ function fixture(files) {
 }
 
 const filled = TEMPLATE.replace("<krátky názov problému>", "Faktúra sa neuloží pri zľave 100 %")
-  .replace("| Priorita | P2 |", "| Priorita | P1 |")
+  .replace("- **Priorita:** P2", "- **Priorita:** P1")
   .replace("Čo sa deje a čo by sa malo diať namiesto toho.", "Pri zľave 100 % tlačidlo Uložiť nič nespraví.")
   .replace("- [ ] Overiteľná podmienka 1\n- [ ] Overiteľná podmienka 2", "- [ ] Faktúra so zľavou 100 % sa uloží s sumou 0,00 €");
 
@@ -62,6 +62,34 @@ test("ticket file has valid frontmatter, next GT number and a slug", () => {
   assert.match(body, /## 4\. Hotovo, keď/);
   writeFileSync(join(root, t.file), t.content);
   assert.deepEqual(lintSpecs(loadSpecs(root), root).errors.filter((e) => e.includes("gt-018")), []);
+});
+
+test("fields come from the list block, not from the priority legend", () => {
+  const r = parseIntake(TEMPLATE.replace("- **Priorita:** P2", "- **Priorita:** P0"));
+  assert.equal(r.priority, "P0");
+  assert.equal(r.fields.type, "chyba");
+  assert.equal(r.fields.status, "Nový");
+});
+
+test("Outline export variants of the field list are accepted", () => {
+  const exported = filled
+    .replace("- **Priorita:** P1", "* **Priorita**: `P1`")
+    .replace("- **Obrazovka / modul:** /records/new-soap", "- **Obrazovka / modul:** /records/new\\-soap\\");
+  const r = parseIntake(exported);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.priority, "P1");
+  assert.equal(r.fields.area, "/records/new-soap");
+});
+
+test("tickets filled from the old table template still import", () => {
+  const legacy = filled.replace(
+    /## Základné údaje\n\n[\s\S]*?\n\n(?=:::tip)/,
+    "| Pole | Hodnota |\n|---|---|\n| Priorita | P1 |\n| Obrazovka / modul | /billing |\n\n",
+  );
+  assert.doesNotMatch(legacy, /\*\*Priorita:\*\* P1/);
+  const r = parseIntake(legacy);
+  assert.equal(r.priority, "P1");
+  assert.equal(r.fields.area, "/billing");
 });
 
 test("slugify strips Slovak diacritics", () => {
