@@ -14,7 +14,9 @@ documentation without an explicit, attributable, replay-safe clinician
 confirmation. This document specifies the two supported confirmation paths:
 
 - **Option 1 (standard, envelope-required):** all browser/API finalization
-  of AI drafts (voice SOAP, discharge, imaging, treatment plans).
+  of AI drafts (voice SOAP, discharge, imaging, treatment plans, and the
+  in-app SOAP editor via `records.prepareSoapFinalization` →
+  `records.finalizeSoapNote`).
 - **Option 2 (transitional, direct):** the external AI-scribe hook
   (`ai.createSoapFromAI`), which is create-only and has no pre-existing
   draft entity to bind an envelope to.
@@ -142,6 +144,8 @@ measurable and the removal can be gated on zero usage over a full pilot week.
 | Router guards (`requireConfirmationEnvelopeId`, `requireExpectedRevision`) | `apps/web/server/routers/extensions/_safety.ts` |
 | Draft-safety layer | `apps/web/lib/ai/draft-safety.ts` |
 | Voice / discharge / imaging finalize | `apps/web/server/routers/extensions/{voice,discharge,imaging}.ts` |
+| SOAP editor prepare → finalize (Sprint 33) | `apps/web/server/routers/records.ts` (`records.prepareSoapFinalization` → `records.finalizeSoapNote`, gate in `lib/records/soap-lifecycle.ts`) |
+| SOAP editor confirmation dialog (Sprint 33) | `apps/web/components/records/ai-soap-finalize-dialog.tsx` |
 | Scribe hook (Option 2) | `apps/web/server/routers/ai.ts` (`createSoapFromAI`) |
 | Ledger append | `apps/web/lib/ai/audit-ledger.ts` |
 | Chain verifier | `apps/web/lib/ai/audit-chain.ts`, `scripts/verify-ai-audit-trail.ts` |
