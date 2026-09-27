@@ -133,10 +133,13 @@ import {
   finalizeAppointmentSoapDraft,
   getAppointmentSoapDraft,
   linkSoapAiProvenanceReceipt,
+  loadSoapAiFinalizationEvent,
   replaceFinalizedSoapNote,
   saveAppointmentSoapDraft,
   SoapLifecycleError,
 } from "@/lib/records/soap-lifecycle";
+import { issueClinicianConfirmation } from "@/lib/ai/clinician-confirmation";
+import { clinicianConfirmationInput } from "@/lib/ai/draft-safety";
 import {
   effectivePrescriptionStatus,
   PRESCRIPTION_LIFECYCLE_REASON_MAX_LENGTH,
@@ -1728,12 +1731,21 @@ export const recordsRouter = createRouter({
         appointmentId: z.string().uuid(),
       }),
     )
-    .query(async ({ ctx, input }) =>
-      getAppointmentSoapDraft(ctx.db, {
+    .query(async ({ ctx, input }) => {
+      const draft = await getAppointmentSoapDraft(ctx.db, {
         practiceId: ctx.practiceId,
         ...input,
-      }),
-    ),
+      });
+      if (!draft) return null;
+      // Sprint 33: the editors prepare the vet's confirmation envelope only
+      // when the draft actually has (unconsumed) AI provenance receipts.
+      const { event } = await loadSoapAiFinalizationEvent(ctx.db, {
+        practiceId: ctx.practiceId,
+        note: draft,
+        forUpdate: false,
+      });
+      return { ...draft, aiAssisted: event !== null };
+    }),
 
   saveSoapDraft: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
@@ -1780,7 +1792,15 @@ export const recordsRouter = createRouter({
       }
     }),
 
-  finalizeSoapNote: protectedProcedure
+  /**
+   * Sprint 33: issue the vet's one-time confirmation envelope for an
+   * AI-assisted SOAP draft (Option 1, docs/confirmation-protocol.md). The
+   * editor calls this after flushing the autosave and, when `required`,
+   * opens the confirmation dialog; `finalizeSoapNote` consumes the envelope
+   * in the finalize transaction. Manual notes return `{ required: false }`
+   * and finalize exactly as before. Never returns draft text.
+   */
+  prepareSoapFinalization: protectedProcedure
     .use(requireRole("admin", "veterinarian"))
     .input(
       z.object({
@@ -1791,12 +1811,82 @@ export const recordsRouter = createRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const [note] = await ctx.db
+        .select()
+        .from(soapNotes)
+        .where(
+          and(
+            eq(soapNotes.id, input.noteId),
+            eq(soapNotes.practiceId, ctx.practiceId),
+            eq(soapNotes.patientId, input.patientId),
+            eq(soapNotes.appointmentId, input.appointmentId),
+            isNull(soapNotes.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!note) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "SOAP draft not found",
+        });
+      }
+      // An already-finalized note finalizes idempotently without a gate.
+      if (note.status === "finalized") return { required: false as const };
+      if (note.revision !== input.expectedRevision) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "SOAP draft changed. Reload the draft and retry.",
+        });
+      }
+      // Same helper as the finalize path: the envelope binds exactly the
+      // hashes finalization will recompute, so the two cannot drift.
+      const { event } = await loadSoapAiFinalizationEvent(ctx.db, {
+        practiceId: ctx.practiceId,
+        note,
+        forUpdate: false,
+      });
+      if (!event) return { required: false as const };
+      const envelope = await issueClinicianConfirmation(ctx.db, {
+        practiceId: ctx.practiceId,
+        actorId: ctx.user.id,
+        actorRole: ctx.user.role,
+        actionType: "soap_note_finalized",
+        entityType: "soap_note",
+        entityId: note.id,
+        expectedRevision: note.revision,
+        originalDraftHash: event.originalDraftHash,
+        confirmedContentHash: event.confirmedContentHash,
+      });
+      return {
+        required: true as const,
+        confirmationId: envelope.id,
+        expiresAt: envelope.expiresAt,
+        sections: event.sections,
+      };
+    }),
+
+  finalizeSoapNote: protectedProcedure
+    .use(requireRole("admin", "veterinarian"))
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        appointmentId: z.string().uuid(),
+        noteId: z.string().uuid(),
+        expectedRevision: z.number().int().min(1),
+        clinicianConfirmed: clinicianConfirmationInput.optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
       let result;
       try {
         result = await ctx.db.transaction((tx) =>
           finalizeAppointmentSoapDraft(tx as unknown as Database, {
             practiceId: ctx.practiceId,
-            ...input,
+            patientId: input.patientId,
+            appointmentId: input.appointmentId,
+            noteId: input.noteId,
+            expectedRevision: input.expectedRevision,
+            clinicianConfirmed: input.clinicianConfirmed,
             // The role is validated with requireClinicalActorRole inside the
             // lifecycle, only when AI receipts make a ledger event necessary.
             actor: { id: ctx.user.id, name: ctx.user.name, role: ctx.user.role },

@@ -8376,6 +8376,18 @@
       "alreadyFinalized": "SOAP bol už autorizovaný v inej relácii.",
       "finalized": "SOAP záznam bol úspešne autorizovaný"
     },
+    "aiConfirm": {
+      "title": "Potvrdenie obsahu s asistenciou AI",
+      "body": "Táto správa obsahuje text vytvorený umelou inteligenciou. Skontrolujte jednotlivé oddiely a potom ju ako ošetrujúci veterinárny lekár potvrďte na finalizáciu.",
+      "acknowledge": "Obsah som skontroloval(a) a ako ošetrujúci veterinárny lekár za neho preberám zodpovednosť.",
+      "confirm": "Potvrdiť a finalizovať",
+      "cancel": "Zrušiť",
+      "section_ai_verbatim": "Text AI, nezmenený",
+      "section_ai_edited": "Text AI, upravený ošetrujúcim lekárom",
+      "section_ai_removed": "Text AI, odstránený",
+      "section_manual": "Napísané manuálne",
+      "expired": "Platnosť potvrdenia vypršala. Poznámku znova skontrolujte."
+    },
     "vitals": {
       "temperature": "Teplota",
       "heartRate": "Tep",

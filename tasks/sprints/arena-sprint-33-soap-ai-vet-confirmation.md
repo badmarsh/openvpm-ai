@@ -2,8 +2,9 @@
 id: 33
 kind: sprint
 title: Vet's final confirmation click on AI-assisted SOAP notes
-state: open
+state: done
 priority: P0
+prs: [75]
 source: GT-001
 depends_on: [32]
 targets:

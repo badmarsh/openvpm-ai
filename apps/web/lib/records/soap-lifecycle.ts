@@ -19,6 +19,11 @@ import { lockOpenVisitForClinicalAppend } from "@/lib/records/visit-integrity";
 import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 import { requireClinicalActorRole } from "@/lib/authorization";
 import {
+  consumeClinicianConfirmation,
+  ClinicianConfirmationError,
+} from "@/lib/ai/clinician-confirmation";
+import type { ClinicianConfirmationInput } from "@/lib/ai/draft-safety";
+import {
   buildSoapAiFinalizationEvent,
   type SoapAiFinalizationEvent,
 } from "@/lib/records/soap-ai-provenance";
@@ -380,6 +385,13 @@ export async function finalizeAppointmentSoapDraft(
     noteId: string;
     expectedRevision: number;
     actor: SoapActor;
+    /**
+     * Sprint 33: the Option 1 envelope `records.prepareSoapFinalization`
+     * issued for this note. Required when the note has AI provenance
+     * receipts; a bare `true` is rejected like a missing envelope
+     * (protocol §2.3). Manual notes finalize without it, as before.
+     */
+    clinicianConfirmed?: ClinicianConfirmationInput | null;
   },
 ): Promise<FinalizeSoapResult> {
   const finalizedAfterClose = await assertOpenSoapVisitWithFinalizedRecovery(
@@ -481,6 +493,8 @@ export async function finalizeAppointmentSoapDraft(
     practiceId: input.practiceId,
     note: finalized,
     actor: input.actor,
+    expectedRevision: input.expectedRevision,
+    clinicianConfirmed: input.clinicianConfirmed,
   });
   return { outcome: "finalized", note: finalized, transitioned: true };
 }
@@ -490,6 +504,14 @@ export const SOAP_AI_RECEIPT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export const SOAP_AI_RECEIPT_INVALID_MESSAGE =
   "AI draft receipt is not valid for this note.";
+
+/**
+ * Sprint 33: the fail-closed message when an AI-assisted SOAP note is
+ * finalized without the vet's confirmation envelope. Shown to the clinician
+ * verbatim (the UI toasts the server message on PRECONDITION_FAILED).
+ */
+export const SOAP_AI_CONFIRMATION_REQUIRED_MESSAGE =
+  "This SOAP note contains AI-generated content. Review it and confirm as the responsible veterinarian before finalizing.";
 
 /**
  * Link an AI provenance receipt (issued by `ai.draftSoapNote`) to the draft it
@@ -550,17 +572,26 @@ export async function linkSoapAiProvenanceReceipt(
     );
 }
 
+export type UnconsumedSoapAiReceipt = Pick<
+  typeof extSoapAiProvenance.$inferSelect,
+  "id" | "source" | "draftHash" | "sectionHashes"
+>;
+
 /**
- * On the transitioned finalize branch: consume the note's AI receipts and
- * append one `soap_note_finalized` event to the AI audit ledger, in the same
- * transaction. No receipts means a manual note: nothing is written. If the
- * append throws, the whole finalization rolls back (fail closed, RULES §1.8).
+ * Sprint 33: the single receipt query + event build shared by
+ * `records.prepareSoapFinalization` and the finalize path, so the two can
+ * never drift. `forUpdate` locks the receipts inside the finalize
+ * transaction; prepare reads without a lock (a concurrent save fails closed
+ * later, via the envelope's revision/content bindings).
  */
-async function recordSoapAiFinalization(
+export async function loadSoapAiFinalizationEvent(
   db: Database,
-  input: { practiceId: string; note: SoapDraft; actor: SoapActor },
-): Promise<SoapAiFinalizationEvent | null> {
-  const receipts = await db
+  input: { practiceId: string; note: SoapDraft; forUpdate: boolean },
+): Promise<{
+  receipts: UnconsumedSoapAiReceipt[];
+  event: SoapAiFinalizationEvent | null;
+}> {
+  const query = db
     .select({
       id: extSoapAiProvenance.id,
       source: extSoapAiProvenance.source,
@@ -575,19 +606,95 @@ async function recordSoapAiFinalization(
         isNull(extSoapAiProvenance.consumedAt),
         isNull(extSoapAiProvenance.deletedAt),
       ),
-    )
-    .for("update");
-
+    );
+  const receipts = input.forUpdate ? await query.for("update") : await query;
   const event = buildSoapAiFinalizationEvent(
     receipts ?? [],
     normalizeSoapSections(input.note),
   );
+  return { receipts: receipts ?? [], event };
+}
+
+/**
+ * Map an envelope failure onto the lifecycle error contract, following
+ * docs/confirmation-protocol.md §2.5 (same mapping as the discharge router).
+ */
+function rethrowConfirmationError(error: ClinicianConfirmationError): never {
+  const code =
+    error.code === "NOT_FOUND"
+      ? "NOT_FOUND"
+      : error.code === "EXPIRED" ||
+          error.code === "ALREADY_CONSUMED" ||
+          error.code === "REVISION_MISMATCH"
+        ? "CONFLICT"
+        : "PRECONDITION_FAILED";
+  throw new SoapLifecycleError(code, error.message);
+}
+
+/**
+ * On the transitioned finalize branch: consume the note's AI receipts and
+ * append one `soap_note_finalized` event to the AI audit ledger, in the same
+ * transaction. No receipts means a manual note: nothing is written. If the
+ * append throws, the whole finalization rolls back (fail closed, RULES §1.8).
+ *
+ * Sprint 33: when receipts exist, the vet's Option 1 envelope is consumed
+ * BEFORE the ledger append. A missing envelope (or a bare `true`, which has
+ * no nonce/expiry/binding) fails closed; the status update above already
+ * happened in this same transaction, so throwing rolls everything back.
+ */
+async function recordSoapAiFinalization(
+  db: Database,
+  input: {
+    practiceId: string;
+    note: SoapDraft;
+    actor: SoapActor;
+    expectedRevision: number;
+    clinicianConfirmed?: ClinicianConfirmationInput | null;
+  },
+): Promise<SoapAiFinalizationEvent | null> {
+  const { receipts, event } = await loadSoapAiFinalizationEvent(db, {
+    practiceId: input.practiceId,
+    note: input.note,
+    forUpdate: true,
+  });
   if (!event) return null;
+
+  const confirmationId =
+    typeof input.clinicianConfirmed === "object" &&
+    input.clinicianConfirmed !== null &&
+    "confirmationId" in input.clinicianConfirmed
+      ? input.clinicianConfirmed.confirmationId
+      : undefined;
+  if (!confirmationId) {
+    throw new SoapLifecycleError(
+      "PRECONDITION_FAILED",
+      SOAP_AI_CONFIRMATION_REQUIRED_MESSAGE,
+    );
+  }
 
   const actorRole = requireClinicalActorRole(
     input.actor.role,
     "Finalizing an AI-assisted SOAP note requires a clinical role (admin or veterinarian).",
   );
+  try {
+    await consumeClinicianConfirmation(db, {
+      confirmationId,
+      practiceId: input.practiceId,
+      actorId: input.actor.id,
+      actorRole,
+      actionType: "soap_note_finalized",
+      entityType: "soap_note",
+      entityId: input.note.id,
+      expectedRevision: input.expectedRevision,
+      originalDraftHash: event.originalDraftHash,
+      confirmedContentHash: event.confirmedContentHash,
+    });
+  } catch (error) {
+    if (error instanceof ClinicianConfirmationError) {
+      rethrowConfirmationError(error);
+    }
+    throw error;
+  }
   const appended = await appendAiAuditEvent(db, {
     practiceId: input.practiceId,
     actorId: input.actor.id,

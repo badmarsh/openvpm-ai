@@ -1,20 +1,11 @@
----
-id: GT-001
-kind: ticket
-title: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
-state: open
-priority: P0
-promoted_to: 32
----
-> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
-> **Evidence:** `lib/records/soap-lifecycle.ts` (finalizeAppointmentSoapDraft) still writes nothing to the AI audit ledger. Only discharge/imaging/voice routers use `extAiAuditLog`.  
-> **Notes:** P0, still open. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
-> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+> **Verification 2026-09-27** · Status: **DONE** · Verdict: **ARCHIVE** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** sprint 32 PR #74 — `ext_soap_ai_provenance` receipts (migration `0114_regular_doctor_doom`) + `soap_note_finalized` ledger event in `lib/records/soap-lifecycle.ts`; contract `server/__tests__/soap-ai-provenance.contract.test.ts` live.  
+> **Origin:** `tasks/proposed/gt-001-ai-provenance-ledger-soap-finalization.md` · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
-**[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY, DATA · Úsilie **M** · Vlastník: API + DB
+**[STATUS: DONE]** · Priorita **P0** · Kategórie SAFETY, DATA · Úsilie **M** · Vlastník: API + DB
 Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-04, §5.6, register F-04-1
 
 ## 1. Context / Why

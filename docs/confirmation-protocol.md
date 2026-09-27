@@ -14,7 +14,10 @@ documentation without an explicit, attributable, replay-safe clinician
 confirmation. This document specifies the two supported confirmation paths:
 
 - **Option 1 (standard, envelope-required):** all browser/API finalization
-  of AI drafts (voice SOAP, discharge, imaging, treatment plans).
+  of AI drafts (voice SOAP, discharge, imaging, treatment plans, and the
+  in-app SOAP editor: `records.prepareSoapFinalization` →
+  `records.finalizeSoapNote`, where the envelope is required only when the
+  note has AI provenance receipts).
 - **Option 2 (transitional, direct):** the external AI-scribe hook
   (`ai.createSoapFromAI`), which is create-only and has no pre-existing
   draft entity to bind an envelope to.
@@ -142,10 +145,12 @@ measurable and the removal can be gated on zero usage over a full pilot week.
 | Router guards (`requireConfirmationEnvelopeId`, `requireExpectedRevision`) | `apps/web/server/routers/extensions/_safety.ts` |
 | Draft-safety layer | `apps/web/lib/ai/draft-safety.ts` |
 | Voice / discharge / imaging finalize | `apps/web/server/routers/extensions/{voice,discharge,imaging}.ts` |
+| In-app SOAP editor finalize | `apps/web/server/routers/records.ts` (`prepareSoapFinalization` → `finalizeSoapNote`; gate in `apps/web/lib/records/soap-lifecycle.ts`) |
 | Scribe hook (Option 2) | `apps/web/server/routers/ai.ts` (`createSoapFromAI`) |
 | Ledger append | `apps/web/lib/ai/audit-ledger.ts` |
 | Chain verifier | `apps/web/lib/ai/audit-chain.ts`, `scripts/verify-ai-audit-trail.ts` |
 | UI prepare → finalize | `apps/web/app/(dashboard)/agent/{voice,discharge}/page.tsx` |
+| SOAP editor prepare → dialog → finalize | `apps/web/app/(dashboard)/records/new-soap/[patientId]/page.tsx`, `apps/web/components/records/{ambulatory-soap-card,ai-soap-finalize-dialog}.tsx` |
 | i18n remediation keys | `apps/web/messages/{en,sk}.json` |
 
 ## 5. Test evidence

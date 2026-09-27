@@ -22,8 +22,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/common/empty-state";
 import { CapturePhotos } from "@/components/records/capture-photos";
+import { AiSoapFinalizeDialog } from "@/components/records/ai-soap-finalize-dialog";
 import { ClinicalGuardianConfirmDialog } from "@/components/clinical/clinical-guardian-confirm-dialog";
 import type { EvaluatedSafetyAlert } from "@/lib/ai/clinical-guardian";
+import type { SoapSectionProvenance } from "@/lib/records/soap-ai-provenance";
+
+function trpcErrorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "data" in error
+    ? (error as { data?: { code?: string } }).data?.code
+    : undefined;
+}
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -192,6 +200,7 @@ export default function NewSoapNotePage() {
   );
   const saveDraftMutation = trpc.records.saveSoapDraft.useMutation();
   const finalizeMutation = trpc.records.finalizeSoapNote.useMutation();
+  const prepareFinalizationMutation = trpc.records.prepareSoapFinalization.useMutation();
   const discardMutation = trpc.records.discardSoapDraft.useMutation();
   const checkMedicationsMutation = trpc.extensions.clinicalGuardian.checkMedications.useMutation();
   const recordAlertsMutation = trpc.extensions.clinicalGuardian.recordAlerts.useMutation();
@@ -199,7 +208,16 @@ export default function NewSoapNotePage() {
   const [draftMode, setDraftMode] = useState<"flash" | "pro">("flash");
   const [detectedAlerts, setDetectedAlerts] = useState<EvaluatedSafetyAlert[]>([]);
   const [guardianConfirmOpen, setGuardianConfirmOpen] = useState(false);
-  const [pendingFinalizeSaved, setPendingFinalizeSaved] = useState<{ id: string; revision: number } | null>(null);
+  const [pendingFinalizeSaved, setPendingFinalizeSaved] = useState<{ id: string; revision: number; clinicianConfirmed?: { confirmationId: string } } | null>(null);
+  // Sprint 33: the vet's confirmation envelope for AI-assisted notes. The
+  // dialog holds the prepared envelope; confirming runs the guardian check
+  // and finalizes with it.
+  const [aiConfirm, setAiConfirm] = useState<{
+    savedRecord: { id: string; revision: number };
+    confirmationId: string;
+    sections: SoapSectionProvenance;
+  } | null>(null);
+  const [aiConfirmOpen, setAiConfirmOpen] = useState(false);
 
   const [draftInitialized, setDraftInitialized] = useState(false);
   const draftInitializedRef = useRef(false);
@@ -211,8 +229,11 @@ export default function NewSoapNotePage() {
   const [finalizedElsewhere, setFinalizedElsewhere] = useState(false);
   const [localTextCopied, setLocalTextCopied] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [conflictDraft, setConflictDraft] = useState<NonNullable<
-    typeof draftQuery.data
+  // Conflict drafts arrive via save/finalize/discard outcomes, which carry no
+  // aiAssisted flag (Sprint 33 reads it fresh before every finalize instead).
+  const [conflictDraft, setConflictDraft] = useState<Omit<
+    NonNullable<typeof draftQuery.data>,
+    "aiAssisted"
   > | null>(null);
   const draftIdRef = useRef<string | null>(null);
   // Sprint 32: server-issued AI provenance receipt from the last "Draft with
@@ -536,13 +557,14 @@ export default function NewSoapNotePage() {
     });
   }
 
-  async function executeFinalize(savedRecord: { id: string; revision: number }) {
+  async function executeFinalize(savedRecord: { id: string; revision: number; clinicianConfirmed?: { confirmationId: string } }) {
     try {
       const result = await finalizeMutation.mutateAsync({
         patientId: params.patientId,
         appointmentId: appointmentId!,
         noteId: savedRecord.id,
         expectedRevision: savedRecord.revision,
+        ...(savedRecord.clinicianConfirmed ? { clinicianConfirmed: savedRecord.clinicianConfirmed } : {}),
       });
       if (result.outcome === "conflict") {
         if (result.note.status === "finalized") {
@@ -560,6 +582,31 @@ export default function NewSoapNotePage() {
       toast.success(t("records.newSoap.finalizedSuccess", "SOAP note finalized"));
       router.push(returnPath);
     } catch (error) {
+      // Sprint 33: an expired or stale envelope re-prepares once and lets the
+      // vet confirm the fresh envelope. Anything else (including the
+      // PRECONDITION_FAILED gate message) surfaces as the server message.
+      if (savedRecord.clinicianConfirmed && trpcErrorCode(error) === "CONFLICT") {
+        try {
+          const prepared = await prepareFinalizationMutation.mutateAsync({
+            patientId: params.patientId,
+            appointmentId: appointmentId!,
+            noteId: savedRecord.id,
+            expectedRevision: savedRecord.revision,
+          });
+          if (prepared.required) {
+            toast.info(t("soap.aiConfirm.expired", "The confirmation expired. Review the note again to continue."));
+            setAiConfirm({
+              savedRecord: { id: savedRecord.id, revision: savedRecord.revision },
+              confirmationId: prepared.confirmationId,
+              sections: prepared.sections,
+            });
+            setAiConfirmOpen(true);
+            return;
+          }
+        } catch {
+          // Fall through to the error toast below.
+        }
+      }
       toast.error(
         error instanceof Error
           ? error.message
@@ -616,6 +663,63 @@ export default function NewSoapNotePage() {
     const saved = await persistDraft();
     if (!saved) return;
 
+    // Sprint 33: re-read the AI flag — a receipt may have been linked since
+    // the draft was loaded. On a stale flag the server gate fails closed.
+    let aiAssisted = false;
+    try {
+      const fresh = await draftQuery.refetch();
+      if (fresh.data && fresh.data.id === saved.id) {
+        aiAssisted = fresh.data.aiAssisted === true;
+      }
+    } catch {
+      // Keep aiAssisted=false; the server gate is the source of truth.
+    }
+
+    if (aiAssisted) {
+      let prepared;
+      try {
+        prepared = await prepareFinalizationMutation.mutateAsync({
+          patientId: params.patientId,
+          appointmentId: appointmentId!,
+          noteId: saved.id,
+          expectedRevision: saved.revision,
+        });
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t("records.newSoap.finalizeFailed", "SOAP note could not be finalized"),
+        );
+        return;
+      }
+      if (prepared.required) {
+        setAiConfirm({
+          savedRecord: saved,
+          confirmationId: prepared.confirmationId,
+          sections: prepared.sections,
+        });
+        setAiConfirmOpen(true);
+        return;
+      }
+    }
+
+    await finalizeWithGuardianCheck(saved);
+  }
+
+  async function handleAiConfirm() {
+    const confirmation = aiConfirm;
+    if (!confirmation) return;
+    setAiConfirmOpen(false);
+    setAiConfirm(null);
+    await finalizeWithGuardianCheck(confirmation.savedRecord, {
+      confirmationId: confirmation.confirmationId,
+    });
+  }
+
+  async function finalizeWithGuardianCheck(
+    savedRecord: { id: string; revision: number },
+    clinicianConfirmed?: { confirmationId: string },
+  ) {
     // Check medication safety with Clinical Guardian before finalizing
     const planText = soapSectionText(sectionsRef.current.plan);
     const candidateMeds = planText
@@ -633,7 +737,7 @@ export default function NewSoapNotePage() {
         });
         if (alerts && alerts.length > 0 && alerts.some((a) => a.severity === "critical")) {
           setDetectedAlerts(alerts);
-          setPendingFinalizeSaved(saved);
+          setPendingFinalizeSaved({ ...savedRecord, clinicianConfirmed });
           setGuardianConfirmOpen(true);
           return;
         }
@@ -642,7 +746,10 @@ export default function NewSoapNotePage() {
       }
     }
 
+    // The AI confirmation dialog already is an explicit final click; manual
+    // notes keep their window.confirm exactly as before.
     if (
+      !clinicianConfirmed &&
       !window.confirm(
         t(
           "records.newSoap.confirmFinalize",
@@ -653,7 +760,7 @@ export default function NewSoapNotePage() {
       return;
     }
 
-    await executeFinalize(saved);
+    await executeFinalize({ ...savedRecord, clinicianConfirmed });
   }
 
   function useServerDraft() {
@@ -1422,6 +1529,7 @@ export default function NewSoapNotePage() {
             onClick={() => void handleFinalize()}
             disabled={
               finalizeMutation.isPending ||
+              prepareFinalizationMutation.isPending ||
               !isOnline ||
               saveState === "saving" ||
               saveState === "error" ||
@@ -1459,6 +1567,16 @@ export default function NewSoapNotePage() {
         onEditPrescription={handleGuardianEditPrescription}
         onProceedAnyway={handleGuardianProceedAnyway}
         isProcessing={finalizeMutation.isPending || recordAlertsMutation.isPending}
+      />
+      <AiSoapFinalizeDialog
+        open={aiConfirmOpen}
+        sections={aiConfirm?.sections ?? {}}
+        onConfirm={() => void handleAiConfirm()}
+        onCancel={() => {
+          setAiConfirmOpen(false);
+          setAiConfirm(null);
+        }}
+        pending={finalizeMutation.isPending || prepareFinalizationMutation.isPending}
       />
     </div>
   );
