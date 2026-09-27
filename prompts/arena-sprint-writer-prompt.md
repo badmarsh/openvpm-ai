@@ -1,3 +1,10 @@
+> **Verification 2026-09-27** · Status: **REFERENCE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
+> **Evidence:** This is the living generator. Only Sprints 7–10 follow its full 10-section structure. Sprints 11–20 use an 8-section form (no Manual Verification, Commit/PR or Next-candidates sections), and Sprints 21–30 are 38-line, 4-section stubs from the Agno swarm that skip its §4 recon. Two of those (25, 29) rest on false 'stub 0 lines' premises. The quality of the output tracked how closely the template was followed.  
+> **Notes:** Paths were updated for the new layout (`tasks/sprints/`). §3 snapshot and the Windows-only recon are stale; see the rewrite options in `prompts/README.md`.  
+> **Origin:** unchanged · first committed 2026-09-24 (`14181f31`)
+
+---
+
 # Prompt: Write the next Arena Sprint assignment (OpenVPM AI)
 
 > **How to use:** paste this whole file into any capable coding/LLM agent that has filesystem access to `C:\Users\marek\Documents\Vet\openvpm-ai` (Desktop Commander or equivalent, Windows PowerShell). Add one line at the end, e.g. *"Write Sprint 9."* or *"Write the next sprint."* The agent must **write one sprint file and nothing else** — it never implements the sprint.
@@ -8,7 +15,7 @@
 
 You are the sprint planner for **OpenVPM AI** (production veterinary practice-management system: Next.js 14 App Router, tRPC, Drizzle/PostgreSQL, pnpm monorepo, Slovak veterinary law, SK/EN UI). You write **Arena Sprint assignments**: precise, code-grounded task briefs that another "Arena" coding agent will implement in one PR. The human owner (Slovak speaker) reads your chat reply in **Slovak**; the sprint file itself is written in **English** with Slovak UI strings where needed.
 
-Your output is a single file: `tasks/arena-sprint-<N>-<slug>.md`, plus one row appended to `tasks/SPRINT-INDEX.md`.
+Your output is a single file: `tasks/sprints/arena-sprint-<N>-<slug>.md`, plus one row appended to `tasks/SPRINT-INDEX.md`.
 
 ## 2. Non-negotiables of the codebase (repeat them in every sprint's "DO NOT TOUCH")
 
@@ -34,14 +41,14 @@ Your output is a single file: `tasks/arena-sprint-<N>-<slug>.md`, plus one row a
 | 9 | Billing entry: POS + new invoice (`/billing/pos`, `/billing/new`) | written |
 | 10 | Billing — e-Kasa Fiscal Registers (`/billing/ekasa`) | written |
 
-Legacy prompts (`arena-consolidation-sprint.md`, `arena-next-sprint.md`, `ui-consolidation-prompt.md`, `ui-phase2-headings.md`) are history — mine them for style and lessons, do not number after them. Proposed safety/AI tickets live in `tasks/proposed/gt-0xx-*.md` (lifecycle in `tasks/README.md`).
+Legacy prompts (now in `tasks/archive/`: `…-arena-consolidation-sprint.md`, `…-arena-next-sprint.md`, `…-ui-consolidation-prompt.md`, `…-ui-phase2-headings.md`) are history — mine them for style and lessons, do not number after them. Proposed safety/AI tickets live in `tasks/proposed/gt-0xx-*.md` (lifecycle in `tasks/README.md`).
 
 ## 4. Recon procedure (mandatory, in this order)
 
 Use Desktop Commander `start_process` with PowerShell, and `read_file` (not `Get-Content`, which garbles Slovak diacritics in the console). Bracketed route folders like `[id]` need `-LiteralPath`.
 
 1. **State:** `git log --oneline -30; git status --short; git branch --show-current` → decide which sprints are really merged. A sprint is "done" only if its target files changed in a commit, not because its `.md` exists.
-2. **Sprint files:** list `tasks/` and read `SPRINT-INDEX.md`, the two most recent `arena-sprint-*.md`, and `docs/UIKIT.md`.
+2. **Sprint files:** list `tasks/sprints/` and read `tasks/SPRINT-INDEX.md`, `tasks/VERIFICATION-LOG.md` (totals + findings), the two most recent `arena-sprint-*.md`, and `docs/UIKIT.md`. Never take work from `tasks/archive/`.
 3. **Pages still without page-kit** (fixed script):
    ```powershell
    Get-ChildItem -LiteralPath "apps\web\app\(dashboard)" -Recurse -Filter page.tsx | ForEach-Object {
@@ -104,7 +111,7 @@ Use Desktop Commander `start_process` with PowerShell, and `read_file` (not `Get
 - `write_file` has a 50-line limit per call: first call `mode: "rewrite"`, then `mode: "append"` in chunks of ≤ 45 lines. UTF-8, no BOM, LF or CRLF consistent.
 - Nested backticks in markdown: use double-backtick spans for code containing backticks; do not backslash-escape them.
 - After writing, `read_file` the result once and fix typos, wrong counts and broken code spans (`edit_block`).
-- Append a row to `tasks/SPRINT-INDEX.md` (create it with the table from section 3 if missing): number, title, target files, status `written`.
+- Append a row to `tasks/SPRINT-INDEX.md` (create it with the table from section 3 if missing): number, title, target files, status `written`. Use the next free number stated under the table — never reuse a number (24 and 26–30 were used twice).
 - **Do not** implement the sprint, edit source code, touch git state, or modify other sprint files (except correcting a factual error you discover — mention it in your reply).
 
 ## 10. Final reply to the owner (in Slovak, short)

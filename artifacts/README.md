@@ -6,11 +6,9 @@ Live operational runbooks and guidelines live under [`docs/`](../docs/).
 
 ---
 
-## Prompt library (read-only)
+## Prompt library — moved (2026-09-27)
 
-**[`audit-prompts/`](audit-prompts/)** — Reusable agent prompts for recurring audit passes and evaluations.
-Do not modify without operator review. Includes:
-- [`outline-docs-sync-prompt.md`](audit-prompts/outline-docs-sync-prompt.md) — Prompt for synchronizing OpenVPM AI v0.6 documentation with Outline.
+The former `audit-prompts/` library was verified and moved to [`../tasks/archive/`](../tasks/archive/) (date-prefixed, with a verification header on each file). Living prompt templates are in [`../prompts/`](../prompts/). The old → new mapping is in [`../tasks/VERIFICATION-LOG.md`](../tasks/VERIFICATION-LOG.md).
 
 
 ---
