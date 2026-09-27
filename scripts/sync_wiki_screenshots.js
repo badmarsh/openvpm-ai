@@ -1,8 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const OUTLINE_URL = 'https://outline.dev.significa.sk';
-const OUTLINE_API_KEY = 'ol_api_6fdkgz1d7vthENLyIiV1D1sfUay1bdo8M02YVF';
+const OUTLINE_URL = process.env.OUTLINE_URL || 'https://outline.dev.significa.sk';
+// Never hardcode the token (a live key was committed here until 2026-09-27 and must be rotated).
+const OUTLINE_API_KEY = process.env.OUTLINE_API_KEY;
+if (!OUTLINE_API_KEY) {
+  console.error('OUTLINE_API_KEY is not set. Create a key in Outline → Settings → API, then: OUTLINE_API_KEY=ol_api_… node ' + require('path').basename(__filename));
+  process.exit(1);
+}
 
 const mapFile = path.resolve(__dirname, '../docs/screenshots/wiki/attachments_map.json');
 const map = JSON.parse(fs.readFileSync(mapFile, 'utf8'));
