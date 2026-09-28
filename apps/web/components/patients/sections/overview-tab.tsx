@@ -253,7 +253,7 @@ export function OverviewTab({
             label={t("patients.tabs.insurance", "Insurance")}
             value={
               insuranceLoading
-                ? t("common.loading", "Loading...")
+                ? t("common.loading", "Loading…")
                 : insurance?.providerName
                   ? insurance.providerName
                   : t("patients.overview.insuranceNone", "No policy on file")
@@ -354,7 +354,7 @@ export function OverviewTab({
         </h3>
         {insuranceLoading ? (
           <p className="mt-2 text-sm text-muted-foreground">
-            {t("common.loading", "Loading...")}
+            {t("common.loading", "Loading…")}
           </p>
         ) : insurance?.providerName ? (
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">

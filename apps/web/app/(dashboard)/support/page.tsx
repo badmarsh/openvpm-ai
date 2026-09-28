@@ -77,7 +77,7 @@ export default function SupportPage() {
                 {createSession.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t("support.creating", "Vytváram...")}
+                    {t("support.creating", "Vytváram…")}
                   </>
                 ) : (
                   t("support.createSession", "Vytvoriť reláciu podpory")
@@ -111,7 +111,7 @@ export default function SupportPage() {
                 {startSession.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t("support.starting", "Spúšťam...")}
+                    {t("support.starting", "Spúšťam…")}
                   </>
                 ) : (
                   t("support.startSharing", "Spustiť zdieľanie")

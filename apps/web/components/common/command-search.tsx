@@ -684,7 +684,7 @@ export function CommandSearch({
               ref={inputRef}
               value={search}
               onValueChange={setSearch}
-              placeholder={t("commandSearch.placeholder", "Search patients by name, chip, owner phone, or navigate...")}
+              placeholder={t("commandSearch.placeholder", "Search patients by name, chip, owner phone, or navigate…")}
               className="flex h-12 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground font-medium"
             />
             <button
@@ -937,7 +937,7 @@ export function CommandSearch({
                     <span>
                       {showMoreNav
                         ? t("commandSearch.navShowLess", "Show less")
-                        : t("commandSearch.navShowMore", "Show more...")}
+                        : t("commandSearch.navShowMore", "Show more…")}
                     </span>
                   </Command.Item>
                 )}

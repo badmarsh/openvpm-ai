@@ -249,7 +249,7 @@ export function VaccinationsTab({
   if (isLoading) {
     return (
       <PatientDetailLoadingPanel
-        label={t("patients.vaccinations.loading", "Loading vaccinations...")}
+        label={t("patients.vaccinations.loading", "Loading vaccinations…")}
       />
     );
   }

@@ -109,7 +109,7 @@ export default function NewInvoicePage() {
       <div className="mx-auto max-w-3xl">
         <div className={pageShellClass}>
           <InlineQueryMessage kind="loading">
-            {t("billing.new.checkingAccess", "Checking billing access...")}
+            {t("billing.new.checkingAccess", "Checking billing access…")}
           </InlineQueryMessage>
         </div>
       </div>
@@ -422,7 +422,7 @@ function NewInvoiceForm() {
                   id="client-search"
                   placeholder={t(
                     "billing.new.searchClientsPlaceholder",
-                    "Search clients..."
+                    "Search clients…"
                   )}
                   value={clientSearch}
                   maxLength={CLIENT_SEARCH_MAX_LENGTH}
@@ -447,7 +447,7 @@ function NewInvoiceForm() {
                       <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         <span>
-                          {t("billing.new.searchingClients", "Searching clients...")}
+                          {t("billing.new.searchingClients", "Searching clients…")}
                         </span>
                       </div>
                     ) : clientOptions.length === 0 ? (
@@ -522,7 +522,7 @@ function NewInvoiceForm() {
                 </InlineQueryMessage>
               ) : patientResults.isLoading ? (
                 <InlineQueryMessage kind="loading">
-                  {t("billing.new.loadingPatients", "Loading client patients...")}
+                  {t("billing.new.loadingPatients", "Loading client patients…")}
                 </InlineQueryMessage>
               ) : null}
             </div>
@@ -551,7 +551,7 @@ function NewInvoiceForm() {
               </InlineQueryMessage>
             ) : servicesQuery.isLoading ? (
               <InlineQueryMessage kind="loading">
-                {t("billing.new.loadingServices", "Loading billing services...")}
+                {t("billing.new.loadingServices", "Loading billing services…")}
               </InlineQueryMessage>
             ) : null}
 
@@ -734,7 +734,7 @@ function NewInvoiceForm() {
                 <InlineQueryMessage kind="loading">
                   {t(
                     "billing.new.loadingTax",
-                    "Loading practice tax settings..."
+                    "Loading practice tax settings…"
                   )}
                 </InlineQueryMessage>
               </div>
@@ -779,7 +779,7 @@ function NewInvoiceForm() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {t(
                   "billing.new.loadingDateSettings",
-                  "Loading practice date settings..."
+                  "Loading practice date settings…"
                 )}
               </p>
             ) : null}
@@ -801,7 +801,7 @@ function NewInvoiceForm() {
               }
             >
               {createInvoice.isPending
-                ? t("billing.new.creatingButton", "Creating...")
+                ? t("billing.new.creatingButton", "Creating…")
                 : isEstimate
                 ? t("billing.new.createEstimateButton", "Create Estimate")
                 : t("billing.new.createInvoiceButton", "Create Invoice")}

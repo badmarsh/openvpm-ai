@@ -362,7 +362,7 @@ function PatientAssignmentPanel({
           ) : canSearch && patientSearch.isLoading ? (
             <p className="mt-2 inline-flex items-center gap-2 text-xs">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {t("encounters.patientPanel.searchingPatients", "Searching patients...")}
+              {t("encounters.patientPanel.searchingPatients", "Searching patients…")}
             </p>
           ) : canSearch && patientSearch.data?.length === 0 ? (
             <p className="mt-2 text-xs">
@@ -452,7 +452,7 @@ function EncounterLoading() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-12 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      {t("encounters.workspace.loading", "Loading visit workspace...")}
+      {t("encounters.workspace.loading", "Loading visit workspace…")}
     </div>
   );
 }
@@ -914,7 +914,7 @@ export default function EncounterWorkspacePage() {
                   ) : patientQuery.isLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("encounters.workspace.loadingPatientContext", "Loading patient context...")}
+                      {t("encounters.workspace.loadingPatientContext", "Loading patient context…")}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4">
@@ -1110,7 +1110,7 @@ export default function EncounterWorkspacePage() {
                           <Sparkles className="mr-1.5 h-4 w-4 text-primary" />
                         )}
                         {draftWithAi.isPending
-                          ? t("encounters.aiDraft.generating", "Drafting with AI...")
+                          ? t("encounters.aiDraft.generating", "Drafting with AI…")
                           : t("encounters.aiDraft.generateButton", "Draft SOAP with AI")}
                       </Button>
 
@@ -2432,7 +2432,7 @@ function VisitCloseout({
       <Card id="visit-closeout">
         <CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {t("encounters.closeout.loadingReadiness", "Loading closeout readiness...")}
+          {t("encounters.closeout.loadingReadiness", "Loading closeout readiness…")}
         </CardContent>
       </Card>
     );
@@ -3439,7 +3439,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
     : props.saveState === "saving"
       ? t(
           "encounters.clinicalForm.saveStatusSaving",
-          "Saving closeout draft to the server...",
+          "Saving closeout draft to the server…",
         )
       : props.saveState === "saved"
         ? props.lastSavedAt
@@ -3731,7 +3731,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
             className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">
-              {t("encounters.clinicalForm.selectChoose", "Choose...")}
+              {t("encounters.clinicalForm.selectChoose", "Choose…")}
             </option>
             <option
               value="prescribed"
@@ -3774,7 +3774,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
             className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">
-              {t("encounters.clinicalForm.selectChoose", "Choose...")}
+              {t("encounters.clinicalForm.selectChoose", "Choose…")}
             </option>
             <option value="none">
               {t("encounters.clinicalForm.followUpNone", "No follow-up needed")}
@@ -3811,7 +3811,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
             className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">
-              {t("encounters.clinicalForm.selectChoose", "Choose...")}
+              {t("encounters.clinicalForm.selectChoose", "Choose…")}
             </option>
             {props.followUpAppointments.map((candidate) => (
               <option key={candidate.id} value={candidate.id}>
@@ -3892,7 +3892,7 @@ function ClinicalCloseoutForm(props: ClinicalCloseoutFormProps) {
               className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">
-                {t("encounters.clinicalForm.selectChoose", "Choose...")}
+                {t("encounters.clinicalForm.selectChoose", "Choose…")}
               </option>
               {props.followUpAssignees.map((assignee) => (
                 <option key={assignee.id} value={assignee.id}>
@@ -4198,7 +4198,7 @@ function FollowUpResolutionPanel({
                 className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">
-                  {t("encounters.followUpPanel.selectChoose", "Choose...")}
+                  {t("encounters.followUpPanel.selectChoose", "Choose…")}
                 </option>
                 <option value="scheduled">
                   {t(
@@ -4240,7 +4240,7 @@ function FollowUpResolutionPanel({
                   className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="">
-                    {t("encounters.followUpPanel.selectChoose", "Choose...")}
+                    {t("encounters.followUpPanel.selectChoose", "Choose…")}
                   </option>
                   {followUpAppointments.map((appointment) => (
                     <option key={appointment.id} value={appointment.id}>
@@ -4410,7 +4410,7 @@ function OperationalCloseoutForm({
             className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">
-              {t("encounters.operationalForm.selectChoose", "Choose...")}
+              {t("encounters.operationalForm.selectChoose", "Choose…")}
             </option>
             <option value="paid" disabled={!paidReady}>
               {paidReady
@@ -4460,7 +4460,7 @@ function OperationalCloseoutForm({
             className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">
-              {t("encounters.operationalForm.selectChoose", "Choose...")}
+              {t("encounters.operationalForm.selectChoose", "Choose…")}
             </option>
             <option value="print">
               {t(
@@ -4639,7 +4639,7 @@ function EncounterInvoices({
         {invoicesQuery.isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {t("encounters.invoices.loadingInvoices", "Loading visit invoices...")}
+            {t("encounters.invoices.loadingInvoices", "Loading visit invoices…")}
           </div>
         ) : invoicesQuery.error || !invoicesQuery.data ? (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
@@ -4813,7 +4813,7 @@ function VisitWorkReconciliation({
             <Loader2 className="h-4 w-4 animate-spin" />
             {t(
               "encounters.workReconciliation.checkingWork",
-              "Checking performed work...",
+              "Checking performed work…",
             )}
           </div>
         ) : reconciliation.error || !reconciliation.data ? (
@@ -5504,7 +5504,7 @@ function ChargeCapture({
             <Loader2 className="h-4 w-4 animate-spin" />
             {t(
               "encounters.chargeCapture.confirmingState",
-              "Confirming visit invoice state...",
+              "Confirming visit invoice state…",
             )}
           </div>
         ) : !invoiceStateReady ? (
@@ -5527,7 +5527,7 @@ function ChargeCapture({
             <Loader2 className="h-4 w-4 animate-spin" />
             {t(
               "encounters.chargeCapture.loadingExistingCharges",
-              "Loading existing visit charges...",
+              "Loading existing visit charges…",
             )}
           </div>
         ) : activeInvoiceIsDraft &&
@@ -5543,7 +5543,7 @@ function ChargeCapture({
             <Loader2 className="h-4 w-4 animate-spin" />
             {t(
               "encounters.chargeCapture.loadingTaxConfig",
-              "Loading practice tax and currency settings...",
+              "Loading practice tax and currency settings…",
             )}
           </div>
         ) : !configReady ? (
@@ -5572,7 +5572,7 @@ function ChargeCapture({
             <Loader2 className="h-4 w-4 animate-spin" />
             {t(
               "encounters.chargeCapture.loadingServicesAndProducts",
-              "Loading services and products...",
+              "Loading services and products…",
             )}
           </div>
         ) : catalog.length === 0 && items.length === 0 ? (

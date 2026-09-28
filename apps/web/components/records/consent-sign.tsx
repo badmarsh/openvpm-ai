@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CheckCircle2, FileSignature, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -19,6 +20,11 @@ const CONSENT_POLL_INTERVAL_MS = 5_000;
  * edit the text, then a QR appears; the client signs on their own phone or
  * a handed-over tablet via the no-login /sign/[token] page. The signed
  * status shows here live. Mount only for roles that can manage the patient.
+ *
+ * The modal uses the Radix Dialog primitive directly (like journey-overlay)
+ * rather than the shared <DialogContent>, because it must stack at z-[90]
+ * above the encounter page's fixed panels while keeping Radix's focus trap,
+ * Escape handling, scroll lock and aria wiring.
  */
 export function ConsentSign({
   patientId,
@@ -116,136 +122,117 @@ export function ConsentSign({
         {t("patients.actions.getSignature", "Get signature")}
       </Button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[90] overflow-y-auto bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("records.consentSign.modalTitle", "Get signature")}
-        >
-          <div className="flex min-h-full items-center justify-center">
-            <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-heading text-base font-semibold">
-                    {t("records.consentSign.modalTitle", "Get signature")}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {request
-                      ? t("records.consentSign.scanNotice", "Scan with any phone. The code works for 60 minutes.")
-                      : t("records.consentSign.checkNotice", "Check the consent text, then make the code.")}
-                  </p>
+      <DialogPrimitive.Root
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) handleClose();
+        }}
+      >
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/50" />
+          {/* Staff often edit the consent text before making the code; a stray
+              tap on the backdrop must not discard that. Escape / ✕ / Done close it. */}
+          <DialogPrimitive.Content
+            className="fixed inset-0 z-[90] overflow-y-auto overscroll-contain p-4 outline-none"
+            onPointerDownOutside={(event) => event.preventDefault()}
+          >
+            <div className="flex min-h-full items-center justify-center">
+              <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <DialogPrimitive.Title className="font-heading text-base font-semibold">
+                      {t("records.consentSign.modalTitle", "Get signature")}
+                    </DialogPrimitive.Title>
+                    <DialogPrimitive.Description className="mt-1 text-sm text-muted-foreground">
+                      {request
+                        ? t("records.consentSign.scanNotice", "Scan with any phone. The code works for 60 minutes.")
+                        : t("records.consentSign.checkNotice", "Check the consent text, then make the code.")}
+                    </DialogPrimitive.Description>
+                  </div>
+                  <DialogPrimitive.Close
+                    aria-label={t("common.close", "Close")}
+                    className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X className="h-5 w-5" aria-hidden="true" />
+                  </DialogPrimitive.Close>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  aria-label={t("common.close", "Close")}
-                  className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              {!request ? (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <label
-                      htmlFor="consent-form"
-                      className="mb-1 block text-sm font-medium"
-                    >
-                      {t("records.consentSign.formLabel", "Form")}
-                    </label>
-                    {forms.isLoading || !forms.data ? (
-                      <div className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        {t("records.consentSign.loadingForms", "Loading forms...")}
-                      </div>
-                    ) : (
-                      <select
-                        id="consent-form"
-                        value={formId ?? ""}
-                        onChange={(e) => handleFormChange(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                {!request ? (
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label
+                        htmlFor="consent-form"
+                        className="mb-1 block text-sm font-medium"
                       >
-                        {forms.data.map((form) => (
-                          <option key={form.id} value={form.id}>
-                            {form.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t(
-                        "records.consentSign.templateNotice",
-                        "Starter templates. Have your attorney look them over, and fill in any blanks before you send."
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="consent-title"
-                      className="mb-1 block text-sm font-medium"
-                    >
-                      {t("records.consentSign.titleLabel", "Title")}
-                    </label>
-                    <input
-                      id="consent-title"
-                      type="text"
-                      maxLength={CONSENT_TITLE_MAX_LENGTH}
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="consent-body"
-                      className="mb-1 block text-sm font-medium"
-                    >
-                      {t("records.consentSign.consentTextLabel", "Consent text")}
-                    </label>
-                    <textarea
-                      id="consent-body"
-                      rows={8}
-                      maxLength={CONSENT_BODY_MAX_LENGTH}
-                      value={bodyText}
-                      onChange={(e) => setBodyText(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-6"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      disabled={
-                        createRequest.isPending ||
-                        !formId ||
-                        title.trim().length === 0 ||
-                        bodyText.trim().length === 0
-                      }
-                      onClick={() =>
-                        createRequest.mutate({
-                          patientId,
-                          appointmentId,
-                          formId: formId!,
-                          title: title.trim(),
-                          bodyText: bodyText.trim(),
-                        })
-                      }
-                    >
-                      {createRequest.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("records.consentSign.formLabel", "Form")}
+                      </label>
+                      {forms.isLoading || !forms.data ? (
+                        <div className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {t("records.consentSign.loadingForms", "Loading forms…")}
+                        </div>
                       ) : (
-                        <FileSignature className="mr-2 h-4 w-4" />
+                        <select
+                          id="consent-form"
+                          value={formId ?? ""}
+                          onChange={(e) => handleFormChange(e.target.value)}
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          {forms.data.map((form) => (
+                            <option key={form.id} value={form.id}>
+                              {form.title}
+                            </option>
+                          ))}
+                        </select>
                       )}
-                      {t("records.consentSign.makeCode", "Make the code")}
-                    </Button>
-                  </div>
-                  {createRequest.isError && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t(
+                          "records.consentSign.templateNotice",
+                          "Starter templates. Have your attorney look them over, and fill in any blanks before you send."
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="consent-title"
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        {t("records.consentSign.titleLabel", "Title")}
+                      </label>
+                      <input
+                        id="consent-title"
+                        type="text"
+                        maxLength={CONSENT_TITLE_MAX_LENGTH}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="consent-body"
+                        className="mb-1 block text-sm font-medium"
+                      >
+                        {t("records.consentSign.consentTextLabel", "Consent text")}
+                      </label>
+                      <textarea
+                        id="consent-body"
+                        rows={8}
+                        maxLength={CONSENT_BODY_MAX_LENGTH}
+                        value={bodyText}
+                        onChange={(e) => setBodyText(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm leading-6"
+                      />
+                    </div>
                     <div className="flex justify-end">
                       <Button
-                        variant="outline"
                         size="sm"
-                        disabled={!formId}
+                        disabled={
+                          createRequest.isPending ||
+                          !formId ||
+                          title.trim().length === 0 ||
+                          bodyText.trim().length === 0
+                        }
                         onClick={() =>
                           createRequest.mutate({
                             patientId,
@@ -256,78 +243,103 @@ export function ConsentSign({
                           })
                         }
                       >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        {t("common.tryAgain", "Try again")}
+                        {createRequest.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileSignature className="mr-2 h-4 w-4" />
+                        )}
+                        {t("records.consentSign.makeCode", "Make the code")}
                       </Button>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="mt-4 flex flex-col items-center gap-3">
-                  {isSigned ? (
-                    <div className="flex w-full flex-col items-center gap-3 rounded-lg border border-border bg-muted/30 p-6 text-center">
-                      <CheckCircle2 className="h-10 w-10 text-primary" />
-                      <p className="text-sm font-medium">
-                        {t(
-                          "records.consentSign.signedBy",
-                          `Signed by ${activeConsent?.signerName ?? ""}`,
-                          { name: activeConsent?.signerName ?? "" },
-                        )}
-                      </p>
-                      {activeConsent?.fileUrl && (
-                        <a
-                          href={activeConsent.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm font-medium text-primary underline underline-offset-4"
+                    {createRequest.isError && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={!formId}
+                          onClick={() =>
+                            createRequest.mutate({
+                              patientId,
+                              appointmentId,
+                              formId: formId!,
+                              title: title.trim(),
+                              bodyText: bodyText.trim(),
+                            })
+                          }
                         >
-                          {t("records.consentSign.openSignedPdf", "Open the signed PDF")}
-                        </a>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {t("records.consentSign.savedUnderDocs", "Saved on this patient under Documents.")}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {qrDataUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={qrDataUrl}
-                          alt={t(
-                            "records.consentSign.qrAlt",
-                            "QR code for the consent signing link"
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          {t("common.tryAgain", "Try again")}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 flex flex-col items-center gap-3">
+                    {isSigned ? (
+                      <div className="flex w-full flex-col items-center gap-3 rounded-lg border border-border bg-muted/30 p-6 text-center">
+                        <CheckCircle2 className="h-10 w-10 text-primary" />
+                        <p className="text-sm font-medium">
+                          {t(
+                            "records.consentSign.signedBy",
+                            `Signed by ${activeConsent?.signerName ?? ""}`,
+                            { name: activeConsent?.signerName ?? "" },
                           )}
-                          className="h-60 w-60 rounded-lg border border-border bg-white p-2"
-                        />
-                      ) : (
-                        <div className="flex h-60 w-60 items-center justify-center rounded-lg border border-border bg-muted/30">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
-                      <p className="w-full break-all text-center text-xs text-muted-foreground">
-                        {request.url}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {t(
-                          "records.consentSign.waitingForSignature",
-                          "Waiting for a signature…"
+                        </p>
+                        {activeConsent?.fileUrl && (
+                          <a
+                            href={activeConsent.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-medium text-primary underline underline-offset-4"
+                          >
+                            {t("records.consentSign.openSignedPdf", "Open the signed PDF")}
+                          </a>
                         )}
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
+                        <p className="text-xs text-muted-foreground">
+                          {t("records.consentSign.savedUnderDocs", "Saved on this patient under Documents.")}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {qrDataUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={qrDataUrl}
+                            alt={t(
+                              "records.consentSign.qrAlt",
+                              "QR code for the consent signing link"
+                            )}
+                            className="h-60 w-60 rounded-lg border border-border bg-white p-2"
+                          />
+                        ) : (
+                          <div className="flex h-60 w-60 items-center justify-center rounded-lg border border-border bg-muted/30">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        <p className="w-full break-all text-center text-xs text-muted-foreground">
+                          {request.url}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {t(
+                            "records.consentSign.waitingForSignature",
+                            "Waiting for a signature…"
+                          )}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
 
-              <div className="mt-5 flex justify-end">
-                <Button variant="outline" size="sm" onClick={handleClose}>
-                  {t("common.done", "Done")}
-                </Button>
+                <div className="mt-5 flex justify-end">
+                  <Button variant="outline" size="sm" onClick={handleClose}>
+                    {t("common.done", "Done")}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </>
   );
 }

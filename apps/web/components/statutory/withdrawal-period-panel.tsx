@@ -393,7 +393,7 @@ export function WithdrawalPeriodPanel() {
             <Input
               placeholder={t(
                 "statutory.withdrawal.searchPlaceholder",
-                "Search animal, medication, batch, ear tag, farmer..."
+                "Search animal, medication, batch, ear tag, farmer…"
               )}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -630,7 +630,7 @@ export function WithdrawalPeriodPanel() {
                   <Input
                     placeholder={t(
                       "statutory.withdrawal.fieldPatientSearch",
-                      "Search animal (name, ear tag, microchip)..."
+                      "Search animal (name, ear tag, microchip)…"
                     )}
                     value={patientSearch}
                     onChange={(e) => {

@@ -90,7 +90,7 @@ export function DemoRoleSwitcherView({
         {pendingRole
           ? t(
               "demo.roleSwitcher.switchingTo",
-              `Prepínanie na ${pendingLabel}...`,
+              `Prepínanie na ${pendingLabel}…`,
               { role: pendingLabel },
             )
           : t(

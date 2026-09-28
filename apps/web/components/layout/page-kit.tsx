@@ -39,6 +39,7 @@ export function SearchField({
   className,
   inputClassName,
   autoFocus,
+  "aria-label": ariaLabel,
 }: {
   id?: string;
   inputRef?: React.Ref<HTMLInputElement>;
@@ -48,19 +49,44 @@ export function SearchField({
   maxLength?: number;
   className?: string;
   inputClassName?: string;
+  /**
+   * Desktop-only affordance: on touch devices auto-focus pops the keyboard
+   * over the content before the user asked for it. Callers should gate it on
+   * a fine pointer / viewport width, never pass it unconditionally.
+   */
   autoFocus?: boolean;
+  /**
+   * Accessible name. When omitted, instances without an `id` (so no
+   * `<label htmlFor>` can exist) fall back to the placeholder; instances with
+   * an `id` are expected to have a real label and are left alone so the
+   * label keeps precedence in the accessible-name computation.
+   */
+  "aria-label"?: string;
 }) {
   return (
     <div className={cn("relative w-full min-w-48 flex-1 sm:max-w-sm", className)}>
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+      />
+      {/* type="search" adds a native clear (✕) control in WebKit/Blink; the
+          pseudo-element resets keep the field visually identical to the other
+          toolbar inputs. */}
       <Input
         id={id}
         ref={inputRef}
+        type="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        aria-label={ariaLabel ?? (id ? undefined : placeholder)}
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={cn("h-9 pl-9 text-xs", inputClassName)}
+        className={cn(
+          "h-9 pl-9 text-xs [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
+          inputClassName,
+        )}
         autoFocus={autoFocus}
       />
     </div>

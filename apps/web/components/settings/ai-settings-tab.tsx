@@ -280,7 +280,7 @@ export function AiSettingsTab() {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-        {t("settings.checkingAccess", "Checking settings access...")}
+        {t("settings.checkingAccess", "Checking settings access…")}
       </div>
     );
   }
@@ -334,7 +334,7 @@ export function AiSettingsTab() {
               <CheckCircle2 className="mr-2 h-4 w-4" />
             )}
             {updateMutation.isPending
-              ? t("settings.ai.actions.saving", "Ukladám nastavenia...")
+              ? t("settings.ai.actions.saving", "Ukladám nastavenia…")
               : t("settings.ai.actions.save", "Uložiť nastavenia AI")}
           </Button>
         </div>
@@ -398,7 +398,7 @@ export function AiSettingsTab() {
                   type={showOpenaiKey ? "text" : "password"}
                   value={openaiApiKey}
                   onChange={(e) => setOpenaiApiKey(e.target.value)}
-                  placeholder={t("settings.ai.providers.apiKeyPlaceholder", "Zadajte API kľúč...")}
+                  placeholder={t("settings.ai.providers.apiKeyPlaceholder", "Zadajte API kľúč…")}
                   className="font-mono text-xs pr-9"
                 />
                 <button
@@ -508,7 +508,7 @@ export function AiSettingsTab() {
                   type={showGeminiKey ? "text" : "password"}
                   value={geminiApiKey}
                   onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="AIzaSy..."
+                  placeholder="AIzaSy…"
                   className="font-mono text-xs pr-9"
                 />
                 <button
@@ -1075,7 +1075,7 @@ function FeatureRow({
               onChangeModel={onChangeModel}
               availableModels={availableModels}
               placeholder={t("settings.ai.features.model", "Model")}
-              searchPlaceholder={t("settings.ai.features.searchModel", "Hľadať model...")}
+              searchPlaceholder={t("settings.ai.features.searchModel", "Hľadať model…")}
               noModelsText={t("settings.ai.features.noModelsFound", "Žiadne modely sa nenašli")}
               renderCustomText={(custom) =>
                 t("settings.ai.features.useCustomModel", `Použiť model "${custom}"`, { model: custom })
@@ -1085,7 +1085,7 @@ function FeatureRow({
             <Input
               value={model}
               onChange={(e) => onChangeModel(e.target.value)}
-              placeholder="Model ID..."
+              placeholder="Model ID…"
               className="h-8 font-mono text-xs"
             />
           )}

@@ -137,9 +137,7 @@ export function MessageLogsView() {
             <span>{t("marketing.messages.statsBlockedSympathy", "Zablokované (Sympathy Gate)")}</span>
             <ShieldAlert className="w-4 h-4 text-purple-500" />
           </div>
-          <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-            {stats.blocked_sympathy}
-          </div>
+          <div className="text-2xl font-bold text-foreground">{stats.blocked_sympathy}</div>
           <p className="text-[11px] text-muted-foreground">
             {t("marketing.messages.statsBlockedSympathyDesc", "Ochrana smútiacich majiteľov")}
           </p>
@@ -216,7 +214,7 @@ export function MessageLogsView() {
         {logsQuery.isLoading ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-            {t("marketing.messages.loadingLogs", "Načítavam históriu správ...")}
+            {t("marketing.messages.loadingLogs", "Načítavam históriu správ…")}
           </div>
         ) : !logsQuery.data || logsQuery.data.length === 0 ? (
           <div className="p-12 text-center space-y-2">

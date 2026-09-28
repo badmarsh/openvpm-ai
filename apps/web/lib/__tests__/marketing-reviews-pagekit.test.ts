@@ -350,7 +350,7 @@ describe("website CMS page — page-kit harmonization", () => {
     expect(website).toContain('saveMutation.mutate({ sections, publishLive: false });');
     expect(website).toContain("publishMutation.mutate({ sections });");
     expect(website).toContain("toggleMutation.mutate({ published: false, sections });");
-    expect(website).toContain('t("marketing.website.autosaveSaving", "Ukladám zmeny...")');
+    expect(website).toContain('t("marketing.website.autosaveSaving", "Ukladám zmeny…")');
     expect(website).toContain('t("marketing.website.autosaveSaved", "Všetky zmeny uložené v koncepte")');
     expect(website).toContain('t("marketing.website.autosaveUnsaved", "Neuložené zmeny")');
     // The drag-and-drop canvas and its palette/sheet stay mounted.

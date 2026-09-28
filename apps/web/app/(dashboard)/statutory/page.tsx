@@ -698,7 +698,7 @@ function RabiesRegisterTab() {
             <SearchField
               value={search}
               onChange={setSearch}
-              placeholder={t("statutory.rabies.searchPlaceholder", "Hľadať pacienta, čip alebo majiteľa...")}
+              placeholder={t("statutory.rabies.searchPlaceholder", "Hľadať pacienta, čip alebo majiteľa…")}
             />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-4 w-4" />
@@ -1025,7 +1025,7 @@ function TreatmentDiaryTab() {
         <SearchField
           value={search}
           onChange={setSearch}
-          placeholder={t("statutory.treatment.searchPlaceholder", "Hľadať diagnózu, lieky, pacienta alebo lekára...")}
+          placeholder={t("statutory.treatment.searchPlaceholder", "Hľadať diagnózu, lieky, pacienta alebo lekára…")}
         />
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Calendar className="h-4 w-4" />

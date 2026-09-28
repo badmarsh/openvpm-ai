@@ -314,7 +314,7 @@ function ImagingContent() {
       recognizer.start();
       speechRecognizerRef.current = recognizer;
       setIsPromptListening(true);
-      toast.success("Hlasové diktovanie spustené. Hovorte...");
+      toast.success("Hlasové diktovanie spustené. Hovorte…");
     } catch (err) {
       console.error("Microphone access error:", err);
       let msg = "Nepodarilo sa získať prístup k mikrofónu. Skontrolujte povolenia prehliadača.";
@@ -1133,7 +1133,7 @@ function ImagingContent() {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          {t("imaging.patient.searchPlaceholder", "Vyhľadať pacienta podľa mena...")}
+                          {t("imaging.patient.searchPlaceholder", "Vyhľadať pacienta podľa mena…")}
                         </span>
                       )}
                       <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1141,7 +1141,7 @@ function ImagingContent() {
                   </PopoverTrigger>
                   <PopoverContent className="w-[360px] sm:w-[420px] p-2" align="start">
                     <Input
-                      placeholder={t("imaging.patient.searchInputPlaceholder", "Hľadať pacienta...")}
+                      placeholder={t("imaging.patient.searchInputPlaceholder", "Hľadať pacienta…")}
                       value={patientSearch}
                       onChange={(e) => setPatientSearch(e.target.value)}
                       className="mb-2"
@@ -1341,7 +1341,7 @@ function ImagingContent() {
                     {uploading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko...")}
+                        {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko…")}
                       </>
                     ) : (
                       <>
@@ -1411,7 +1411,7 @@ function ImagingContent() {
                       {isPromptListening ? (
                         <>
                           <Square className="h-3 w-3 fill-current" />
-                          <span>Nahrávam...</span>
+                          <span>Nahrávam…</span>
                         </>
                       ) : (
                         <>
@@ -1422,7 +1422,7 @@ function ImagingContent() {
                     </Button>
                   </div>
                   <Textarea
-                    placeholder={t("imaging.config.promptPlaceholder", "Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku...")}
+                    placeholder={t("imaging.config.promptPlaceholder", "Napr.: Zameraj sa na pľúcne polia, podozrenie na edém alebo cudzie teleso v žalúdku…")}
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     rows={3}
@@ -1439,12 +1439,12 @@ function ImagingContent() {
                   {analyzeMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("imaging.config.analyzing", "Spracúvam rádiologickú analýzu...")}
+                      {t("imaging.config.analyzing", "Spracúvam rádiologickú analýzu…")}
                     </>
                   ) : uploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko...")}
+                      {t("imaging.upload.uploading", "Nahrávam snímok na zabezpečené úložisko…")}
                     </>
                   ) : (
                     <>
@@ -1504,7 +1504,7 @@ function ImagingContent() {
                       <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/10 blur-sm" />
                     </div>
                     <p className="text-sm font-semibold text-foreground">
-                      {t("imaging.result.processing", "Multimodálny model spracováva snímok...")}
+                      {t("imaging.result.processing", "Multimodálny model spracováva snímok…")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 max-w-sm">
                       {t("imaging.result.processingHint", "Vyhodnocujem rádiologické štruktúry, hustotu tkanív a formulujem klinické posúdenie.")}
@@ -1847,7 +1847,7 @@ export default function ImagingPage() {
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">
-              {t("imaging.page.loading", "Načítavam diagnostiku snímkov...")}
+              {t("imaging.page.loading", "Načítavam diagnostiku snímkov…")}
             </span>
           </div>
         </div>

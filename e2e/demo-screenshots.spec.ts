@@ -96,7 +96,7 @@ test.describe("Demo screenshots + audit", () => {
     // Dashboard
     await page.goto("/", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByText("Loading dashboard...")).toHaveCount(0);
+    await expect(page.getByText("Loading dashboard…")).toHaveCount(0);
     const hideSetup = page.getByRole("button", { name: "Hide for now" });
     if (await hideSetup.isVisible()) {
       await hideSetup.click();
@@ -109,7 +109,7 @@ test.describe("Demo screenshots + audit", () => {
     await expect(
       page.getByRole("heading", { name: "Schedule", level: 2 }),
     ).toBeVisible();
-    await expect(page.getByText("Loading schedule...")).toHaveCount(0);
+    await expect(page.getByText("Loading schedule…")).toHaveCount(0);
     await expectNoFrameworkOverlay(page);
     await page.screenshot({ path: path.join(OUT, "schedule.png"), fullPage: false });
 
@@ -121,7 +121,7 @@ test.describe("Demo screenshots + audit", () => {
     await page.waitForURL(/\/patients\/[a-f0-9-]{8,}/, { timeout: 30_000 });
     await page.waitForLoadState("networkidle");
     await expect(page.getByText("Basic Information")).toBeVisible();
-    await expect(page.getByText("Loading patient...")).toHaveCount(0);
+    await expect(page.getByText("Loading patient…")).toHaveCount(0);
     await expectNoFrameworkOverlay(page);
     await page.screenshot({ path: path.join(OUT, "patient.png"), fullPage: false });
     expect(errors, "README screenshot routes logged unexpected errors").toEqual([]);

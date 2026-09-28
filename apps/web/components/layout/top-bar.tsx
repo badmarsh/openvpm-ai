@@ -214,7 +214,7 @@ export function TopBar({
           className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-64 sm:px-3 md:w-80"
         >
           <Search className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t("chrome.searchPlaceholder", "Search...")}</span>
+          <span className="hidden sm:inline">{t("chrome.searchPlaceholder", "Search…")}</span>
           <kbd className="ml-auto hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium md:inline">
             ⌘K
           </kbd>

@@ -144,7 +144,7 @@ test("Dogfood B: client, patient, appointment, whiteboard", async ({ page }) => 
 
   // Client with SMS consent (idempotent: skip if Riley already exists)
   await page.goto("/clients", { waitUntil: "networkidle" });
-  await page.fill('input[placeholder="Search clients..."]', "Riley");
+  await page.fill('input[placeholder="Search clients…"]', "Riley");
   await page.waitForTimeout(1200);
   const rileyExists = await page
     .getByText(/riley bennett/i)
@@ -181,7 +181,7 @@ test("Dogfood B: client, patient, appointment, whiteboard", async ({ page }) => 
   // Patient: dedicated /patients/new page with a client-search combobox.
   await page.goto("/patients/new", { waitUntil: "networkidle" });
   await page.fill(
-    'input[placeholder="Search clients by name or email..."]',
+    'input[placeholder="Search clients by name or email…"]',
     "Riley"
   );
   await page.waitForTimeout(1000);
@@ -198,7 +198,7 @@ test("Dogfood B: client, patient, appointment, whiteboard", async ({ page }) => 
   await page.goto("/schedule", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /new appointment/i }).first().click();
   await page.waitForTimeout(800);
-  await page.fill('input[placeholder="Search patients..."]', "Juniper");
+  await page.fill('input[placeholder="Search patients…"]', "Juniper");
   await page.waitForTimeout(1000);
   await page.getByText(/juniper/i).first().click();
   await page.waitForTimeout(500);
@@ -272,7 +272,7 @@ test("Dogfood C: check-in, vitals, SOAP, problem, Rx warning, lab", async ({ pag
 
   // Problem, prescription (allergy warning), lab on the records page.
   await page.goto("/records", { waitUntil: "networkidle" });
-  await page.fill('input[placeholder="Search patients by name..."]', "Juniper");
+  await page.fill('input[placeholder="Search patients by name…"]', "Juniper");
   await page.waitForTimeout(1000);
   await page.getByText(/juniper/i).first().click();
   await page.waitForTimeout(800);
@@ -327,7 +327,7 @@ test("Dogfood C2: prescription with allergy warning + lab", async ({ page }) => 
   await login(page);
 
   await page.goto("/records", { waitUntil: "networkidle" });
-  await page.fill('input[placeholder="Search patients by name..."]', "Juniper");
+  await page.fill('input[placeholder="Search patients by name…"]', "Juniper");
   await page.waitForTimeout(1000);
   await page.getByText(/juniper/i).first().click();
   await page.waitForTimeout(800);

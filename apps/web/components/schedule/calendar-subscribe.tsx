@@ -92,7 +92,7 @@ export function CalendarSubscribe() {
         {feed.isLoading ? (
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {t("schedule.calendarSubscribe.checkingFeed", "Checking the feed...")}
+            {t("schedule.calendarSubscribe.checkingFeed", "Checking the feed…")}
           </div>
         ) : feed.error ? (
           <div className="mt-3 text-xs text-destructive">
@@ -133,7 +133,7 @@ export function CalendarSubscribe() {
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                   {rotate.isPending
-                    ? t("common.updating", "Updating...")
+                    ? t("common.updating", "Updating…")
                     : confirmRotate
                       ? t(
                           "schedule.calendarSubscribe.confirmNewLink",
@@ -165,7 +165,7 @@ export function CalendarSubscribe() {
             {enable.isPending ? (
               <>
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                {t("schedule.calendarSubscribe.turningOn", "Turning on...")}
+                {t("schedule.calendarSubscribe.turningOn", "Turning on…")}
               </>
             ) : (
               t(

@@ -287,7 +287,7 @@ export function VeterinarianReviewModal({
                 {brief.clinicalClaims.map((claimItem, i) => (
                   <div
                     key={i}
-                    className="border-l-4 border-l-amber-500 border rounded-r-lg p-3 bg-amber-50/40 dark:bg-amber-950/20 space-y-1.5"
+                    className="rounded-lg border border-amber-300/70 bg-amber-50/40 p-3 space-y-1.5 dark:border-amber-800/60 dark:bg-amber-950/20"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <Badge variant="outline" className="text-[10px] bg-background">

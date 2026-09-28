@@ -233,7 +233,7 @@ export default function AiSwarmAdminPage() {
                 )}
               />
               {isRefetching
-                ? t("admin.aiSwarm.actions.refreshing", "Obnovuje sa...")
+                ? t("admin.aiSwarm.actions.refreshing", "Obnovuje sa…")
                 : t("admin.aiSwarm.actions.refresh", "Obnoviť stav")}
             </Button>
 
@@ -430,7 +430,7 @@ export default function AiSwarmAdminPage() {
               onChange={setSearchQuery}
               placeholder={t(
                 "admin.aiSwarm.toolbar.searchPlaceholder",
-                "Filtrovať agentov, relácie alebo úlohy..."
+                "Filtrovať agentov, relácie alebo úlohy…"
               )}
             />
             <select
@@ -654,7 +654,7 @@ export default function AiSwarmAdminPage() {
               onChange={setSearchQuery}
               placeholder={t(
                 "admin.aiSwarm.toolbar.searchPlaceholder",
-                "Filtrovať agentov, relácie alebo úlohy..."
+                "Filtrovať agentov, relácie alebo úlohy…"
               )}
             />
             <select

@@ -369,7 +369,7 @@ function LogEntryForm({ onClose, onRecorded }: { onClose: () => void; onRecorded
               {patientsQuery.error || patientsMissing
                 ? t("controlledSubstances.errors.unableToLoadPatients", "Unable to load patients")
                 : patientsQuery.isLoading
-                  ? t("controlledSubstances.errors.patientLoading", "Loading patients...")
+                  ? t("controlledSubstances.errors.patientLoading", "Loading patients…")
                   : t("controlledSubstances.errors.noPatient", "No patient")}
             </option>
             {patientOptions.map((patient) => (
@@ -418,7 +418,7 @@ function LogEntryForm({ onClose, onRecorded }: { onClose: () => void; onRecorded
               {witnessesQuery.error || witnessesMissing
                 ? t("controlledSubstances.errors.unableToLoadWitnesses", "Unable to load witnesses")
                 : witnessesQuery.isLoading
-                  ? t("controlledSubstances.errors.witnessLoading", "Loading witnesses...")
+                  ? t("controlledSubstances.errors.witnessLoading", "Loading witnesses…")
                   : t("controlledSubstances.errors.noWitness", "No witness")}
             </option>
             {witnessOptions.map((user) => (
@@ -465,7 +465,7 @@ function LogEntryForm({ onClose, onRecorded }: { onClose: () => void; onRecorded
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={!canSubmit}>
           {createMutation.isPending
-            ? t("controlledSubstances.submitting", "Submitting...")
+            ? t("controlledSubstances.submitting", "Submitting…")
             : t("controlledSubstances.submitEntry", "Submit Entry")}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
@@ -514,7 +514,7 @@ function SummarySection() {
           ) : isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              {t("controlledSubstances.summary.loading", "Loading summary...")}
+              {t("controlledSubstances.summary.loading", "Loading summary…")}
             </div>
           ) : data && data.length > 0 ? (
             <Table>
@@ -633,7 +633,7 @@ export default function ControlledSubstancesPage() {
       <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {t("controlledSubstances.checkingAccess", "Checking controlled-substance access...")}
+          {t("controlledSubstances.checkingAccess", "Checking controlled-substance access…")}
         </div>
       </div>
     );
@@ -754,7 +754,7 @@ function ControlledSubstancesLogPage() {
         <PageToolbar>
           <SearchField
             value={search}
-            placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name...")}
+            placeholder={t("controlledSubstances.filterPlaceholder", "Filter by drug name…")}
             maxLength={CONTROLLED_SUBSTANCE_DRUG_NAME_MAX_LENGTH}
             onChange={(value) => {
               setSearch(value);
@@ -781,7 +781,7 @@ function ControlledSubstancesLogPage() {
         ) : isLogLoading ? (
           <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card py-12 text-sm text-muted-foreground shadow-xs">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {t("controlledSubstances.loadingEntries", "Loading controlled-substance entries...")}
+            {t("controlledSubstances.loadingEntries", "Loading controlled-substance entries…")}
           </div>
         ) : !verifiedLogPayload ? (
           <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">

@@ -135,7 +135,7 @@ export default function PatientsPage() {
           maxLength={PATIENT_SEARCH_MAX_LENGTH}
           placeholder={t(
             "patients.search_placeholder",
-            "Search patients or owners...",
+            "Search patients or owners…",
           )}
           onChange={setSearch}
         />

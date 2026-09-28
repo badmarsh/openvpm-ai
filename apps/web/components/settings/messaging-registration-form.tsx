@@ -238,12 +238,14 @@ export function MessagingRegistrationForm() {
         </Field>
         <TextField
           label="Clinic name clients know"
+          autoComplete="organization"
           value={form.displayName}
           onChange={(v) => update("displayName", v)}
           disabled={submitted}
         />
         <TextField
           label="Legal business name"
+          autoComplete="organization"
           value={form.legalName}
           onChange={(v) => update("legalName", v)}
           disabled={submitted}
@@ -264,12 +266,14 @@ export function MessagingRegistrationForm() {
         </Field>
         <TextField
           label="Contact first name"
+          autoComplete="given-name"
           value={form.contactFirstName}
           onChange={(v) => update("contactFirstName", v)}
           disabled={submitted}
         />
         <TextField
           label="Contact last name"
+          autoComplete="family-name"
           value={form.contactLastName}
           onChange={(v) => update("contactLastName", v)}
           disabled={submitted}
@@ -277,6 +281,7 @@ export function MessagingRegistrationForm() {
         <TextField
           label="Contact email"
           type="email"
+          autoComplete="email"
           value={form.contactEmail}
           onChange={(v) => update("contactEmail", v)}
           disabled={submitted}
@@ -284,30 +289,35 @@ export function MessagingRegistrationForm() {
         <TextField
           label="Business phone"
           type="tel"
+          autoComplete="tel"
           value={form.businessPhone}
           onChange={(v) => update("businessPhone", v)}
           disabled={submitted}
         />
         <TextField
           label="Street address"
+          autoComplete="street-address"
           value={form.street}
           onChange={(v) => update("street", v)}
           disabled={submitted}
         />
         <TextField
           label="City"
+          autoComplete="address-level2"
           value={form.city}
           onChange={(v) => update("city", v)}
           disabled={submitted}
         />
         <TextField
           label="State"
+          autoComplete="address-level1"
           value={form.state}
           onChange={(v) => update("state", v.toUpperCase().slice(0, 2))}
           disabled={submitted}
         />
         <TextField
           label="ZIP code"
+          autoComplete="postal-code"
           value={form.postalCode}
           onChange={(v) => update("postalCode", v)}
           disabled={submitted}
@@ -315,6 +325,7 @@ export function MessagingRegistrationForm() {
         <TextField
           label="Clinic website or professional profile (HTTPS)"
           type="url"
+          autoComplete="url"
           value={form.website}
           onChange={(v) => update("website", v)}
           disabled={submitted}
@@ -399,6 +410,7 @@ function TextField({
   value,
   onChange,
   type = "text",
+  autoComplete,
   disabled,
   description,
 }: {
@@ -406,6 +418,8 @@ function TextField({
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "email" | "tel" | "url";
+  /** HTML autocomplete token so browsers/password managers can prefill. */
+  autoComplete?: React.HTMLInputAutoCompleteAttribute;
   disabled?: boolean;
   description?: string;
 }) {
@@ -413,6 +427,7 @@ function TextField({
     <Field label={label}>
       <Input
         type={type}
+        autoComplete={autoComplete}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}

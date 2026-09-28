@@ -502,7 +502,7 @@ export function EncounterVitalsCard({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 {recordVitals.isPending
-                  ? t("records.encounterVitals.recording", "Recording...")
+                  ? t("records.encounterVitals.recording", "Recording…")
                   : t("records.encounterVitals.recordAction", "Record visit vitals")}
               </Button>
             </div>
@@ -512,7 +512,7 @@ export function EncounterVitalsCard({
             {!visitStateReady
               ? t(
                   "records.encounterVitals.checkingAccepts",
-                  "Checking whether this visit accepts new vitals...",
+                  "Checking whether this visit accepts new vitals…",
                 )
               : visitOpen
                 ? t(
@@ -537,7 +537,7 @@ export function EncounterVitalsCard({
           ) : vitalsQuery.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              {t("records.encounterVitals.loading", "Loading visit vitals...")}
+              {t("records.encounterVitals.loading", "Loading visit vitals…")}
             </div>
           ) : vitals.length === 0 ? (
             <p className="text-sm text-muted-foreground">

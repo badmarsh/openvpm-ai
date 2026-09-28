@@ -252,7 +252,7 @@ export function MarketingStudioContent() {
       return;
     }
     setIsVideoLoading(true);
-    setVideoStatusText(t("marketing.studio.videoSubmitting", "Odosielam požiadavku na video..."));
+    setVideoStatusText(t("marketing.studio.videoSubmitting", "Odosielam požiadavku na video…"));
     try {
       const prompt = `Cinematic veterinary video: ${selectedTopic}. High quality, smooth movement, clean bright clinic.`;
       const submitRes = await submitVideoMutation.mutateAsync({
@@ -260,7 +260,7 @@ export function MarketingStudioContent() {
         model: "wan2.1-t2v-turbo",
       });
 
-      setVideoStatusText(t("marketing.studio.videoProcessing", "Spracovávam video..."));
+      setVideoStatusText(t("marketing.studio.videoProcessing", "Spracovávam video…"));
       toast.info(t("marketing.studio.toastVideoQueued", "Úloha generovania videa bola zaradená do fronty."));
 
       const startTime = Date.now();
@@ -280,7 +280,7 @@ export function MarketingStudioContent() {
             setVideoStatusText(null);
             toast.error(pollRes.error || t("marketing.studio.toastVideoFailed", "Generovanie videa zlyhalo."));
           } else {
-            setVideoStatusText(`Spracovanie videa (${pollRes.status.toLowerCase()})...`);
+            setVideoStatusText(`Spracovanie videa (${pollRes.status.toLowerCase()})…`);
           }
         } catch {
           // ignore transient errors
@@ -598,7 +598,7 @@ export function MarketingStudioContent() {
                 rows={3}
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
-                placeholder={t("marketing.studio.topicPlaceholder", "Napr. Prečo nepodávať psovi čokoládu cez sviatky...")}
+                placeholder={t("marketing.studio.topicPlaceholder", "Napr. Prečo nepodávať psovi čokoládu cez sviatky…")}
                 className="w-full rounded-xl border bg-muted/20 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 resize-none leading-relaxed"
               />
             </div>
@@ -611,7 +611,7 @@ export function MarketingStudioContent() {
               <Input
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder={t("marketing.studio.audiencePlaceholder", "Napr. Majitelia mačiek, psíkov seniorov...")}
+                placeholder={t("marketing.studio.audiencePlaceholder", "Napr. Majitelia mačiek, psíkov seniorov…")}
                 className="h-8 text-xs"
               />
             </div>
@@ -654,7 +654,7 @@ export function MarketingStudioContent() {
               {isGenerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>{t("marketing.studio.generating", "Gemini generuje príspevky...")}</span>
+                  <span>{t("marketing.studio.generating", "Gemini generuje príspevky…")}</span>
                 </>
               ) : (
                 <>
@@ -818,7 +818,7 @@ export function MarketingStudioContent() {
                   </div>
                   <div className="space-y-1">
                     <h5 className="font-semibold text-xs text-foreground">
-                      {videoStatusText || "Spracovávam Wan 2.1 video..."}
+                      {videoStatusText || "Spracovávam Wan 2.1 video…"}
                     </h5>
                     <p className="text-[11px] text-muted-foreground max-w-xs">
                       Alibaba Wan 2.1 generuje plynulé video pre tému „{selectedTopic}“.
@@ -832,7 +832,7 @@ export function MarketingStudioContent() {
                   </div>
                   <div className="space-y-1">
                     <h5 className="font-semibold text-xs text-foreground">
-                      {t("marketing.studio.generatingVisual", "Generujem vizuál...")}
+                      {t("marketing.studio.generatingVisual", "Generujem vizuál…")}
                     </h5>
                     <p className="text-[11px] text-muted-foreground max-w-xs">
                       Alibaba Wanx 2.1 (Qwen 3 Pro) vykresľuje fotorealistický obrázok pre sociálne siete.

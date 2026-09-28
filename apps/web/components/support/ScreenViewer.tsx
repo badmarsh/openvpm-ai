@@ -119,7 +119,7 @@ export function ScreenViewer({ sessionId, role, onEnd }: ScreenViewerProps) {
         <div className="flex items-center gap-2">
           <Monitor className="w-4 h-4 text-stone-600" />
           <span className="text-sm font-medium">
-            {status === "connecting" && "Pripájanie..."}
+            {status === "connecting" && "Pripájanie…"}
             {status === "waiting" && "Čaká sa na zdieľanie"}
             {status === "viewing" && "Zdieľaná obrazovka"}
           </span>
@@ -142,8 +142,8 @@ export function ScreenViewer({ sessionId, role, onEnd }: ScreenViewerProps) {
           <div className="flex flex-col items-center justify-center py-24 text-stone-400">
             <Loader2 className="w-8 h-8 animate-spin mb-3" />
             <p className="text-sm">
-              {status === "connecting" && "Pripájanie k session..."}
-              {status === "waiting" && "Čaká sa, kým zákazník začne zdieľať..."}
+              {status === "connecting" && "Pripájanie k session…"}
+              {status === "waiting" && "Čaká sa, kým zákazník začne zdieľať…"}
             </p>
           </div>
         )}

@@ -85,7 +85,7 @@ function ClientDetailLoadingPanel() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      {t("clients.detail.loadingClient", "Loading client...")}
+      {t("clients.detail.loadingClient", "Loading client…")}
     </div>
   );
 }
@@ -333,7 +333,7 @@ export default function ClientDetailPage() {
               >
                 <RefreshCw className="h-4 w-4" />
                 {rotatePortalToken.isPending
-                  ? t("clients.detail.updating", "Updating...")
+                  ? t("clients.detail.updating", "Updating…")
                   : client.portalAccessState !== "not_issued"
                     ? confirmRotatePortal
                       ? t("clients.detail.confirmReset", "Confirm Reset")
@@ -495,7 +495,7 @@ function CommunicationLogPanel({ clientId }: { clientId: string }) {
           <Loader2 className="h-4 w-4 animate-spin" />
           {t(
             "clients.detail.loadingCommLog",
-            "Loading communication log...",
+            "Loading communication log…",
           )}
         </div>
       ) : verifiedCommunicationSettings &&
@@ -699,7 +699,7 @@ function WellnessEnrollmentPanel({
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {isLoading
-                ? t("clients.detail.loadingWellness", "Loading plans...")
+                ? t("clients.detail.loadingWellness", "Loading plans…")
                 : error
                 ? error.message
                 : plansMissing
@@ -808,7 +808,7 @@ function WellnessEnrollmentPanel({
           <Loader2 className="h-4 w-4 animate-spin" />
           {t(
             "clients.detail.loadingWellnessMemberships",
-            "Loading memberships...",
+            "Loading memberships…",
           )}
         </div>
       ) : activeEnrollments.length > 0 ? (

@@ -223,8 +223,8 @@ function LoginPageInner() {
           >
             {loading
               ? DEMO_MODE
-                ? t("auth.login.openingDemo", "Opening demo...")
-                : t("auth.login.signingIn", "Signing in...")
+                ? t("auth.login.openingDemo", "Opening demo…")
+                : t("auth.login.signingIn", "Signing in…")
               : DEMO_MODE
                 ? t("auth.login.openDemo", "Open the live demo")
                 : t("auth.login.signIn", "Sign in")}

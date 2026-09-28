@@ -401,7 +401,7 @@ export default function VaccinationsPage() {
             <SearchField
               value={rabiesSearch}
               onChange={setRabiesSearch}
-              placeholder={t("common.search", "Hľadať pacienta, čip...")}
+              placeholder={t("common.search", "Hľadať pacienta, čip…")}
             />
             {rabiesQuery.data && (
               <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
@@ -506,7 +506,7 @@ export default function VaccinationsPage() {
             <SearchField
               value={patientQueryText}
               onChange={setPatientQueryText}
-              placeholder={t("patients.searchPlaceholder", "Meno pacienta, mikročip, majiteľ...")}
+              placeholder={t("patients.searchPlaceholder", "Meno pacienta, mikročip, majiteľ…")}
             />
             {patientSearch.data && patientQueryText.trim().length >= 2 && (
               <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">

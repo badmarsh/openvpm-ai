@@ -16,7 +16,7 @@ export function PageLoading({ className }: { className?: string }) {
     >
       <div className="flex flex-col items-center gap-2">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">{t("common.loading", "Loading...")}</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
       </div>
     </div>
   );

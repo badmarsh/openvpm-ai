@@ -127,7 +127,7 @@ export default function AgentPage() {
       <div className="mx-auto max-w-3xl rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {t("agent.checkingAccess", "Checking agent access...")}
+          {t("agent.checkingAccess", "Checking agent access…")}
         </div>
       </div>
     );
@@ -1040,7 +1040,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                       {run.isPending ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>{t("agent.composer.sending", "Odosielam...")}</span>
+                          <span>{t("agent.composer.sending", "Odosielam…")}</span>
                         </>
                       ) : (
                         <>
@@ -1082,7 +1082,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
             <SearchField
               value={sessionSearch}
               onChange={setSessionSearch}
-              placeholder={t("agent.recentSessions.title", "Hľadať v reláciách...")}
+              placeholder={t("agent.recentSessions.title", "Hľadať v reláciách…")}
               className="max-w-xs"
             />
             <div className="flex flex-wrap items-center gap-2">

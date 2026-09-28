@@ -528,7 +528,7 @@ export default function MedicationOversightPage() {
             onChange={(val) => setSearch(val)}
             placeholder={t(
               "medications.searchPlaceholder",
-              "Filtrovať podľa lieku, pacienta alebo majiteľa...",
+              "Filtrovať podľa lieku, pacienta alebo majiteľa…",
             )}
             className="w-full sm:w-64"
           />
@@ -817,7 +817,7 @@ export default function MedicationOversightPage() {
                   required
                 >
                   <option value="">
-                    {t("medications.selectPatientPlaceholder", "Vyberte pacienta...")}
+                    {t("medications.selectPatientPlaceholder", "Vyberte pacienta…")}
                   </option>
                   {patientsQuery.data?.items.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -836,7 +836,7 @@ export default function MedicationOversightPage() {
                   id="med-name"
                   value={newMedicationName}
                   onChange={(e) => setNewMedicationName(e.target.value)}
-                  placeholder="napr. Amoxicillin, Meloxicam, Ketamín..."
+                  placeholder="napr. Amoxicillin, Meloxicam, Ketamín…"
                   className="mt-1 h-9 text-xs"
                   required
                 />
@@ -954,7 +954,7 @@ export default function MedicationOversightPage() {
                   id="med-inst"
                   value={newInstructions}
                   onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="napr. Podávať po jedle, zapíjať dostatkom vody..."
+                  placeholder="napr. Podávať po jedle, zapíjať dostatkom vody…"
                   rows={2}
                   className="mt-1 text-xs resize-none"
                 />

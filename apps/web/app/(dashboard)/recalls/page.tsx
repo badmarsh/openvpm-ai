@@ -225,7 +225,7 @@ export default function VaccinationRecallsPage() {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("recalls.checkingAccess", "Checking recall access...")}
+        {t("recalls.checkingAccess", "Checking recall access…")}
       </div>
     );
   }
@@ -247,7 +247,7 @@ export default function VaccinationRecallsPage() {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("recalls.buildingPreview", "Building the recall preview...")}
+        {t("recalls.buildingPreview", "Building the recall preview…")}
       </div>
     );
   }

@@ -2093,7 +2093,7 @@ function AppointmentDetailPopover({
                 disabled={locationsQuery.isLoading || Boolean(locationsQuery.error)}
                 className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
               >
-                <option value="">{t("schedule.selectLocationPlaceholder", "Select location...")}</option>
+                <option value="">{t("schedule.selectLocationPlaceholder", "Select location…")}</option>
                 {(locationsQuery.data ?? []).map((location) => (
                   <option key={location.id} value={location.id}>
                     {location.name}
@@ -2337,7 +2337,7 @@ function AppointmentDetailPopover({
                           onChange={(e) => setInlineDoctorId(e.target.value)}
                           className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          <option value="">{t("schedule.selectDoctorToAssign", "Select doctor...")}</option>
+                          <option value="">{t("schedule.selectDoctorToAssign", "Select doctor…")}</option>
                           {eligibleRescheduleDoctors.map((doc) => (
                             <option key={doc.id} value={doc.id}>
                               {formatDoctorName(doc.name, t)}
@@ -2773,7 +2773,7 @@ function BookingForm({
               <option value="">
                 {locationsUnavailable
                   ? t("schedule.locationsUnavailable", "Locations unavailable")
-                  : t("schedule.selectLocationPlaceholder", "Select location...")}
+                  : t("schedule.selectLocationPlaceholder", "Select location…")}
               </option>
               {locations?.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -2817,7 +2817,7 @@ function BookingForm({
             ) : (
               <div className="relative mt-1">
                 <Input
-                  placeholder={t("schedule.searchPatientsPlaceholder", "Search patients or owners...")}
+                  placeholder={t("schedule.searchPatientsPlaceholder", "Search patients or owners…")}
                   value={patientSearch}
                   maxLength={APPOINTMENT_PATIENT_SEARCH_MAX_LENGTH}
                   aria-invalid={!canSearchPatients}
@@ -2846,7 +2846,7 @@ function BookingForm({
                       </div>
                     ) : isSearchingPatients ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">
-                        {t("schedule.searchingPatients", "Searching patients...")}
+                        {t("schedule.searchingPatients", "Searching patients…")}
                       </div>
                     ) : searchResults && searchResults.length > 0 ? (
                       searchResults.map((p) => (
@@ -2895,7 +2895,7 @@ function BookingForm({
               <option value="">
                 {appointmentTypesUnavailable
                   ? t("schedule.appointmentTypesUnavailable", "Appointment types unavailable")
-                  : t("schedule.selectTypePlaceholder", "Select type...")}
+                  : t("schedule.selectTypePlaceholder", "Select type…")}
               </option>
               {appointmentTypes?.map((tItem) => (
                 <option key={tItem.id} value={tItem.id}>
@@ -2913,7 +2913,7 @@ function BookingForm({
               </p>
             ) : appointmentTypesQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                {t("schedule.loadingTypes", "Loading appointment types...")}
+                {t("schedule.loadingTypes", "Loading appointment types…")}
               </p>
             ) : null}
           </div>
@@ -2930,7 +2930,7 @@ function BookingForm({
               <option value="">
                 {doctorsUnavailable
                   ? t("schedule.doctorsUnavailable", "Doctors unavailable")
-                  : t("schedule.selectDoctorPlaceholder", "Select doctor...")}
+                  : t("schedule.selectDoctorPlaceholder", "Select doctor…")}
               </option>
               {eligibleDoctors?.map((doc) => (
                 <option key={doc.id} value={doc.id}>
@@ -2948,7 +2948,7 @@ function BookingForm({
               </p>
             ) : doctorsQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                {t("schedule.loadingDoctors", "Loading doctors...")}
+                {t("schedule.loadingDoctors", "Loading doctors…")}
               </p>
             ) : null}
           </div>
@@ -2965,7 +2965,7 @@ function BookingForm({
               <option value="">
                 {roomsUnavailable
                   ? t("schedule.roomsUnavailable", "Rooms unavailable")
-                  : t("schedule.selectRoomPlaceholder", "Select room...")}
+                  : t("schedule.selectRoomPlaceholder", "Select room…")}
               </option>
               {roomsList?.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -2983,7 +2983,7 @@ function BookingForm({
               </p>
             ) : roomsQuery.isLoading ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                {t("schedule.loadingRooms", "Loading rooms...")}
+                {t("schedule.loadingRooms", "Loading rooms…")}
               </p>
             ) : null}
           </div>
@@ -3113,7 +3113,7 @@ function BookingForm({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              placeholder={t("schedule.optionalNotesPlaceholder", "Optional notes...")}
+              placeholder={t("schedule.optionalNotesPlaceholder", "Optional notes…")}
             />
           </div>
         </div>
@@ -3147,7 +3147,7 @@ function ScheduleLoading() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      {t("schedule.loadingSchedule", "Loading schedule...")}
+      {t("schedule.loadingSchedule", "Loading schedule…")}
     </div>
   );
 }
@@ -3681,7 +3681,7 @@ function SchedulePageContent() {
       ) : isScheduleLoading ? (
         <div className="mt-6 flex items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {t("schedule.loadingAppointments", "Loading appointments...")}
+          {t("schedule.loadingAppointments", "Loading appointments…")}
         </div>
       ) : (
         <>

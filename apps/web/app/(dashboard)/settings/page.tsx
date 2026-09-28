@@ -548,7 +548,7 @@ function SettingsPageInner() {
       <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         {/* Checking settings access... */}
-        {t("settings.checkingAccess", "Checking settings access...")}
+        {t("settings.checkingAccess", "Checking settings access…")}
       </div>
     );
   }
@@ -5799,7 +5799,7 @@ function TemplatesTab() {
                     className={cn(tableCellClass, "py-8 text-center text-muted-foreground")}
                   >
                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    {t("settings.templates.loadingItems", "Načítavam položky šablóny...")}
+                    {t("settings.templates.loadingItems", "Načítavam položky šablóny…")}
                   </td>
                 </tr>
               ) : selectedTemplateMissing ? (

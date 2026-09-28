@@ -820,7 +820,7 @@ export default function PatientDuplicatesPage() {
               maxLength={DUPLICATE_FILTER_MAX_LENGTH}
               placeholder={t(
                 "patients.duplicates.searchPlaceholder",
-                "Filter by owner, patient, or microchip...",
+                "Filter by owner, patient, or microchip…",
               )}
             />
             <p className="text-xs tabular-nums text-muted-foreground sm:ml-auto sm:shrink-0">
@@ -922,7 +922,7 @@ export default function PatientDuplicatesPage() {
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 {t(
                   "patients.duplicates.previewLoading",
-                  "Checking both charts and their retained history...",
+                  "Checking both charts and their retained history…",
                 )}
               </div>
             ) : (
@@ -1041,7 +1041,7 @@ export default function PatientDuplicatesPage() {
                         disabled={mergeLocked}
                         placeholder={t(
                           "patients.duplicates.reasonPlaceholder",
-                          "Explain reason for merge (e.g., duplicated during migration)...",
+                          "Explain reason for merge (e.g., duplicated during migration)…",
                         )}
                         aria-describedby="merge-reason-hint"
                         onChange={(event) => setReason(event.target.value)}
@@ -1160,7 +1160,7 @@ export default function PatientDuplicatesPage() {
                   <GitMerge className="mr-2 h-4 w-4" aria-hidden="true" />
                 )}
                 {mergePatient.isPending
-                  ? t("patients.duplicates.merging", "Merging charts...")
+                  ? t("patients.duplicates.merging", "Merging charts…")
                   : t("patients.duplicates.executeMerge", "Merge and retire duplicate")}
               </Button>
             ) : null}

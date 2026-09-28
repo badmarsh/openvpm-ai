@@ -576,7 +576,7 @@ export function AmbulatoryVisitRecordsCard({
                 safety.isFetching ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Checking prescription safety...
+                    Checking prescription safety…
                   </div>
                 ) : safety.error || !safety.data ? (
                   <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">

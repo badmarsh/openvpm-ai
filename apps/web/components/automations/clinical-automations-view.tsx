@@ -221,7 +221,7 @@ export function ClinicalAutomationsView() {
           {isLoading ? (
             <div className="py-12 text-center text-xs text-muted-foreground">
               <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("common.loading", "Načítavam...")}
+              {t("common.loading", "Načítavam…")}
             </div>
           ) : !alerts || alerts.length === 0 ? (
             <div className="py-12 text-center text-xs text-muted-foreground">

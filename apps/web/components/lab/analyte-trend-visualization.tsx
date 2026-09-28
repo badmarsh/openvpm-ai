@@ -98,7 +98,7 @@ export function AnalyteTrendVisualization({
                 <Input
                   value={patientSearch}
                   onChange={(e) => setPatientSearch(e.target.value)}
-                  placeholder="Vyhľadajte pacienta pre zobrazenie trendov..."
+                  placeholder="Vyhľadajte pacienta pre zobrazenie trendov…"
                   className="h-8 pl-8 text-xs"
                 />
                 {patientsQuery.data?.items && patientsQuery.data.items.length > 0 && (

@@ -152,8 +152,8 @@ export function TemplateCatalogPicker({
           {value
             ? selectedLabel
             : itemType === "service"
-              ? t("settings.templates.searchServices", "Search services...")
-              : t("settings.templates.searchProducts", "Search products...")}
+              ? t("settings.templates.searchServices", "Search services…")
+              : t("settings.templates.searchProducts", "Search products…")}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0" />
       </button>
@@ -167,8 +167,8 @@ export function TemplateCatalogPicker({
               role="combobox"
               aria-label={
                 itemType === "service"
-                  ? t("settings.templates.searchServices", "Search services...")
-                  : t("settings.templates.searchProducts", "Search products...")
+                  ? t("settings.templates.searchServices", "Search services…")
+                  : t("settings.templates.searchProducts", "Search products…")
               }
               aria-autocomplete="list"
               aria-expanded="true"
@@ -224,7 +224,7 @@ export function TemplateCatalogPicker({
           >
             {queryIsStale || catalogQuery.isFetching ? (
               <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> {t("settings.templates.searching", "Searching...")}
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("settings.templates.searching", "Searching…")}
               </div>
             ) : catalogQuery.error ? (
               <div role="alert" className="px-3 py-6 text-sm text-destructive">

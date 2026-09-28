@@ -476,7 +476,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
         }
         className="w-full rounded-md border border-border bg-background py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
       >
-        {suggestAltMutation.isPending ? "Generujem..." : "Navrhnúť alt text (prístupnosť)"}
+        {suggestAltMutation.isPending ? "Generujem…" : "Navrhnúť alt text (prístupnosť)"}
       </button>
     </div>
   );
@@ -677,7 +677,7 @@ function UploadPanel({
             className="text-xs h-8 bg-warning text-warning-foreground hover:bg-warning/90"
             onClick={() => grantMutation.mutate({ clientId: ownerId, scope: "photo_social" })}
           >
-            {grantMutation.isPending ? t("marketing.media.grantingConsent", "Ukladám súhlas...") : t("marketing.media.grantConsentAtReception", "Získať súhlas na recepcii (podpis)")}
+            {grantMutation.isPending ? t("marketing.media.grantingConsent", "Ukladám súhlas…") : t("marketing.media.grantConsentAtReception", "Získať súhlas na recepcii (podpis)")}
           </Button>
         </div>
       )}
@@ -697,7 +697,7 @@ function UploadPanel({
           {createMutation.isPending ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Ukladám...
+              Ukladám…
             </>
           ) : (
             <>

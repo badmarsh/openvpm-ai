@@ -168,7 +168,7 @@ describe("clinic encounter workspace", () => {
       /recordVitals\.mutate\(\{\s+patientId,\s+appointmentId,/,
     );
     expect(encounterVitalsSource).toContain(
-      "Checking whether this visit accepts new vitals...",
+      "Checking whether this visit accepts new vitals…",
     );
     expect(encounterVitalsSource).toContain(
       "This visit is closed to new vitals. Recorded values remain read-only.",
@@ -207,7 +207,7 @@ describe("clinic encounter workspace", () => {
     expect(workspaceSource).toContain(
       "trpc.billing.updateInvoiceItems.useMutation",
     );
-    expect(workspaceSource).toContain("Loading existing visit charges...");
+    expect(workspaceSource).toContain("Loading existing visit charges…");
     expect(workspaceSource).toContain("Only unpaid");
     expect(workspaceSource).toContain("Update visit invoice");
     expect(workspaceSource).toContain(
@@ -218,7 +218,7 @@ describe("clinic encounter workspace", () => {
 
   it("locks charge creation until invoice state is known and surfaces failures", () => {
     expect(workspaceSource).toContain("invoiceStateReady");
-    expect(workspaceSource).toContain("Confirming visit invoice state...");
+    expect(workspaceSource).toContain("Confirming visit invoice state…");
     expect(workspaceSource).toContain(
       "Charge capture is locked because invoice state could not be",
     );

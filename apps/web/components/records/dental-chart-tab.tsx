@@ -163,7 +163,7 @@ export function DentalChartTab({ patientId }: { patientId: string }) {
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={createMutation.isPending}>
               {createMutation.isPending
-                ? t("records.common.saving", "Saving...")
+                ? t("records.common.saving", "Saving…")
                 : t("records.common.save", "Save")}
             </Button>
             <Button

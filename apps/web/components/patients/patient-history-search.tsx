@@ -255,7 +255,7 @@ export function PatientHistorySearch({
             >
               <Search className="mr-2 h-4 w-4" />
               {search.isFetching
-                ? t("patients.historySearch.searching", "Searching...")
+                ? t("patients.historySearch.searching", "Searching…")
                 : t("patients.historySearch.applyFilters", "Apply filters")}
             </Button>
           </div>
@@ -398,7 +398,7 @@ export function PatientHistorySearch({
             <p className="py-8 text-center text-sm text-muted-foreground">
               {t(
                 "patients.historySearch.searchingAuthorized",
-                "Searching authorized history..."
+                "Searching authorized history…"
               )}
             </p>
           ) : search.data ? (

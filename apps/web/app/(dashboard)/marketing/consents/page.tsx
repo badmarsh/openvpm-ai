@@ -271,7 +271,7 @@ export default function MarketingCompliancePage() {
             {consentsQuery.isLoading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                Načítavam evidenciu súhlasov...
+                Načítavam evidenciu súhlasov…
               </div>
             ) : !consentsQuery.data || consentsQuery.data.length === 0 ? (
               <div className="p-12 text-center space-y-2">
@@ -363,7 +363,7 @@ export default function MarketingCompliancePage() {
           {scriptsQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              Načítavam operačné skripty...
+              Načítavam operačné skripty…
             </div>
           ) : (
             <div className="space-y-8">

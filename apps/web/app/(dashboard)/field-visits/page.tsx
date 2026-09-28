@@ -1541,7 +1541,7 @@ export default function FieldVisitsPage() {
                     id="fv-diagnosis"
                     placeholder={t(
                       "fieldVisits.form.diagnosisPlaceholder",
-                      "Zadajte diagnózu alebo klinický nález..."
+                      "Zadajte diagnózu alebo klinický nález…"
                     )}
                     value={formDiagnosis}
                     onChange={(e) => setFormDiagnosis(e.target.value)}
@@ -1681,7 +1681,7 @@ export default function FieldVisitsPage() {
                     id="fv-notes"
                     placeholder={t(
                       "fieldVisits.form.notesPlaceholder",
-                      "napr. Ochranná lehota mlieko 4 dni, kontrola o 3 dni..."
+                      "napr. Ochranná lehota mlieko 4 dni, kontrola o 3 dni…"
                     )}
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
@@ -1731,7 +1731,7 @@ export default function FieldVisitsPage() {
                 >
                   <Check className="h-4 w-4 mr-2" />
                   {createVisitMutation.isPending
-                    ? t("fieldVisits.form.submitting", "Ukladám výjazd...")
+                    ? t("fieldVisits.form.submitting", "Ukladám výjazd…")
                     : t("fieldVisits.form.submit", "Uložiť ošetrenie do knihy a na faktúru")}
                 </Button>
               </form>
@@ -1859,7 +1859,7 @@ export default function FieldVisitsPage() {
               >
                 <Check className="h-4 w-4 mr-2" />
                 {createHerdBatchMutation.isPending
-                  ? t("fieldVisits.batch.submitting", "Ukladám hromadný zákrok...")
+                  ? t("fieldVisits.batch.submitting", "Ukladám hromadný zákrok…")
                   : t("fieldVisits.batch.submit", "Uložiť hromadný zákrok stáda")}
               </Button>
               {batchCowIds.length === 1 && (

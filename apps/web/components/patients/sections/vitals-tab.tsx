@@ -436,7 +436,7 @@ export function VitalsTab({
           <div className="mt-3 flex justify-end">
             <Button type="submit" disabled={!canSubmitVitals}>
               {record.isPending
-                ? t("patients.actions.saving", "Saving...")
+                ? t("patients.actions.saving", "Saving…")
                 : t("patients.vitals.saveVitals", "Record vitals")}
             </Button>
           </div>
@@ -456,7 +456,7 @@ export function VitalsTab({
         />
       ) : isLoading ? (
         <PatientDetailLoadingPanel
-          label={t("patients.vitals.loading", "Loading vitals...")}
+          label={t("patients.vitals.loading", "Loading vitals…")}
         />
       ) : !vitals || vitals.length === 0 ? (
         <EmptyState

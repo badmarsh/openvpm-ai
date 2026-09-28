@@ -1,18 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  FileCheck,
-  ShieldAlert,
-  ShieldCheck,
-  Edit3,
-  X,
-} from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, FileCheck, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConfidenceScoreBadge } from "./confidence-score-badge";
 import { isControlledSubstanceName } from "@/lib/controlled-substances/policy";
 import { useI18n } from "@/lib/i18n";
@@ -53,6 +50,11 @@ export interface ClinicalDiffConfirmModalProps {
  *    AI nesmie priamo zapisovať do klinickej dokumentácie bez autorizácie lekára.
  * 2. Zákon 139/1998 Z. z.: Kontrolované látky (omamné a psychotropné) — NULA AI prefill.
  *    Ak je zistená kontrolovaná látka, pole je zablokované pre AI a vyžaduje manuálne zadanie lekárom.
+ *
+ * Built on the shared Radix <Dialog>: focus is trapped inside, Escape closes,
+ * the page behind is inert for assistive tech and body scroll is locked.
+ * Clicking the backdrop is deliberately NOT a dismiss action so a stray click
+ * cannot throw away the veterinarian's manual edits — use Escape, Cancel or ✕.
  */
 export function ClinicalDiffConfirmModal({
   isOpen,
@@ -99,35 +101,33 @@ export function ClinicalDiffConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-card border rounded-xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] flex flex-col">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-5 rounded-xl bg-card p-6 shadow-2xl sm:rounded-xl"
+        onPointerDownOutside={(event) => event.preventDefault()}
+      >
         {/* Header */}
-        <div className="flex items-start justify-between border-b pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-primary" />
-              <h2 className="font-bold text-base text-foreground">
-                {t(
-                  "copilot.diffModal.title",
-                  "Autorizácia klinického záznamu (Diff Overenie)"
-                )}
-              </h2>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t("copilot.diffModal.patient", "Pacient:")}{" "}
-              <span className="font-semibold text-foreground">{patientName}</span>{" "}
-              {species ? `(${species})` : ""} |{" "}
-              {t("copilot.diffModal.source", "Zdroj:")} {sourceTitle}
-            </p>
+        <div className="border-b pb-3 pr-8">
+          <div className="flex items-center gap-2">
+            <FileCheck className="w-5 h-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-bold text-base leading-normal tracking-normal text-foreground">
+              {t(
+                "copilot.diffModal.title",
+                "Autorizácia klinického záznamu (Diff Overenie)"
+              )}
+            </DialogTitle>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+            {t("copilot.diffModal.patient", "Pacient:")}{" "}
+            <span className="font-semibold text-foreground">{patientName}</span>{" "}
+            {species ? `(${species})` : ""} |{" "}
+            {t("copilot.diffModal.source", "Zdroj:")} {sourceTitle}
+          </DialogDescription>
         </div>
 
         {/* Confidence & Statutory Status */}
@@ -158,8 +158,11 @@ export function ClinicalDiffConfirmModal({
 
         {/* Controlled Substance Warning Banner (Zákon 139/1998 Z. z.) */}
         {hasControlledSubstance && (
-          <div className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 p-3 text-xs">
-            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 p-3 text-xs"
+          >
+            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div className="space-y-1">
               <div className="font-bold text-red-900 dark:text-red-300">
                 {t(
@@ -178,7 +181,7 @@ export function ClinicalDiffConfirmModal({
         )}
 
         {/* Diff Table */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 space-y-3">
           <div className="rounded-lg border overflow-hidden text-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -233,24 +236,26 @@ export function ClinicalDiffConfirmModal({
                           {isControlled ? (
                             <input
                               type="text"
+                              aria-label={field.label}
                               value={editedValues[field.label] ?? ""}
                               onChange={(e) =>
                                 setEditedValues({ ...editedValues, [field.label]: e.target.value })
                               }
                               placeholder={t(
                                 "copilot.diffModal.controlledInputPlaceholder",
-                                "Zadajte dávku a aplikáciu manuálne..."
+                                "Zadajte dávku a aplikáciu manuálne…"
                               )}
-                              className="w-full rounded-md border border-red-300 bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-red-500"
+                              className="w-full rounded-md border border-red-300 bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                             />
                           ) : (
                             <textarea
                               rows={2}
+                              aria-label={field.label}
                               value={editedValues[field.label] ?? field.proposedValue}
                               onChange={(e) =>
                                 setEditedValues({ ...editedValues, [field.label]: e.target.value })
                               }
-                              className="w-full rounded-md border bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-primary"
+                              className="w-full rounded-md border bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           )}
                         </td>
@@ -290,12 +295,12 @@ export function ClinicalDiffConfirmModal({
               onClick={handleConfirm}
               className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
               {t("copilot.diffModal.signAndRecord", "Podpísať & Zapísať do karty pacienta")}
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

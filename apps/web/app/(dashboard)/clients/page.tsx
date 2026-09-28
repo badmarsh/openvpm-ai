@@ -77,7 +77,7 @@ export default function ClientsPage() {
         <SearchField
           value={search}
           maxLength={CLIENT_SEARCH_MAX_LENGTH}
-          placeholder={t("clients.search_placeholder", "Search clients...")}
+          placeholder={t("clients.search_placeholder", "Search clients…")}
           onChange={setSearch}
         />
         {verifiedClientList && (

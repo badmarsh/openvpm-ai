@@ -311,7 +311,7 @@ export function SoapPreview({
                   className="text-xs sm:text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[110px] p-3 leading-relaxed custom-scrollbar"
                  placeholder={t(
                     "voice.soap.sectionPlaceholder",
-                    "Doplňte {section}...",
+                    "Doplňte {section}…",
                     { section: label.replace(/\s*\([A-Z]\)\s*$/, "").toLowerCase() },
                   )}
                 />

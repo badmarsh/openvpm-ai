@@ -747,7 +747,7 @@ function DischargeContent() {
             <SearchField
               value={historySearch}
               onChange={setHistorySearch}
-              placeholder={t("discharge.patientSelectPlaceholder", "Search patient by name...")}
+              placeholder={t("discharge.patientSelectPlaceholder", "Search patient by name…")}
             />
             <div className="flex items-center gap-2 ml-auto">
               <Badge variant="outline" className="text-xs">
@@ -845,7 +845,7 @@ function DischargeContent() {
                       </span>
                     ) : (
                       <span className="text-muted-foreground">
-                        {t("discharge.patientSelectPlaceholder", "Search patient by name...")}
+                        {t("discharge.patientSelectPlaceholder", "Search patient by name…")}
                       </span>
                     )}
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -853,7 +853,7 @@ function DischargeContent() {
                 </PopoverTrigger>
                 <PopoverContent className="w-[360px] sm:w-[420px] p-2" align="start">
                   <Input
-                    placeholder={t("discharge.patientSelectPlaceholder", "Search patient by name...")}
+                    placeholder={t("discharge.patientSelectPlaceholder", "Search patient by name…")}
                     value={patientSearch}
                     onChange={(e) => setPatientSearch(e.target.value)}
                     className="mb-2 h-9 text-xs"
@@ -1087,7 +1087,7 @@ function DischargeContent() {
                     {generateMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("discharge.generatingButton", "Generating client report...")}
+                        {t("discharge.generatingButton", "Generating client report…")}
                       </>
                     ) : (
                       <>
@@ -1219,7 +1219,7 @@ function DischargeContent() {
                             <Save className="h-3.5 w-3.5" />
                           )}
                           {saveMutation.isPending
-                            ? t("discharge.saving", "Saving...")
+                            ? t("discharge.saving", "Saving…")
                             : clinicianConfirmed
                               ? t("discharge.saveFinal", "Confirm & Save to Chart")
                               : t("discharge.saveDraft", "Save Draft")}
@@ -1303,7 +1303,7 @@ function DischargeContent() {
                     <div className="flex flex-col items-center justify-center h-full min-h-[350px] text-center p-8 text-muted-foreground gap-3">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       <p className="text-sm font-medium text-foreground">
-                        {t("discharge.generatingNotice", "AI is translating clinical jargon into practical home care instructions...")}
+                        {t("discharge.generatingNotice", "AI is translating clinical jargon into practical home care instructions…")}
                       </p>
                     </div>
                   ) : result ? (
@@ -1384,11 +1384,11 @@ function DischargeContent() {
                                 {generateSmsMutation.isPending ? (
                                   <div className="flex items-center gap-2 py-2 text-muted-foreground">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>{t("discharge.smsPreparing", "Pripravujem SMS súhrn a liekový rozvrh...")}</span>
+                                    <span>{t("discharge.smsPreparing", "Pripravujem SMS súhrn a liekový rozvrh…")}</span>
                                   </div>
                                 ) : (
                                   smsScheduleData?.smsText ||
-                                  t("discharge.smsGenerating", "SMS text sa generuje...")
+                                  t("discharge.smsGenerating", "SMS text sa generuje…")
                                 )}
                               </div>
 
@@ -1670,7 +1670,7 @@ export default function DischargePage() {
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">
-              {t("discharge.page.loading", "Načítavam prepúšťaciu správu...")}
+              {t("discharge.page.loading", "Načítavam prepúšťaciu správu…")}
             </span>
           </div>
         </div>

@@ -19,7 +19,7 @@ export default function LegacyTvRedirectPage() {
   return (
     <div className="flex h-64 items-center justify-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="h-5 w-5 animate-spin text-primary" />
-      <span>Presmerovávam do Čakárne...</span>
+      <span>Presmerovávam do Čakárne…</span>
     </div>
   );
 }

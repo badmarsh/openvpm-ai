@@ -290,7 +290,7 @@ export function RabiesObservationPanel() {
             <Input
               placeholder={t(
                 "statutory.rabies.searchPlaceholder",
-                "Search patient, injured person, microchip..."
+                "Search patient, injured person, microchip…"
               )}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -562,7 +562,7 @@ export function RabiesObservationPanel() {
                     {t("statutory.rabies.fieldInjuredContact", "Phone / address of injured person")}
                   </label>
                   <Input
-                    placeholder={t("statutory.rabies.placeholderInjuredContact", "+421 9...")}
+                    placeholder={t("statutory.rabies.placeholderInjuredContact", "+421 9…")}
                     value={newInjuredPersonContact}
                     onChange={(e) => setNewInjuredPersonContact(e.target.value)}
                     className="mt-1 h-8 text-xs"
@@ -573,7 +573,7 @@ export function RabiesObservationPanel() {
                     {t("statutory.rabies.fieldIncidentLocation", "Incident location")}
                   </label>
                   <Input
-                    placeholder={t("statutory.rabies.placeholderLocation", "e.g. Park, street, backyard...")}
+                    placeholder={t("statutory.rabies.placeholderLocation", "e.g. Park, street, backyard…")}
                     value={newIncidentLocation}
                     onChange={(e) => setNewIncidentLocation(e.target.value)}
                     className="mt-1 h-8 text-xs"
@@ -588,7 +588,7 @@ export function RabiesObservationPanel() {
                 <Input
                   placeholder={t(
                     "statutory.rabies.placeholderDesc",
-                    "Provoked / unprovoked, interaction with other animals..."
+                    "Provoked / unprovoked, interaction with other animals…"
                   )}
                   value={newIncidentDescription}
                   onChange={(e) => setNewIncidentDescription(e.target.value)}

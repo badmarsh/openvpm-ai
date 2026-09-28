@@ -77,7 +77,7 @@ const textareaClass =
   "w-full resize-y rounded-md border border-input bg-background p-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const fileInputClass =
-  "block w-full text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-emerald-700";
+  "block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-emerald-700";
 
 function importMap<T>(create: () => T): Record<MigrationImportMode, T> {
   return Object.fromEntries(

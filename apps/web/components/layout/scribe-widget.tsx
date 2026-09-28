@@ -88,7 +88,7 @@ export function ScribeWidget() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={t("scribe.searchPlaceholder", "Search patient...")}
+              placeholder={t("scribe.searchPlaceholder", "Search patient…")}
               className="pl-9 h-9 text-xs bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -105,7 +105,7 @@ export function ScribeWidget() {
             </div>
           ) : isLoading ? (
             <div className="text-center py-6 px-4 text-xs text-muted-foreground">
-              {t("scribe.searching", "Searching records...")}
+              {t("scribe.searching", "Searching records…")}
             </div>
           ) : !patients || patients.length === 0 ? (
             <div className="text-center py-6 px-4 text-xs text-muted-foreground">

@@ -701,7 +701,7 @@ export default function MarketingWebsitePage() {
             {saveStatus === "saving" ? (
               <>
                 <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden="true" />
-                {t("marketing.website.autosaveSaving", "Ukladám zmeny...")}
+                {t("marketing.website.autosaveSaving", "Ukladám zmeny…")}
               </>
             ) : saveStatus === "saved" ? (
               <>
@@ -844,11 +844,11 @@ export default function MarketingWebsitePage() {
                   <div
                     role="status"
                     className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground"
-                    aria-label={t("marketing.website.editor.loading", "Načítavam editor stránky...")}
+                    aria-label={t("marketing.website.editor.loading", "Načítavam editor stránky…")}
                   >
                     <RefreshCw className="mb-2 h-6 w-6 animate-spin text-primary" aria-hidden="true" />
                     <p className="text-xs">
-                      {t("marketing.website.editor.loading", "Načítavam editor stránky...")}
+                      {t("marketing.website.editor.loading", "Načítavam editor stránky…")}
                     </p>
                   </div>
                 ) : (
@@ -936,7 +936,7 @@ export default function MarketingWebsitePage() {
           ) : configQuery.isLoading ? (
             <div
               role="status"
-              aria-label={t("marketing.website.sections.loading", "Načítavam sekcie stránky...")}
+              aria-label={t("marketing.website.sections.loading", "Načítavam sekcie stránky…")}
             >
               <TableSkeleton rows={5} cols={SECTION_COLUMNS} />
             </div>
@@ -1207,7 +1207,7 @@ export default function MarketingWebsitePage() {
           ) : inquiriesQuery.isLoading ? (
             <div
               role="status"
-              aria-label={t("marketing.website.inquiries.loading", "Načítavam dopyty...")}
+              aria-label={t("marketing.website.inquiries.loading", "Načítavam dopyty…")}
             >
               <TableSkeleton rows={5} cols={INQUIRY_COLUMNS} />
             </div>

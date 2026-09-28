@@ -678,7 +678,7 @@ export default function KvepisPage() {
           <div className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span className="text-xs">
-              {t("statutory.kvepis.loading", "Načítavam KVEPIS podania...")}
+              {t("statutory.kvepis.loading", "Načítavam KVEPIS podania…")}
             </span>
           </div>
         ) : !filtered.length ? (

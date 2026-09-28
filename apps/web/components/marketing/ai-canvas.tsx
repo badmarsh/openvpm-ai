@@ -93,7 +93,7 @@ export function AiCanvas({ onGenerated }: { onGenerated?: () => void }) {
           <Input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="napr. letná hydratácia psa – abstraktný plagát, dentálna hygiena mačky..."
+            placeholder="napr. letná hydratácia psa – abstraktný plagát, dentálna hygiena mačky…"
             maxLength={200}
             className="pl-9 h-11 rounded-xl bg-background text-sm"
           />
@@ -107,7 +107,7 @@ export function AiCanvas({ onGenerated }: { onGenerated?: () => void }) {
           {generateMutation.isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Generujem...
+              Generujem…
             </>
           ) : (
             <>

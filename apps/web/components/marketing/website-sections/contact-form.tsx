@@ -163,7 +163,7 @@ export function ContactFormSection({ content, contextData, isEditor }: ContactFo
                 minLength={5}
                 maxLength={2000}
                 rows={4}
-                placeholder="Napíšte nám, ako vám môžeme pomôcť..."
+                placeholder="Napíšte nám, ako vám môžeme pomôcť…"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />

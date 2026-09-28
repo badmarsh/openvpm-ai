@@ -233,7 +233,7 @@ test("runs the synthetic patient-chart to field-closeout flow", async ({
     .getByRole("link", { name: "Charges and payment", exact: true })
     .click();
   const charges = page.locator("#charge-capture");
-  await charges.getByRole("button", { name: "Search services..." }).click();
+  await charges.getByRole("button", { name: "Search services…" }).click();
   await charges.getByRole("option").first().click();
   await charges.getByRole("button", { name: "Add", exact: true }).click();
   await charges.getByRole("button", { name: "Create visit invoice" }).click();

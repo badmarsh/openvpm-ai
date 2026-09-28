@@ -19,7 +19,7 @@ export default function WaitingRoomTvPage() {
       <div className="fixed inset-0 bg-[#090d0b] text-white flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
         <p className="text-sm font-medium tracking-wide text-white/70">
-          Pripravujem informačný panel čakárne...
+          Pripravujem informačný panel čakárne…
         </p>
       </div>
     );

@@ -728,9 +728,9 @@ export const RecordingButton = forwardRef<
             {isActivelySimulating
               ? t(
                   "voice.demo.simulationRunning",
-                  "Prebieha simulácia mikrofónu z demo nahrávky...",
+                  "Prebieha simulácia mikrofónu z demo nahrávky…",
                 )
-              : t("voice.recording.dictatePrompt", "Diktujte klinický nález...")}
+              : t("voice.recording.dictatePrompt", "Diktujte klinický nález…")}
           </span>
         )}
       </div>

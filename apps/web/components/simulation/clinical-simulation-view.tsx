@@ -629,7 +629,7 @@ export function ClinicalSimulationView({
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/80 backdrop-blur-2xs z-10 space-y-3">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="text-sm font-medium text-muted-foreground animate-pulse">
-              Hermes AI inicializuje 12 klinických scenárov a live prevádzku...
+              Hermes AI inicializuje 12 klinických scenárov a live prevádzku…
             </p>
           </div>
         )}

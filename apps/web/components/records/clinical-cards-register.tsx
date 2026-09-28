@@ -220,7 +220,7 @@ export function ClinicalCardsRegister() {
             <DataTableSearchInput
               placeholder={t(
                 "records.register.searchPlaceholder",
-                "Filtrovať karty podľa pacienta, majiteľa alebo čipu...",
+                "Filtrovať karty podľa pacienta, majiteľa alebo čipu…",
               )}
               value={search}
               onChange={(event) => setSearch(event.target.value)}

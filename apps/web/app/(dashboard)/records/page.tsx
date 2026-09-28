@@ -1651,7 +1651,7 @@ function RecordsPageContent() {
           <SearchField
             value={searchQuery}
             maxLength={PATIENT_SEARCH_MAX_LENGTH}
-            placeholder={t("records.searchPlaceholder", "Search patients by patient or owner name...")}
+            placeholder={t("records.searchPlaceholder", "Search patients by patient or owner name…")}
             className="sm:max-w-none"
             onChange={(value) => {
               setSearchQuery(value);
@@ -1675,7 +1675,7 @@ function RecordsPageContent() {
               ) : isSearchingPatients ? (
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {t("records.searchingPatients", "Searching patients...")}
+                  {t("records.searchingPatients", "Searching patients…")}
                 </div>
               ) : searchResults && searchResults.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-muted-foreground">
@@ -1951,8 +1951,8 @@ function RecordsPageContent() {
               />
             ) : recordsSettingsLoading ? (
               <>
-                {/* <RecordsLoadingPanel label="Loading records settings..." /> */}
-                <RecordsLoadingPanel label={t("records.loadingSettings", "Loading records settings...")} />
+                {/* <RecordsLoadingPanel label="Loading records settings…" /> */}
+                <RecordsLoadingPanel label={t("records.loadingSettings", "Loading records settings…")} />
               </>
             ) : (
               <>
@@ -2300,7 +2300,7 @@ function RecordsPageContent() {
                                             }
                                           >
                                             {addSoapAddendum.isPending
-                                              ? t("common.saving", "Saving...")
+                                              ? t("common.saving", "Saving…")
                                               : t("records.soap.saveAddendum", "Save addendum")}
                                           </Button>
                                           <Button
@@ -2532,7 +2532,7 @@ function RecordsPageContent() {
                         disabled={!canSubmitVaccination}
                       >
                         {createVaccination.isPending
-                          ? t("common.saving", "Saving...")
+                          ? t("common.saving", "Saving…")
                           : t("common.save", "Save")}
                       </Button>
                       <Button
@@ -2560,7 +2560,7 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingVaccinations ? (
-                  <RecordsLoadingPanel label={t("records.vaccinations.loading", "Loading vaccinations...")} />
+                  <RecordsLoadingPanel label={t("records.vaccinations.loading", "Loading vaccinations…")} />
                 ) : vaccinations && vaccinations.length > 0 ? (
                   <DataTableFrame>
                     <table className="w-full text-xs">
@@ -3021,7 +3021,7 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingPrescriptions ? (
-                  <RecordsLoadingPanel label={t("records.prescriptions.loading", "Loading prescriptions...")} />
+                  <RecordsLoadingPanel label={t("records.prescriptions.loading", "Loading prescriptions…")} />
                 ) : prescriptionsList && prescriptionsList.length > 0 ? (
                   <DataTableFrame>
                     <table className="w-full text-xs">
@@ -3296,7 +3296,7 @@ function RecordsPageContent() {
                         disabled={!canSubmitProblem}
                       >
                         {createProblem.isPending
-                          ? t("common.saving", "Saving...")
+                          ? t("common.saving", "Saving…")
                           : t("common.save", "Save")}
                       </Button>
                       <Button
@@ -3324,7 +3324,7 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingProblems ? (
-                  <RecordsLoadingPanel label={t("records.problems.loading", "Loading problems...")} />
+                  <RecordsLoadingPanel label={t("records.problems.loading", "Loading problems…")} />
                 ) : problems && problems.length > 0 ? (
                   <div className="space-y-2">
                     {problems.map((problem) => (
@@ -3734,7 +3734,7 @@ function RecordsPageContent() {
                         className="h-11 sm:h-9"
                         disabled={!canSubmitLabResult}
                       >
-                        {createLabResult.isPending ? t("records.common.saving", "Saving...") : t("records.common.save", "Save")}
+                        {createLabResult.isPending ? t("records.common.saving", "Saving…") : t("records.common.save", "Save")}
                       </Button>
                       <Button
                         type="button"
@@ -3771,7 +3771,7 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingLabResults ? (
-                  <RecordsLoadingPanel label={t("records.labResults.loading", "Loading lab results...")} />
+                  <RecordsLoadingPanel label={t("records.labResults.loading", "Loading lab results…")} />
                 ) : labResultsList && labResultsList.length > 0 ? (
                   <div className="space-y-4">
                     {labTrendGroups.length > 0 && (
@@ -4248,7 +4248,7 @@ function RecordsPageContent() {
                         className="h-11 sm:h-9"
                         disabled={!canSubmitProcedure}
                       >
-                        {createProcedure.isPending ? t("records.common.saving", "Saving...") : t("records.common.save", "Save")}
+                        {createProcedure.isPending ? t("records.common.saving", "Saving…") : t("records.common.save", "Save")}
                       </Button>
                       <Button
                         type="button"
@@ -4275,7 +4275,7 @@ function RecordsPageContent() {
                     }
                   />
                 ) : isLoadingProcedures ? (
-                  <RecordsLoadingPanel label={t("records.procedures.loading", "Loading procedures...")} />
+                  <RecordsLoadingPanel label={t("records.procedures.loading", "Loading procedures…")} />
                 ) : proceduresList && proceduresList.length > 0 ? (
                   <DataTableFrame>
                     <table className="w-full text-xs">
@@ -4602,7 +4602,7 @@ function RecordsPageContent() {
 export default function RecordsPage() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<RecordsLoadingPanel label={t("records.loading", "Loading records...")} />}>
+    <Suspense fallback={<RecordsLoadingPanel label={t("records.loading", "Loading records…")} />}>
       <RecordsPageContent />
     </Suspense>
   );

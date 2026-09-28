@@ -480,7 +480,7 @@ function AutomationsContent() {
               onChange={setSearchQuery}
               placeholder={t(
                 "automations.filters.searchPlaceholder",
-                "Hľadať cesty podľa názvu alebo popisu...",
+                "Hľadať cesty podľa názvu alebo popisu…",
               )}
             />
 
@@ -563,7 +563,7 @@ function AutomationsContent() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-muted-foreground">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                      <span>{t("automations.table.loading", "Načítavam zákaznícke cesty...")}</span>
+                      <span>{t("automations.table.loading", "Načítavam zákaznícke cesty…")}</span>
                     </td>
                   </tr>
                 ) : filteredJourneys.length === 0 ? (
@@ -763,7 +763,7 @@ function AutomationsContent() {
               onChange={setSuppressionSearch}
               placeholder={t(
                 "automations.filters.searchSuppression",
-                "Hľadať v záznamoch potlačenia...",
+                "Hľadať v záznamoch potlačenia…",
               )}
             />
 
@@ -864,7 +864,7 @@ function AutomationsContent() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-muted-foreground">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                      <span>{t("automations.suppression.loading", "Načítavam auditné záznamy...")}</span>
+                      <span>{t("automations.suppression.loading", "Načítavam auditné záznamy…")}</span>
                     </td>
                   </tr>
                 ) : filteredSuppressionLogs.length === 0 ? (
@@ -1009,7 +1009,7 @@ function AutomationsContent() {
             <DialogDescription>
               {t(
                 "automations.builder.descriptionPlaceholder",
-                "Popíšte cieľ a časovanie tejto automatizovanej cesty...",
+                "Popíšte cieľ a časovanie tejto automatizovanej cesty…",
               )}
             </DialogDescription>
           </DialogHeader>
@@ -1060,7 +1060,7 @@ function AutomationsContent() {
                 onChange={(e) => setFormDesc(e.target.value)}
                 placeholder={t(
                   "automations.builder.descriptionPlaceholder",
-                  "Popíšte cieľ a časovanie tejto automatizovanej cesty...",
+                  "Popíšte cieľ a časovanie tejto automatizovanej cesty…",
                 )}
                 className="text-xs min-h-[64px]"
               />
@@ -1276,7 +1276,7 @@ function AutomationsContent() {
             >
               {createJourneyMutation.isPending ||
               updateJourneyMutation.isPending
-                ? t("automations.builder.saving", "Ukladám...")
+                ? t("automations.builder.saving", "Ukladám…")
                 : t("automations.builder.saveJourney", "Uložiť cestu")}
             </Button>
           </DialogFooter>
