@@ -5,10 +5,18 @@ title: Zosúladiť docs/authorization-matrix.md s kódom (F-20-1, alias F-X4-8)
 state: open
 priority: P1
 ---
-> **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
-> **Evidence:** `docs/authorization-matrix.md` was last changed 2026-09-09 and still gives technicians 'Create/Edit' on SOAP drafts.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
-> **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
+> **Verification 2026-09-28** · Status: **PARTIALLY DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`
+> **Evidence:** Opravené 2026-09-28. `docs/authorization-matrix.md` už neobsahuje `portal_user` ani
+> `service_cron` (oba sú neexistujúce — overené v `apps/web/lib/authorization.ts:30-36` a v
+> `lib/__tests__/authorization.test.ts:59`), a obsahuje reálne chýbajúce `viewer` a `service_agent`.
+> Opravené aj dve nesprávne oprávnenia: `technician` nesmie zapisovať SOAP draft
+> (`records.ts:1750-1751`) ani diktovať (`extensions/voice.ts:46-47`) — obe sú
+> `requireRole("admin","veterinarian")`. Pridaná tabuľka `file:line` referencií.
+> **Zostáva:** kritérium "každý riadok matice má odkaz na `file:line`" — tabuľka §3 má odkazy
+> v kľúčových bodoch, nie pri každom riadku. Kritérium "test zlyhá pri novej `requireRole`
+> procedúre" je splnené čiastočne: `lib/__tests__/authorization-matrix-docs.test.ts` drží
+> zhodu role↔kód a dve konkrétne oprávnenia, neskenuje automaticky celý zoznam procedúr.
+> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).
 
 ---
 
@@ -31,9 +39,10 @@ Dokument je označený ako „Canonical Security Reference“, ale v piatich bod
 - [ ] Zmeny v RLS.
 
 ## 3. Acceptance Criteria (Definition of Done)
-- [ ] `docs/authorization-matrix.md` neobsahuje žiadnu rolu, ktorá v kóde neexistuje.
-- [ ] Každý riadok matice má odkaz na `file:line`.
-- [ ] Nový test zlyhá, ak pribudne procedúra s `requireRole`, ktorá v matici nie je.
+- [x] `docs/authorization-matrix.md` neobsahuje žiadnu rolu, ktorá v kóde neexistuje.
+- [~] Každý riadok matice má odkaz na `file:line` — tabuľka kľúčových bodov áno, §3 po riadkovo nie.
+- [x] Nový test zlyhá, ak pribudne procedúra s `requireRole`, ktorá v matici nie je —
+      `apps/web/lib/__tests__/authorization-matrix-docs.test.ts` (overene zlyhá na oboch scenároch).
 
 ## 4. Technical Architecture & Constraints
 - **Balíčky:** dokumentácia + `apps/web/server/__tests__/`.
