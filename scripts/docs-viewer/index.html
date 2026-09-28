@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenVPM — technická dokumentácia</title>
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <a class="brand" href="#/">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-text">
+          <strong>OpenVPM</strong>
+          <small>technická dokumentácia</small>
+        </span>
+      </a>
+      <button class="icon-btn" id="theme" title="Prepnúť motív" aria-label="Prepnúť motív">◐</button>
+    </div>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Hľadať v dokumentácii…" autocomplete="off" spellcheck="false">
+      <kbd class="hint">/</kbd>
+    </div>
+
+    <div class="search-meta" id="searchMeta" hidden></div>
+    <nav class="tree" id="tree" aria-label="Dokumenty"></nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="icon-btn only-narrow" id="menu" aria-label="Menu">☰</button>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="topbar-right">
+        <span class="stat" id="stat"></span>
+      </div>
+    </div>
+    <div class="body">
+      <article class="page" id="page"></article>
+      <aside class="toc" id="toc"></aside>
+    </div>
+  </main>
+</div>
+<script src="./assets/app.js"></script>
+</body>
+</html>
