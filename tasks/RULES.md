@@ -26,6 +26,17 @@ Every sprint spec inherits these rules **by reference**. Specs don't copy them. 
 ## 3. Delivery rules (for whoever implements)
 
 1. **One sprint = one branch = one PR.** Never bundle sprints (PR #67 bundled six generic tickets with no review).
+
+   **Exception — mechanical sweeps** *(owner decision 2026-09-28)*: one PR may touch many
+   files when it applies **the same mechanical edit** to each (e.g. raw palette utilities →
+   one shared token file, adopting one page-kit primitive), and all three hold:
+   1. the PR body states the sweep boundary (the paths it may touch) and its size;
+   2. a **mechanical contract** ships with it — a script or test that fails on any remaining
+      violation inside that boundary, so the diff is verifiable instead of eyeballed;
+   3. it is presentation-only: no logic, no amounts, no statuses, no router behaviour.
+
+   This is not a licence to bundle *different* changes, and it does not apply to a whole
+   feature area "because it's faster". If the edit differs per file, it is not a sweep.
 2. Start with `node scripts/tasks/tasks.mjs check <id>`. If it isn't READY, stop and fix the spec first.
 3. You're done when the contract test is flipped from `it.fails` to `it` and passes, the pinned tests stay green, the spec's `state:` is `done` with `prs:` filled in, and `tasks.mjs index` has been re-run.
 4. Commits: one logical change each (`feat(scope):`, `fix(scope):`, `test(scope):`, `docs(tasks):`).

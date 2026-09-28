@@ -40,7 +40,8 @@
     "docs:build": "node scripts/docs-viewer.mjs",
     "docs:check": "node scripts/docs-viewer/code-check.mjs",
     "docs:links": "node scripts/docs-viewer/link-audit.mjs",
-    "docs:smoke": "node scripts/docs-viewer/smoke.mjs"
+    "docs:smoke": "node scripts/docs-viewer/smoke.mjs",
+    "ui:check": "node scripts/ui/uniformity.mjs --boundary apps/web/app/portal --boundary apps/web/components/portal --rules saturated"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
