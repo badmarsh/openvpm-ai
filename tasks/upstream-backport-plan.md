@@ -5,6 +5,150 @@
 > **Zdroj analyzy:** .gemini/antigravity/brain/26bfd515.../backport-selection-analysis.md
 > **Overene a opravené:** 2026-09-28 -- `git fetch upstream main`, 176 suborov porovnanych
 > proti `upstream/main` (tip `f1a3363`). Pozri sekciu [Korekcia planu](#korekcia-planu-preverene-fakty).
+> **Audit fáz:** 2026-09-28 (druhá session) -- pozri sekciu **AUDIT FÁZ** hneď pod týmto blokom. Fázy 1--4 sú ním uzavreté, Fáza 5 má zoznam kandidátov na rozhodnutie vlastníka.
+
+---
+
+## AUDIT FÁZ (2026-09-28, druhá session) — merané verdikty
+
+> Odpoveď na [Odporúčané ďalšie kroky](#odporucane-dalsie-kroky-namiesto-puvodneho-postupu),
+> body 2--5. Nič nižšie nie je odhad: každé číslo je výstup
+> `node scripts/upstream-backport-audit.mjs` (nástroj je súčasťou tohto PR).
+> Upstream tip pri audite: `f1a3363` — rovnaký, aký použila pôvodná analýza.
+
+Prerekvizita (remote sa v sandboxe neperzistuje medzi turami):
+
+```bash
+git remote add upstream https://github.com/evangauer/openvpm.git
+git fetch --no-tags upstream main
+node scripts/upstream-backport-audit.mjs journal
+```
+
+### Ako sa meria (aby sa dalo zopakovať)
+
+| Príkaz | Čo meria |
+|---|---|
+| `audit.mjs classify <shas>` | súbory dotknuté fázou (union, `pnpm-lock.yaml` vynechaný), porovnané blob-na-blob proti upstream tipu: `identical` / `differs` / `missing` |
+| `audit.mjs candidates <shas>` | riadky, ktoré fáza **pridala**, upstream tip ich stále má a náš strom nie — jediní skutoční kandidáti na backport |
+| `audit.mjs journal` | prvý index, kde sa rozchádza `_journal.json` |
+
+`candidates` robí dve veci zámerne, inak by klamal:
+
+- **uzná aj `t("kľúč", "text")`** — UI texty u nás idú cez `useI18n()` (RULES §1.3), takže upstream
+  `toast.success("One-time portal link created")` je u nás
+  `toast.success(t("clients.detail.portalLinkCreated", "One-time portal link created"))`.
+  Porovnanie celých riadkov by to hlásilo ako chýbajúce.
+- **zahodí riadky, ktoré upstream sám nahradil** — ak fáza pridala riadok, ktorý v tipe už
+  neexistuje, nie je čo backportovať. Bez tohto filtra nástroj hlásil falošné poplachy
+  (napr. `0096_aberrant_juggernaut.sql`: fáza ho pridala, upstream ho medzitým premenoval).
+
+### Merané verdikty po fázach
+
+| Fáza | Súborov (unique) | identical | differs | missing | Riadkov pridaných fázou | Kandidátov | Verdikt |
+|---|---|---|---|---|---|---|---|
+| 1. Security | 6 | 2 | 4 | 0 | 36 | **0** | **hotová (no-op)** |
+| 2. Portal sessions | 69 | 53 | 16 | 0 | 7 587 | **12** | **hotová** — všetkých 12 je i18n/branding/TTL |
+| 3. Identity rotation | 28 | 17 | 11 | 0 | 12 694 | **0** | **hotová** |
+| 4. Prescription + field | 26 | 10 | 16 | 0 | 6 420 | **10** | **hotová** — všetkých 10 je i18n/štruktúra |
+| 5. Clinical workflow | 67 | 23 | 38 | 6 | 8 162 | **685** | **otvorená** — pozri nižšie |
+
+Celý prienik 15 commitov (union, bez lockfile) na kontrolu: **176 súborov = 102 identical +
+68 differs + 6 missing**. To reprodukuje pôvodnú analýzu presne; rozchádzajú sa len *riadkové*
+súčty v tabuľke §8 (pozri „Korekcia čísel" nižšie).
+
+Fáza 1 má dnes navyše znovu zmerané testy: `soap-editor-ui.test.ts` (21) +
+`tiptap-attribute-security.test.ts` (1) = **22/22 zelených**.
+
+### Fáza 2 — čo je tých 12 kandidátov
+
+| Súbor | Kandidát | Prečo to nie je chýbajúca funkcia |
+|---|---|---|
+| `clients/[id]/page.tsx` | 7 riadkov textov stavu portálového odkazu | všetky sú u nás cez `t("clients.detail.portalActive"…)` a pod. (`RULES` §1.3) |
+| `portal/[token]/invoices/page.tsx` | `Receipt` ikona | máme `ReceiptEuro` — EUR lokalizácia |
+| `portal-shell.tsx` | `Powered by OpenVPM` | máme `Powered by VET.IS` — naše branding (plán §7) |
+| `portal-branding-ui.test.ts` | tvrdí `Powered by OpenVPM` | náš test akceptuje `/(?:OpenVPM|VET\.IS)/` |
+| `portal/tokens.ts` + `session.test.ts` | `PORTAL_SESSION_IDLE_TTL_MS = 30 min` | u nás **60 min** — zámerné (BUG-8, komentár v kóde) |
+| `auth-tokens.ts` | `password_reset: 1h` | u nás **4h** — zámerné (BUG-10, komentár v kóde) |
+
+### Fáza 4 — čo je tých 10 kandidátov
+
+Všetky sú textové alebo štrukturálne; správanie existuje:
+
+- `encounters/[appointmentId]/page.tsx` (4): `aria-label`, `Bill now, finish notes later`,
+  `Unfinished field visits` — u nás `t("ambulatory.…")`.
+- `unfinished-field-visits.tsx` (2): chybová hláška a `Resume visit` — u nás
+  `t("dashboard.fieldVisits.…")` + bohatšie stránkovanie.
+- `records/page.tsx` (1): `{linkedPrescriptionProduct.unitPrice} per unit.` — u nás celá veta
+  cez `t("records.prescriptions.inventoryHelpText", …, { price })`.
+- `prescription-inventory-product-picker.tsx` (2): `{product.unitPrice} each` a guard
+  `products.isFetching || !hasMore` — u nás tie isté hodnoty, inak zalomené riadky.
+- `inventory-safety.test.ts` (1): `countRows` máme so **7** count dopytmi namiesto 5
+  (náš list vracia viac agregátov).
+
+### Fáza 5 — rozhodnutie vlastníka (nie je to „len náš vývoj")
+
+Upstream tip má v týchto 38 `differs` + 6 `missing` súboroch **685 riadkov správania, ktoré
+u nás neexistuje** — ale väčšina je text/markup, ktorý sa musí prepísať cez `useI18n()`.
+Rozdelené podľa druhu:
+
+| Druh | Súbory (kandidátskych riadkov) | Spolu | Čo s tým |
+|---|---|---|---|
+| Text a markup (i18n/štruktúra) | `patients/[id]` 47, `service-picker` 17, `patient-document-upload` 17, `encounters/…` 16, `docs/help/README.md` 9, `schedule` 8, `markup-input` 2, `weight-correction-dialog` 3, `reconciliation-reason-actions` 4, `api/upload` 3, `README.md` 1, `billing/new` 1, `managed-file-upload` 1 | **133** | overené ako existujúce správanie: `patients/[id]` je u nás rozdelené na `patients/sections/*-tab.tsx` (filtre aj `WeightCorrectionDialog` tam sú), `service-picker` má „Load more", `schedule` má delete s dôvodom, `api/upload` má kontrolu `image/` pre branding, `docs/help/self-hosted-*.md` existujú |
+| **Funkčné — rozhodnutie vlastníka** | `records/page.tsx` 16, `inventory/page.tsx` 11, `server/routers/inventory.ts` 11, `__tests__/billing-list-inputs.test.ts` 22, `__tests__/inventory-safety.test.ts` 10, `lib/inventory/policy.ts` 4, `__tests__/inventory-ui.test.ts` 1 | **75** | pozri „Otázka 1" nižšie |
+| By design (migračné artefakty) | `0105_fractional_medication_quantities.sql` 15, `meta/0105_snapshot.json` 3, `meta/_journal.json` 2 | **20** | neriešiť: našu 0105 nahradil náš `0108_adorable_misty_knight.sql`; chráni to `migration-journal-integrity.test.ts` |
+| Upstream vlastný e2e harness | `e2e/jayne-followup.spec.ts` 217, `e2e/jayne-hosted-followup.spec.ts` 170, `docs/testing/clinic-followup-workflows.md` 24, `playwright.jayne-hosted.config.ts` 24, `playwright.jayne-followup.config.ts` 22 | **457** | neportovať: písané proti upstream UI (anglické literály), u nás tomu odpovedá `playwright.jayne.config.ts` + `e2e/jayne-deployment-gaps.spec.ts` |
+| | | **685** | 133 + 75 + 20 + 457 |
+
+#### Otázka 1 pre vlastníka: zlomkové množstvá (numeric(13,3)) sú len v DB, nie v kóde
+
+Toto je najkonkrétnejší nález auditu. Naša schéma už zlomkové množstvá má, naša validácia nie:
+
+| Vrstva | My | Upstream tip |
+|---|---|---|
+| DB `products.stock_quantity` | `numeric(13,3)` — náš `0108_adorable_misty_knight.sql:348` | `numeric(13,3)` — ich 0105 |
+| Helper `lib/quantity.ts` | **byte-identický s upstreamom** (`isSupportedQuantity`, 3 desatinné miesta) | ten istý |
+| UI validátor skladu | `isInventoryNonnegativeIntegerInputValid` (`policy.ts:40`) — celé čísla | `isInventoryStockQuantityInputValid` (`policy.ts:51`) — 3 desatinné miesta |
+| Minimum korekcie stavu | `INVENTORY_ADJUSTMENT_QUANTITY_MIN = 1` | `0.001` |
+| Server — príjem/otvorenie skladu | `nonnegativeIntegerColumnInput` (`inventory.ts:109,451`; `storage-bounds.ts:5`) | `stockQuantityInput` |
+| Server — korekcia stavu | `integerColumnDeltaInput` (`inventory.ts:494`) | `z.number()` v ±`POSTGRES_INTEGER_MAX` + `.refine(isSupportedQuantity)` |
+| UI vstup | `step={1}` + `parseInt(...)` | `step="0.001"` |
+| Testy | náš test **pinuje opak**: `isInventoryNonnegativeIntegerInputValid(1.5) === false` (`inventory-ui.test.ts:56`) | testy na `0.001` a na prijatie 3 desatinných miest |
+
+Preskripčná strana zlomky **už má** (`records.ts:438`: `quantity` s `isSupportedQuantity`),
+a naše vlastné cesty odpočtu skladu tiež (`records.ts:1009`, `billing.ts:1597`,
+`templates.ts:347`, `extensions/ekasa.ts:738`). Rozpor je presne v tom, čo smie obsluha
+naskladniť a skorigovať: UI aj API držia celé čísla, hoci stĺpec je `numeric(13,3)`.
+Buď je to nedokončený backport (schéma prišla, vstupy nie), alebo zámerné rozhodnutie
+„sklad len v celých kusoch" — potom je ale `numeric(13,3)` na `products.stock_quantity`
+a zlomkové odpočty v odbere omyl. **Rozhodnutie patrí vlastníkovi, nie plánu.**
+
+Menšie funkčné položky na to isté rozhodnutie:
+
+1. `records/page.tsx`: máme fail-closed kontrolu (`hasValidPrescriptionQuantityForInventory`,
+   riadky 1158--1166), ale nemáme jej feedback vrstvu (aria-describedby, `role="status"`,
+   „Review inventory in a new tab", „Refresh stock").
+2. Cursor stránkovanie `billing.searchProducts` máme (`billing.ts:3230`) a je použité
+   (`useInfiniteQuery`, encounters:5136), ale nemáme naň unit testy — upstream ich má
+   22 riadkov v `billing-list-inputs.test.ts`.
+3. `encounters/…/page.tsx`: upstream drží vybraný produkt v zozname, aj keď nie je na
+   načítanej strane; u nás je to na posúdenie.
+
+#### Korekcia čísel v §8
+
+Pôvodná tabuľka „Per-fazovy rozpad" sčítavala **záznamy commitov**, nie súbory: keď jeden
+súbor zmenili dva commity tej istej fázy, počítal sa dvakrát. Preto vychádzalo Fáza 2 = 73,
+Fáza 5 = 72. Merané (unique súbory) je 69 a 67; globálny súčet 176 a rozdelenie
+102 / 68 / 6 naopak sedia presne. Rovnaký efekt (nie nezrovnalosť v obsahu) je aj
+v číslach `identical` v Fáze 2 (57 vs 53).
+
+#### Čo tento audit mení v pôvodnom pláne
+
+Nižšie v dokumente sú **na mieste** opravené tri nebezpečné/pomýlené inštrukcie; pôvodné
+znenie zostáva citované v `> **OPRAVENÉ**` bloku, aby sa história nestratila:
+
+1. Fáza 1 krok 2 -- „akceptuj upstream verziu lockfilu" → nikdy nebrať cudzí lockfile.
+2. Globálne pravidlo 5 -- „migrácie výhradne cez `pnpm db:push`" → `pnpm db:generate`.
+3. Fáza 4/5 -- `encounters/page.tsx` → `encounters/[appointmentId]/page.tsx`.
 
 ---
 
@@ -167,7 +311,14 @@ Per-fazovy rozpad (subory priradene prvej faze, ktora ich dotkla):
 | 4. Prescription + field | 10 | 0 | 20 | 0 |
 | 5. Clinical workflow | 23 | 4 | 39 | 6 |
 
-**Faza 2 je prakticky hotova** (57 z 73 suborov je byte-identickych).
+> **OPRAVENÉ (audit 2026-09-28):** riadkove súčty v tabuľke vyššie počítajú **záznamy
+> commitov**, nie súbory — súbor zmenený dvoma commitmi tej istej fázy je v nich dvakrát.
+> Merané počty unique súborov sú **6 / 69 / 28 / 26 / 67** a ich rozdelenie je
+> `2+4 / 53+16 / 17+11 / 10+16 / 23+38(+6 missing)`; globálne čísla (102 / 68 / 6) sedia.
+> Reprodukuje to `node scripts/upstream-backport-audit.mjs classify <shas fázy>`.
+> Detaily a verdikty sú v sekcii **AUDIT FÁZ** na začiatku tohto dokumentu.
+
+**Faza 2 je prakticky hotova** (57 z 73 suborov je byte-identickych; po korekcii počtov 53 z 69).
 **Faza 1 je hotova cela.** Zo 7 suborov (bez lockfile) su 2 byte-identicke
 (`SoapNoteEditor.tsx`, `tiptap-attribute-security.test.ts`). Zvysne 4 maju **1-3 riadkove
 rozdiely, ktore nie su bezpecnost** -- overene, co z nich upstream ma a my nemame:
@@ -299,6 +450,19 @@ commite `0108_adorable_misty_knight.sql`, takze `db:generate` by netrebali nic.
 5. **Kazdu fazu zvazte na "diff" nie na "chybajuce subory"** -- subory uz existuju,
    ide len o to, ci v nich chyba konkretne správanie.
 
+### Stav týchto krokov (audit 2026-09-28)
+
+| Krok | Stav |
+|---|---|
+| 1. Fáza 1 ako no-op | **hotové** — 36 pridaných riadkov, 0 kandidátov, 22/22 testov zelených dnes |
+| 2. Pravidlo o lockfile | **hotové** — opravené na mieste v Fáze 1 (kroky 2–4), v globálnom pravidle 8 aj v `pnpm install` krokoch |
+| 3. Fáza 2 diff-náhľad | **hotové** — 12 kandidátov, všetko i18n/branding/zámerné TTL; Fáza 2 uzavretá |
+| 4. Fáza 5 rozhodnutie | **otvorené** — meraný podklad je v sekcii **AUDIT FÁZ** na začiatku tohto dokumentu; rozhodnutie vlastníka |
+| 5. Posudzovať podľa diffu | **hotové** — nástroj `scripts/upstream-backport-audit.mjs` meria presne to |
+
+Zavretie Fázy 1 do `tasks/VERIFICATION-LOG.md` je zámerne **neurobené**: log je historický
+záznam a jeho pravidlá hovoria, že sa doň nezasahuje bez explicitného pokynu vlastníka.
+
 ---
 
 ## Pôvodný plán (pôvodne napísaný 2026-09-28, zachovaný pre referenciu)
@@ -317,6 +481,11 @@ upstream má 0105_fractional_medication_quantities, my máme 0105_nifty_ultimatu
 rotation (0101) a ďalšie infrastruktúrne migrácie sú zdieľané.
 
 ## Stav repozitára
+
+> **Audit 2026-09-28:** tabuľka je historická (z pôvodnej analýzy). Dnešné meranie:
+> upstream ahead **403** commitov, `git merge-base HEAD upstream/main` stále nič.
+> Riadok `encounters/page.tsx` je marker z pôvodnej analýzy — správny súbor je
+> `encounters/[appointmentId]/page.tsx` (pozri bod 4 korekcií).
 
 | Fakt | Hodnota |
 |---|---|
@@ -338,9 +507,14 @@ rotation (0101) a ďalšie infrastruktúrne migrácie sú zdieľané.
 ### Postup
 
 1. Vytvor branch swarm/backport-security-patches z origin/main
-2. git cherry-pick --no-commit 0767aff0 -- ak conflict v pnpm-lock.yaml, akceptuj upstream verziu a re-run pnpm install
-3. git cherry-pick --no-commit c66a1ad3 -- ak conflict v pnpm-lock.yaml, re-run pnpm install. Skontroluj SoapNoteEditor.tsx -- merge upstream zmeny (tiptap import) bez straty našich zmien
-4. pnpm install na regeneraciu lockfilu
+2. ~~git cherry-pick --no-commit 0767aff0 -- ak conflict v pnpm-lock.yaml, akceptuj upstream verziu a re-run pnpm install~~
+   > **OPRAVENÉ (audit 2026-09-28):** tento krok je deštruktívny, nikdy sa takto nerobí. Pri konflikte
+   > lockfilu sa upstream verzia **zahodí** (`git checkout --ours pnpm-lock.yaml`) a lockfile sa
+   > **vygeneruje z nášho `package.json`** (`pnpm install --lockfile-only`). Pozri pravidlo 8
+   > v „Doplnené pravidlá" a bod 3 korekcií vyššie.
+3. git cherry-pick --no-commit c66a1ad3 -- pri konflikte lockfilu **nikdy nepreberaj upstream verziu**
+   (viď krok 2). Skontroluj SoapNoteEditor.tsx -- merge upstream zmeny (tiptap import) bez straty našich zmien
+4. `pnpm install --lockfile-only` na regeneraciu lockfilu z nášho `package.json`
 5. pnpm lint && pnpm typecheck && pnpm test
 6. Commit a push, vytvor PR do origin/main
 
@@ -369,7 +543,7 @@ Nízke. pnpm-lock.yaml conflict je mechanický.
 5. **KRITICKY:** enable-rls.sql merge -- upstream pridáva portal_sessions RLS. ZACHOVAJ naše rozšírenia: ext_ dynamic table discovery, AI audit ledger trigger+REVOKE, clinician confirmations REVOKE DELETE, ::text cast v policy USING/WITH CHECK
 6. server/trpc.ts -- merge portal auth middleware
 7. server/routers/portal.ts -- merge 502 riadkov zmien, zachovaj naše portal rozšírenia
-8. Po cherry-pickoch: pnpm db:push && pnpm db:rls && pnpm db:rls:preflight
+8. Po cherry-pickoch: `pnpm db:migrate && pnpm db:rls && pnpm db:rls:preflight` (`db:push` je zakázaný)
 9. pnpm lint && pnpm typecheck && pnpm test
 10. Commit a push, vytvor PR
 
@@ -400,7 +574,7 @@ Vysoké. Portal router a trpc middleware sú centrálne. RLS merge vyžaduje opa
 6. platform-email-preferences.ts schema -- merge 87 riadkov
 7. email-preferences.ts + platform-email-preferences.ts lib -- 668 riadkov; opatrný merge
 8. Health route -- merge upstream rozšírenia
-9. pnpm db:push && pnpm db:rls
+9. `pnpm db:migrate && pnpm db:rls` (`db:push` je zakázaný)
 10. Plná verifikácia
 
 ### Riziko
@@ -425,10 +599,12 @@ Stredné. Schema zmeny sú čisté, ale platform-email-preferences.ts je veľký
 2. Cherry-pick POSTUPNE, každý --no-commit. VYNECHAJ drizzle zmeny pre #321
 3. prescription-inventory-product-picker.tsx -- nový komponent z #321
 4. records/page.tsx -- merge upstream zmeny, zachovaj ext_ rozšírenia
-5. encounters/page.tsx -- #333 pridáva 24 riadkov. Manuálne aplikuj hunky do našej 5938-riadkovej verzie. NEPREPIS AI/visitContext/voice zmeny
+5. ~~encounters/page.tsx~~ → **`encounters/[appointmentId]/page.tsx`** -- #333 pridáva 24 riadkov.
+   Manuálne aplikuj hunky do našej 5938-riadkovej verzie. NEPREPIS AI/visitContext/voice zmeny.
+   (`encounters/page.tsx` je marker z pôvodnej analýzy a má u nás 912 riadkov; upstream taký súbor nemá.)
 6. dashboard.ts router + unfinished-field-visits.tsx -- nové subory, čistý add
-7. pnpm install na regeneráciu lockfilu
-8. pnpm db:push && pnpm db:rls
+7. pnpm install na regeneráciu lockfilu (z nášho `package.json`, nikdy prevzatím upstream verzie)
+8. `pnpm db:generate` (ak sa mení schéma) → commit migrácie → `pnpm db:migrate && pnpm db:rls`
 9. Plná verifikácia
 
 ### Riziko
@@ -451,20 +627,21 @@ Stredné. Encounters page merge je manuálny, ale #333 pridáva len malé hunky.
 
 1. Vytvor branch z origin/main (alebo z výsledku Fázy 4 ak je mergnutá)
 2. Cherry-pick a6e65362 (#336) -- --no-commit
-   - encounters/page.tsx -- 28 riadkov (weight correction dialog), manuálny merge
+   - **`encounters/[appointmentId]/page.tsx`** -- 28 riadkov (weight correction dialog), manuálny merge
+     (`encounters/page.tsx` je marker z pôvodnej analýzy; upstream taký súbor nemá)
    - patients/[id]/page.tsx -- 114 riadkov zmien
    - patient-document-upload.tsx + weight-correction-dialog.tsx -- nové komponenty
 3. Cherry-pick f20c7f3d (#337) -- --no-commit
    - **MIGRÁCIA 0105:** VYNECHAJ packages/db/drizzle/0105_*. Namiesto toho:
      - Uprav vanilla schema: billing.ts, prescriptions.ts, prescription-events.ts, dispense-charge-queue.ts -- quantity na numeric(13,3)
-     - pnpm db:push vytvorí migráciu 0115 automaticky
+     - `pnpm db:generate` vytvorí migráciu, commitni ju; **nikdy `pnpm db:push`** (obchádza journal aj CI drift guard)
      - Trigger invoice_items_validate_dispense_charge re-create pridaj do bootstrap SQL
-   - encounters/page.tsx -- 113 riadkov zmien, ŤAŽKÝ merge. ZACHOVAJ AI/visitContext/voice bloky
+   - **`encounters/[appointmentId]/page.tsx`** -- 113 riadkov zmien, ŤAŽKÝ merge. ZACHOVAJ AI/visitContext/voice bloky
    - Nové utility: markup-input.tsx, quantity.ts, prescription-policy.ts
 4. Cherry-pick f1a33632 (#339) -- --no-commit
-   - encounters/page.tsx -- 39 riadkov, posledný merge
+   - **`encounters/[appointmentId]/page.tsx`** -- 39 riadkov, posledný merge
    - service-picker.tsx -- 84 riadkov
-5. pnpm db:push && pnpm db:rls
+5. `pnpm db:migrate && pnpm db:rls` (migrácie sú commitnuté, nie pushnuté)
 6. Plná verifikácia vrátane pnpm test:e2e
 7. Commit a push, vytvor PR
 
@@ -478,7 +655,8 @@ Upstream 0105 mení:
 - dispense_charge_queue.quantity na numeric(13,3)
 - Re-create invoice_items_validate_dispense_charge trigger
 
-Riešenie: upraviť vanilla .ts schémy, pnpm db:push generuje migráciu s našim indexom.
+Riešenie: upraviť vanilla .ts schémy, `pnpm db:generate` vygeneruje migráciu s naším indexom
+a tá sa commitne. (`db:push` je zakázaný -- obchádza journal aj CI drift guard.)
 
 ### Riziko
 Vysoké. Encounters page má 3x merge. Vanilla schema zmeny (quantity precision) sú legitímne.
@@ -486,6 +664,12 @@ Vysoké. Encounters page má 3x merge. Vanilla schema zmeny (quantity precision)
 > **OPRAVENÉ:** body 3 sú zastaré -- `numeric(13,3)` je už v našich schémach a
 > aplikoval ju náš commit `0108_adorable_misty_knight.sql`. Všetky "nové utility"
 > z bodov 2--4 už existujú. Pozri bod 6 vyššie.
+>
+> **Audit 2026-09-28:** schéma áno, ale **vstupy skladu zlomky stále neprijímajú** --
+> `isInventoryNonnegativeIntegerInputValid` + `nonnegativeIntegerColumnInput` +
+> `integerColumnDeltaInput` + `step={1}` proti stĺpcu `numeric(13,3)` (preskripcie a odpočty
+> zlomky už majú). To je jediná funkčná položka Fázy 5, ktorá potrebuje rozhodnutie
+> vlastníka; pozri „Otázka 1" v AUDIT-e na začiatku dokumentu.
 
 ---
 
@@ -493,9 +677,12 @@ Vysoké. Encounters page má 3x merge. Vanilla schema zmeny (quantity precision)
 
 1. **NIKDY** nemodifikuj packages/db/drizzle/ ani _journal.json manuálne
 2. **NIKDY** nezmaž naše ext_ rozšírenia z enable-rls.sql
-3. **NIKDY** nezmaž naše bloky z encounters/page.tsx (visitContext, AI draft, voice SOAP, ext_ imports)
+3. **NIKDY** nezmaž naše bloky z `encounters/[appointmentId]/page.tsx` (visitContext, AI draft, voice SOAP, ext_ imports)
 4. Vanilla schema zmeny sú povolené IBA ak prichádzajú priamo z upstreamu
-5. Migrácie aplikuj výhradne cez pnpm db:push
+5. ~~Migrácie aplikuj výhradne cez pnpm db:push~~
+   > **OPRAVENÉ (audit 2026-09-28):** presne naopak. Zmena schémy → `pnpm db:generate` → commit
+   > `drizzle/NNNN_*.sql` + snapshot + `_journal.json` → `pnpm db:migrate`. `db:push` je zakázaný
+   > (obchádza journal aj CI drift guard). Platí pravidlo 11 nižšie.
 6. Verifikácia: pnpm lint && pnpm typecheck && pnpm test pred každým PR
 7. Ak test failne, oprav príčinu -- neoslabuj assertions
 
@@ -523,11 +710,11 @@ Fáza 5 závisí na Fáze 4 (encounters/page.tsx base state).
 
 | Fáza | PRov upstream | Suborov | Migrácie | Riziko | Skutočný stav |
 |---|---|---|---|---|---|
-| 1. Security | #322, #318 | ~9 | žiadne | Nízke | **hotová (no-op)** |
-| 2. Portal sessions | 4 commity | ~60 | 0097 zdieľaná | Vysoké | ~78% identických, zvyšok preveriť |
-| 3. Identity rotation | #323, #324 | ~31 | 0100, 0101 zdieľané | Stredné | schémy existujú |
-| 4. Prescription + field | #321, #325, #326, #333 | ~25 | 0099 zdieľaná | Stredná | subory existujú |
-| 5. Clinical workflow | #336, #337, #339 | ~72 | 0105 KOLÍZIA | Vysoké | schema zmena **už aplikovaná** (0108) |
+| 1. Security | #322, #318 | 6 | žiadne | Nízke | **hotová (no-op)** — 0 kandidátov |
+| 2. Portal sessions | 4 commity | 69 | 0097 zdieľaná | Vysoké | **hotová** — 12 kandidátov, všetko i18n/branding/TTL |
+| 3. Identity rotation | #323, #324 | 28 | 0100, 0101 zdieľané | Stredné | **hotová** — 0 kandidátov |
+| 4. Prescription + field | #321, #325, #326, #333 | 26 | 0099 zdieľaná | Stredná | **hotová** — 10 kandidátov, všetko i18n/štruktúra |
+| 5. Clinical workflow | #336, #337, #339 | 67 | 0105 náhradená našou 0108 | Vysoké | **otvorená** — 685 kandidátov, 1 funkčná otázka pre vlastníka |
 
 ---
 
@@ -535,11 +722,17 @@ Fáza 5 závisí na Fáze 4 (encounters/page.tsx base state).
 
 ```bash
 git remote add upstream https://github.com/evangauer/openvpm.git
-git fetch upstream main
+git fetch --no-tags upstream main
 git merge-base HEAD upstream/main          # prazdne = nesuvise historie
-git log --oneline -1 upstream/main        # f1a3363 = tip pouzity v tejto analyze
+git log --oneline -1 upstream/main         # tip pouzity v analyze
 
-# Overenie, ze Faza 1 je no-op:
+# Merania celeho auditu (odporuca sa toto, nie rucne cherry-picky):
+node scripts/upstream-backport-audit.mjs journal
+node scripts/upstream-backport-audit.mjs classify 0767aff0 c66a1ad3            # Faza 1
+node scripts/upstream-backport-audit.mjs candidates 0767aff0 c66a1ad3          # -> 0
+node scripts/upstream-backport-audit.mjs candidates a6e65362 f20c7f3d f1a33632 --list   # Faza 5
+
+# Overenie, ze Faza 1 je no-op (povodny rucny postup):
 git cherry-pick --no-commit 0767aff0 && git diff --stat   # prazdny diff pre package.json
 git cherry-pick --abort 2>/dev/null; git checkout -f HEAD -- pnpm-lock.yaml
 ```
