@@ -1537,7 +1537,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       scenario:
         "Majiteľka psíka bola nadšená z profesionálneho prístupu a čistých zubov po ultrazvukovej dentálnej hygiene.",
       solution:
-        "2 hodiny po vizite jej príde milá SMS: 'Ďakujeme za návštevu s Benym. Ak ste boli spokojní s našou starostlivosťou, pomôžte nám krátkym hodnotením na Google: g.page/review...'. Majiteľka obratom zanechá 5-hviezdičkové hodnotenie.",
+        "2 hodiny po vizite jej príde milá SMS: 'Ďakujeme za návštevu s Benym. Ak ste boli spokojní s našou starostlivosťou, pomôžte nám krátkym hodnotením na Google: g.page/review…'. Majiteľka obratom zanechá 5-hviezdičkové hodnotenie.",
     },
   },
 
@@ -1883,7 +1883,7 @@ export const HELP_CONTENT: Record<string, HelpContent> = {
       scenario:
         "Klinika má v piatok sanitárny deň a cez víkend neordinuje. Potrebuje to okamžite oznámiť verejnosti.",
       solution:
-        "V /marketing/website zapnite lištu 'Dôležitý oznam': 'V piatok 15.8. zatvorené z dôvodu sanitárneho dňa. V akútnych prípadoch volajte zmluvnú pohotovosť...'. Oznam sa okamžite rozsvieti v záhlaví vášho webu.",
+        "V /marketing/website zapnite lištu 'Dôležitý oznam': 'V piatok 15.8. zatvorené z dôvodu sanitárneho dňa. V akútnych prípadoch volajte zmluvnú pohotovosť…'. Oznam sa okamžite rozsvieti v záhlaví vášho webu.",
     },
   },
 

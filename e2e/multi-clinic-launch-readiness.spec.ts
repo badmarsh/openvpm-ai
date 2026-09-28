@@ -205,7 +205,7 @@ async function createClientPatientAndInvoice(
   await expect(page.getByText(data.lastName)).toBeVisible();
 
   await page.goto("/patients/new", { waitUntil: "domcontentloaded" });
-  const clientSearch = page.getByPlaceholder("Search clients by name or email...");
+  const clientSearch = page.getByPlaceholder("Search clients by name or email…");
   await clientSearch.fill(data.lastName);
   await page.getByRole("button", { name: new RegExp(`${data.firstName} ${data.lastName}`) }).click();
   await page.fill("#name", data.patientName);
@@ -217,7 +217,7 @@ async function createClientPatientAndInvoice(
   await expect(page.getByText(data.patientName)).toBeVisible();
 
   await page.goto("/billing/new", { waitUntil: "domcontentloaded" });
-  await page.getByPlaceholder("Search clients...").fill(data.lastName);
+  await page.getByPlaceholder("Search clients…").fill(data.lastName);
   await page.getByRole("button", { name: new RegExp(`${data.firstName} ${data.lastName}`) }).click();
   await page.waitForFunction(
     (patientName) =>

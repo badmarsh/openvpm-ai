@@ -101,7 +101,7 @@ export function AllergyForm({
             <Plus className="mr-1.5 h-3.5 w-3.5" />
           )}
           {isPending
-            ? t("common.saving", "Saving...")
+            ? t("common.saving", "Saving…")
             : t("patients.profile.saveAllergy", "Save allergy")}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>

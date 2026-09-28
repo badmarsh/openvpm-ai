@@ -857,7 +857,7 @@ export default function PatientDetailPage() {
   if (isPageLoading) {
     return (
       <PatientDetailLoadingPanel
-        label={t("patients.profile.loading", "Loading patient...")}
+        label={t("patients.profile.loading", "Loading patient…")}
       />
     );
   }
@@ -1497,7 +1497,7 @@ export default function PatientDetailPage() {
                         <option value="">
                           {t(
                             "patients.actions.selectLocation",
-                            "Select location...",
+                            "Select location…",
                           )}
                         </option>
                         {fieldVisitLocations.map((location) => (
@@ -1529,7 +1529,7 @@ export default function PatientDetailPage() {
                       <Stethoscope className="mr-2 h-4 w-4" />
                     )}
                     {startFieldVisit.isPending
-                      ? t("patients.actions.startingVisit", "Starting visit...")
+                      ? t("patients.actions.startingVisit", "Starting visit…")
                       : t(
                           "patients.actions.fieldVisit",
                           "Start field visit",

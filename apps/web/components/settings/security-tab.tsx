@@ -304,7 +304,7 @@ export function SecurityTab() {
               {changePasswordMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>{t("settings.security.saving", "Ukladám...")}</span>
+                  <span>{t("settings.security.saving", "Ukladám…")}</span>
                 </>
               ) : (
                 <>

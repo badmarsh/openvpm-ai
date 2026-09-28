@@ -63,7 +63,7 @@ export function InvoicesTab({ patientId }: { patientId: string }) {
   if (isLoading) {
     return (
       <PatientDetailLoadingPanel
-        label={t("patients.invoicesTab.loading", "Loading invoices...")}
+        label={t("patients.invoicesTab.loading", "Loading invoices…")}
       />
     );
   }

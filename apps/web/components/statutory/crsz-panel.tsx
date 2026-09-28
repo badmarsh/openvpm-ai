@@ -215,7 +215,7 @@ export function CrszPanel() {
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Input
-                  placeholder={t("statutory.crsz.inputChipPlaceholder", "Zadajte 15-miestny čip...")}
+                  placeholder={t("statutory.crsz.inputChipPlaceholder", "Zadajte 15-miestny čip…")}
                   value={lookupChipInput}
                   onChange={(e) => setLookupChipInput(e.target.value)}
                   className="h-8 text-xs font-mono bg-white dark:bg-background min-w-[210px]"
@@ -272,7 +272,7 @@ export function CrszPanel() {
               <div className="relative min-w-[260px] flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t("crsz.searchPlaceholder", "Hľadať číslo čipu, pacienta, plemeno...")}
+                  placeholder={t("crsz.searchPlaceholder", "Hľadať číslo čipu, pacienta, plemeno…")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"

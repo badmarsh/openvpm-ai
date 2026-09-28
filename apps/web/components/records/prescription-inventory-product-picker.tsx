@@ -141,7 +141,7 @@ export function PrescriptionInventoryProductPicker({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          aria-label="Inventory item"
+          aria-label="Select inventory item"
           className="h-10 w-full justify-between px-3 font-normal"
         >
           <span
@@ -170,7 +170,8 @@ export function PrescriptionInventoryProductPicker({
               value={search}
               onValueChange={changeSearch}
               autoFocus
-              placeholder="Search inventory by name or SKU..."
+              aria-label="Search inventory by name or SKU"
+              placeholder="Search inventory by name or SKU…"
               className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>

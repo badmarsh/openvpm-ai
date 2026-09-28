@@ -459,7 +459,7 @@ export default function WellnessPage() {
           ) : enrollmentsQuery.isLoading ? (
             <div
               role="status"
-              aria-label={t("marketing.wellness.enrollments.loading", "Načítavam wellness zápisy...")}
+              aria-label={t("marketing.wellness.enrollments.loading", "Načítavam wellness zápisy…")}
             >
               <TableSkeleton rows={5} cols={4} />
             </div>
@@ -691,7 +691,7 @@ export default function WellnessPage() {
                 ) : redemptionsQuery.isLoading ? (
                   <div
                     role="status"
-                    aria-label={t("marketing.wellness.redemption.historyLoading", "Načítavam históriu...")}
+                    aria-label={t("marketing.wellness.redemption.historyLoading", "Načítavam históriu…")}
                   >
                     <TableSkeleton rows={3} cols={2} />
                   </div>

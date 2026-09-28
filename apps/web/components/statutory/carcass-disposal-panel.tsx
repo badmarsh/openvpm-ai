@@ -349,7 +349,7 @@ export function CarcassDisposalPanel() {
         <div className="relative min-w-[280px] flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t("statutory.carcass.searchPlaceholder", "Hľadať podľa zvieraťa, čipu, majiteľa, čísla zberného listu...")}
+            placeholder={t("statutory.carcass.searchPlaceholder", "Hľadať podľa zvieraťa, čipu, majiteľa, čísla zberného listu…")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 text-xs"
@@ -524,7 +524,7 @@ export function CarcassDisposalPanel() {
               <div>
                 <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldReason", "Dôvod eutanázie / úhynu *")}</label>
                 <Input
-                  placeholder={t("statutory.carcass.placeholderReason", "Napr. Nevyliečiteľné onkologické ochorenie, multiorgánové zlyhanie...")}
+                  placeholder={t("statutory.carcass.placeholderReason", "Napr. Nevyliečiteľné onkologické ochorenie, multiorgánové zlyhanie…")}
                   className="mt-1 text-xs"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -609,7 +609,7 @@ export function CarcassDisposalPanel() {
               <div>
                 <label className="text-xs font-semibold text-foreground">{t("statutory.carcass.fieldNotes", "Klinické poznámky")}</label>
                 <Input
-                  placeholder="Voliteľná poznámka..."
+                  placeholder="Voliteľná poznámka…"
                   className="mt-1 text-xs"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}

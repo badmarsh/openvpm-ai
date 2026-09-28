@@ -184,7 +184,7 @@ export function PatientDocumentUpload({ patientId }: { patientId: string }) {
               }}
             >
               <option value="">
-                {t("patients.documentsTab.modalityPlaceholder", "Select modality...")}
+                {t("patients.documentsTab.modalityPlaceholder", "Select modality…")}
               </option>
               {IMAGING_MODALITY_CODES.map((code) => (
                 <option key={code} value={code}>

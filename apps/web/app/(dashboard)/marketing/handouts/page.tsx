@@ -262,7 +262,7 @@ export default function HandoutsPage() {
                   rows={4}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder={t("marketing.handouts.fieldBodyPlaceholder", "Sem napíšte obsah letáku: zásady kľudového režimu, kontrola rany, kedy volať lekára...")}
+                  placeholder={t("marketing.handouts.fieldBodyPlaceholder", "Sem napíšte obsah letáku: zásady kľudového režimu, kontrola rany, kedy volať lekára…")}
                 />
               </div>
 
@@ -325,7 +325,7 @@ export default function HandoutsPage() {
                   disabled={!slug || !title || !body || createMutation.isPending}
                 >
                   {createMutation.isPending
-                    ? t("marketing.handouts.saving", "Ukladám...")
+                    ? t("marketing.handouts.saving", "Ukladám…")
                     : t("marketing.handouts.createBtn", "Vytvoriť leták")}
                 </Button>
               </div>

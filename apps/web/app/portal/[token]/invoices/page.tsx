@@ -76,7 +76,7 @@ function PayButton({ invoiceId }: { invoiceId: string }) {
         className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:w-auto"
       >
         <CreditCard className="h-4 w-4" aria-hidden="true" />
-        {loading ? "Opening secure checkout..." : "Pay securely online"}
+        {loading ? "Opening secure checkout…" : "Pay securely online"}
       </button>
       <span className="text-xs text-gray-500">Powered by Stripe</span>
       {error && (

@@ -735,7 +735,7 @@ export default function V2ImportPage() {
           {runMutation.isPending ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Prebieha migrácia dát (čakajte prosím)...
+              Prebieha migrácia dát (čakajte prosím)…
             </>
           ) : (
             <>

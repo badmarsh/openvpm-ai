@@ -212,7 +212,7 @@ describe("schedule appointment form UX", () => {
     expect(source).toContain("patientSearchError || patientSearchMissing");
     expect(source).toContain("isSearchingPatients ? (");
     expect(source).toContain("Unable to search patients. Please retry.");
-    expect(source).toContain("Searching patients...");
+    expect(source).toContain("Searching patients…");
     expect(source).toContain("No patients found");
     expect(source.indexOf("patientSearchError || patientSearchMissing")).toBeLessThan(
       source.indexOf("No patients found")
@@ -287,9 +287,9 @@ describe("schedule appointment form UX", () => {
     expect(source).toContain("Unable to load appointment types. Please retry.");
     expect(source).toContain("Unable to load doctors. Please retry.");
     expect(source).toContain("Unable to load rooms. Please retry.");
-    expect(source).toContain("Loading appointment types...");
-    expect(source).toContain("Loading doctors...");
-    expect(source).toContain("Loading rooms...");
+    expect(source).toContain("Loading appointment types…");
+    expect(source).toContain("Loading doctors…");
+    expect(source).toContain("Loading rooms…");
   });
 
   it("surfaces recurring appointment lifecycle actions in the detail popover", () => {

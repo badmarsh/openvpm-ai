@@ -191,7 +191,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
         <div className="relative">
           <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
           <Input
-            placeholder="Hľadať sekciu..."
+            placeholder="Hľadať sekciu…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-9 text-xs"

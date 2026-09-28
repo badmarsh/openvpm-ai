@@ -116,7 +116,7 @@ function SoapAddendumControl({
           }
         >
           {addendum.isPending
-            ? t("common.saving", "Saving...")
+            ? t("common.saving", "Saving…")
             : t("patients.recordsTab.saveAddendum", "Save addendum")}
         </Button>
         <Button
@@ -219,7 +219,7 @@ export function MedicalRecordsTab({
           <PatientDetailLoadingPanel
             label={t(
               "patients.recordsTab.loading",
-              "Loading medical records...",
+              "Loading medical records…",
             )}
           />
         ) : !notes || notes.length === 0 ? (

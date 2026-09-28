@@ -78,7 +78,7 @@ export default function PosCheckoutPage() {
       <div className={pageShellClass}>
         <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>{t("billing.pos.checkingAccess", "Overovanie prístupových práv...")}</span>
+          <span>{t("billing.pos.checkingAccess", "Overovanie prístupových práv…")}</span>
         </div>
       </div>
     );
@@ -656,7 +656,7 @@ function PosCheckoutForm() {
                 <Input
                   placeholder={t(
                     "billing.pos.clientSearchPlaceholder",
-                    "Pultový zákazník (alebo píšte meno pre priradenie)..."
+                    "Pultový zákazník (alebo píšte meno pre priradenie)…"
                   )}
                   value={clientSearch}
                   maxLength={CLIENT_SEARCH_MAX_LENGTH}
@@ -692,7 +692,7 @@ function PosCheckoutForm() {
                         <span>
                           {t(
                             "billing.pos.clientSearchLoading",
-                            "Vyhľadávanie klientov..."
+                            "Vyhľadávanie klientov…"
                           )}
                         </span>
                       </div>

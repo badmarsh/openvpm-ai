@@ -442,7 +442,7 @@ export default function CareRemindersPage() {
                     />
                     {patientSearch.isFetching ? (
                       <p className="text-xs text-muted-foreground">
-                        {t("careReminders.searching", "Searching...")}
+                        {t("careReminders.searching", "Searching…")}
                       </p>
                     ) : null}
                     {patientSearch.data?.length ? (
@@ -798,7 +798,7 @@ export default function CareRemindersPage() {
           onChange={setSearch}
           placeholder={t(
             "careReminders.searchPlaceholder",
-            "Search by patient, owner, or reminder...",
+            "Search by patient, owner, or reminder…",
           )}
         />
         {status === "open" ? (

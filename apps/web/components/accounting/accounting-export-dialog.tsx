@@ -310,7 +310,7 @@ export function AccountingExportDialog({
               {exportMutation.isPending || isdocMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("accounting.generating", "Generujem export...")}
+                  {t("accounting.generating", "Generujem export…")}
                 </>
               ) : (
                 <>

@@ -304,7 +304,7 @@ export function VoiceCommandsModal({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Filtrovať príkazy..."
+              placeholder="Filtrovať príkazy…"
               className="pl-8 h-8 text-xs bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

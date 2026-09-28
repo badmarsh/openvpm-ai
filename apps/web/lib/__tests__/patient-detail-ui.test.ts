@@ -166,7 +166,7 @@ describe("patient detail UI states", () => {
       "const isPageLoading = !loadError && (isLoading || recordsSettingsLoading)",
     );
     expect(source).toMatch(
-      /<PatientDetailLoadingPanel\s+label=(?:\{t\([^)]*"Loading patient\.\.\."[^\)]*\)\}|"Loading patient\.\.\.")/,
+      /<PatientDetailLoadingPanel\s+label=(?:\{t\([^)]*"Loading patient…"[^\)]*\)\}|"Loading patient…")/,
     );
     expect(source).toContain("if (\n    loadError ||");
     expect(source).toContain("!verifiedRecordsSettings ||\n    !patient");

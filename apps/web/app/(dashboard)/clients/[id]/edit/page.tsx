@@ -37,7 +37,7 @@ function EditClientLoadingPanel() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      {t("clients.detail.loadingClient", "Loading client...")}
+      {t("clients.detail.loadingClient", "Loading client…")}
     </div>
   );
 }
@@ -52,7 +52,7 @@ export default function EditClientPage() {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("clients.form.checkingAccess", "Checking client access...")}
+        {t("clients.form.checkingAccess", "Checking client access…")}
       </div>
     );
   }
@@ -627,7 +627,7 @@ function EditClientForm() {
         <div className="flex gap-3 pt-4">
           <Button type="submit" disabled={!canSubmit || updateClient.isPending}>
             {updateClient.isPending
-              ? t("clients.actions.saving", "Saving...")
+              ? t("clients.actions.saving", "Saving…")
               : t("clients.actions.saveChanges", "Save Changes")}
           </Button>
           <Button

@@ -712,7 +712,7 @@ function VoiceDictationContent() {
       setRawTranscript("");
       setSoapSections({ subjective: "", objective: "", assessment: "", plan: "" });
 
-      toast.info(t("voice.demo.simulationRunning", "Prebieha simulácia mikrofónu z demo nahrávky..."));
+      toast.info(t("voice.demo.simulationRunning", "Prebieha simulácia mikrofónu z demo nahrávky…"));
       await recordingButtonRef.current?.start(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("voice.demo.failed", "Načítanie demo nahrávky zlyhalo"));
@@ -1378,7 +1378,7 @@ function VoiceDictationContent() {
                   <div className="flex flex-col items-center gap-2 py-4 text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-xs font-semibold text-foreground">
-                      {t("voice.recording.processing", "AI analyzuje a štruktúruje veterinárne diktovanie...")}
+                      {t("voice.recording.processing", "AI analyzuje a štruktúruje veterinárne diktovanie…")}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       {t("voice.recording.processingHint", "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.")}
@@ -1406,7 +1406,7 @@ function VoiceDictationContent() {
                    value={rawTranscript}
                    onChange={(e) => setRawTranscript(e.target.value)}
                    rows={4}
-                   placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text...")}
+                   placeholder={t("voice.transcript.placeholder", "Sem môžete vložiť alebo upraviť surový text…")}
                     className="w-full rounded-lg border bg-muted/20 px-3 py-2 text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[90px] leading-relaxed custom-scrollbar"
                  />
                   <div className="flex justify-end">
@@ -1544,7 +1544,7 @@ function VoiceDictationContent() {
                         {saveMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            {t("voice.save.saving", "Ukladám SOAP do karty pacienta...")}
+                            {t("voice.save.saving", "Ukladám SOAP do karty pacienta…")}
                           </>
                         ) : (
                           <>
@@ -1575,7 +1575,7 @@ function VoiceDictationContent() {
                         {extractItemsMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            {t("voice.billing.extracting", "Extrahujem položky pre vyúčtovanie...")}
+                            {t("voice.billing.extracting", "Extrahujem položky pre vyúčtovanie…")}
                           </>
                         ) : (
                           <>
@@ -1846,7 +1846,7 @@ export default function VoiceDictationPage() {
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">
-              {t("voice.page.loading", "Načítavam hlasové diktovanie...")}
+              {t("voice.page.loading", "Načítavam hlasové diktovanie…")}
             </span>
           </div>
         </div>

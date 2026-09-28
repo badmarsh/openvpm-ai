@@ -176,7 +176,7 @@ export function DicomViewer({
       <div className="flex h-72 items-center justify-center rounded-lg border border-border bg-card text-xs text-muted-foreground">
         <div className="flex flex-col items-center gap-2">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span>Dekódovanie DICOM snímky (16-bit dáta)...</span>
+          <span>Dekódovanie DICOM snímky (16-bit dáta)…</span>
         </div>
       </div>
     );

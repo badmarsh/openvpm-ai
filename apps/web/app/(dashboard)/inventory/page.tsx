@@ -415,7 +415,7 @@ function AddProductForm({ onClose }: { onClose: () => void }) {
           disabled={!canSubmit || createMutation.isPending}
         >
           {createMutation.isPending
-            ? t("inventory.form.addingButton", "Adding...")
+            ? t("inventory.form.addingButton", "Adding…")
             : t("inventory.form.addProductButton", "Add Product")}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
@@ -984,7 +984,7 @@ function AddSupplierForm({ onClose }: { onClose: () => void }) {
           disabled={!canSubmit || createMutation.isPending}
         >
           {createMutation.isPending
-            ? t("inventory.form.addingButton", "Adding...")
+            ? t("inventory.form.addingButton", "Adding…")
             : t("inventory.supplier.titleAdd", "Add Supplier")}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
@@ -1177,7 +1177,7 @@ function ControlledAuditTrail() {
           value={search}
           placeholder={t(
             "inventory.controlled.searchPlaceholder",
-            "Search drug, lot or patient..."
+            "Search drug, lot or patient…"
           )}
           onChange={setSearch}
         />
@@ -1198,7 +1198,7 @@ function ControlledAuditTrail() {
             )}
         </div>
       ) : query.isLoading ? (
-        <div role="status" aria-label={t("inventory.controlled.loading", "Loading...")}>
+        <div role="status" aria-label={t("inventory.controlled.loading", "Loading…")}>
           <TableSkeleton columns={6} />
         </div>
       ) : entries.length > 0 ? (
@@ -1440,7 +1440,7 @@ export default function InventoryPage() {
               maxLength={INVENTORY_PRODUCT_SEARCH_MAX_LENGTH}
               placeholder={t(
                 "inventory.page.searchPlaceholder",
-                "Search by name or SKU..."
+                "Search by name or SKU…"
               )}
               onChange={setSearch}
             />

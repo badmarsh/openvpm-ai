@@ -182,8 +182,8 @@ export function AiFlyerGenerator({
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={
               species && species.length > 0
-                ? `napr. zdravý ${species[0].toLowerCase()} pri veterinárovi, jasná klinika, profesionálna fotka...`
-                : "napr. zdravý pes pri veterinárovi, jasná klinika, profesionálna fotka..."
+                ? `napr. zdravý ${species[0].toLowerCase()} pri veterinárovi, jasná klinika, profesionálna fotka…`
+                : "napr. zdravý pes pri veterinárovi, jasná klinika, profesionálna fotka…"
             }
             rows={3}
             maxLength={500}
@@ -219,7 +219,7 @@ export function AiFlyerGenerator({
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Generujem AI obrázok...
+                Generujem AI obrázok…
               </>
             ) : (
               <>

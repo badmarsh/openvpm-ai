@@ -339,7 +339,7 @@ export function KvepisPanel() {
       {isLoading ? (
         <div className="flex items-center justify-center p-12 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          {t("statutory.kvepis.loading", "Načítavam KVEPIS podania...")}
+          {t("statutory.kvepis.loading", "Načítavam KVEPIS podania…")}
         </div>
       ) : !submissions || submissions.length === 0 ? (
         <EmptyState

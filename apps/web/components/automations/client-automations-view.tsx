@@ -350,7 +350,7 @@ function MarketingAutomationsContent() {
           {rulesQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("marketing.automations.loading", "Načítavam automatizačné pravidlá...")}
+              {t("marketing.automations.loading", "Načítavam automatizačné pravidlá…")}
             </div>
           ) : !rulesQuery.data || rulesQuery.data.length === 0 ? (
             <div className="p-12 text-center space-y-2 border rounded-xl bg-card">
@@ -454,7 +454,7 @@ function MarketingAutomationsContent() {
           {segmentsQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("marketing.automations.loadingSegments", "Načítavam CRM segmenty...")}
+              {t("marketing.automations.loadingSegments", "Načítavam CRM segmenty…")}
             </div>
           ) : !segmentsQuery.data || segmentsQuery.data.length === 0 ? (
             <div className="p-12 text-center space-y-2 border rounded-xl bg-card">
@@ -596,7 +596,7 @@ function MarketingAutomationsContent() {
           {channelsQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("marketing.automations.loadingChannels", "Načítavam prepojené kanály...")}
+              {t("marketing.automations.loadingChannels", "Načítavam prepojené kanály…")}
             </div>
           ) : !channelsQuery.data || channelsQuery.data.length === 0 ? (
             <div className="p-12 text-center space-y-2 border rounded-xl bg-card">
@@ -880,7 +880,7 @@ function MarketingAutomationsContent() {
           {eventsQuery.isLoading ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              {t("marketing.automations.loadingEvents", "Načítavam udalosti...")}
+              {t("marketing.automations.loadingEvents", "Načítavam udalosti…")}
             </div>
           ) : !eventsQuery.data || eventsQuery.data.length === 0 ? (
             <div className="p-12 text-center space-y-2 border rounded-xl bg-card">
@@ -1133,7 +1133,7 @@ function MarketingAutomationsContent() {
             {membersQuery.isLoading ? (
               <div className="p-12 text-center text-sm text-muted-foreground">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                {t("marketing.automations.loadingMembers", "Načítavam klientov segmentu...")}
+                {t("marketing.automations.loadingMembers", "Načítavam klientov segmentu…")}
               </div>
             ) : !membersQuery.data || membersQuery.data.members.length === 0 ? (
               <div className="p-12 text-center space-y-2 border rounded-xl bg-muted/20">
@@ -1347,7 +1347,7 @@ function MarketingAutomationsContent() {
                   placeholder={
                     simSelectedPatientName
                       ? `Vybraný: ${simSelectedPatientName}`
-                      : "Hľadať pacienta podľa mena..."
+                      : "Hľadať pacienta podľa mena…"
                   }
                   value={simPatientSearch}
                   onChange={(e) => setSimPatientSearch(e.target.value)}

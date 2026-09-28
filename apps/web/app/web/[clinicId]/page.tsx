@@ -18,7 +18,7 @@ export default function PublicClinicWebsitePage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <p className="text-sm font-medium text-muted-foreground">Načítavam stránku kliniky...</p>
+        <p className="text-sm font-medium text-muted-foreground">Načítavam stránku kliniky…</p>
       </div>
     );
   }

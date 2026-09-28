@@ -89,7 +89,7 @@ describe("billing invoice form UX", () => {
     expect(source).toContain("setDueDate(defaultDueDate(taxConfig.timezone))");
     expect(source).toContain("dueDate.trim().length > 0");
     expect(source).toContain("setDueDateTouched(true)");
-    expect(source).toContain("Loading practice date settings...");
+    expect(source).toContain("Loading practice date settings…");
     expect(source).toContain(
       "Choose a due date manually. Practice settings could not load."
     );
@@ -140,7 +140,7 @@ describe("billing invoice form UX", () => {
     expect(source).toContain("Unable to load billing services");
     expect(source).toContain("Unable to load billing services. Please retry.");
     expect(source).toContain("!servicesMissing");
-    expect(source).toContain("Searching clients...");
+    expect(source).toContain("Searching clients…");
     expect(source).not.toContain("clientResults.data?.map");
     expect(source).not.toContain("patientResults.data?.map");
     expect(source).not.toContain("servicesQuery.data?.map");
@@ -153,7 +153,7 @@ describe("billing invoice form UX", () => {
     expect(source).toContain("taxConfigQuery.error || taxConfigMissing");
     expect(source).toContain("Unable to load practice tax settings");
     expect(source).toContain("Preview totals omit tax");
-    expect(source).toContain("Loading practice tax settings...");
+    expect(source).toContain("Loading practice tax settings…");
     expect(source).toContain("taxConfigQuery.error || taxConfigMissing");
     expect(source).toContain(
       'taxConfigReady && taxConfig ? taxConfig.taxRatePercent : "0.00"'

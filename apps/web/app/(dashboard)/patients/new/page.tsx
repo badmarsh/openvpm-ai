@@ -153,7 +153,7 @@ export default function NewPatientPage() {
   if (status === "loading") {
     return (
       <NewPatientLoadingPanel
-        label={t("patients.form.checkingAccess", "Checking patient access...")}
+        label={t("patients.form.checkingAccess", "Checking patient access…")}
       />
     );
   }
@@ -187,7 +187,7 @@ export default function NewPatientPage() {
     <Suspense
       fallback={
         <NewPatientLoadingPanel
-          label={t("patients.form.loadingForm", "Loading patient form...")}
+          label={t("patients.form.loadingForm", "Loading patient form…")}
         />
       }
     >
@@ -589,7 +589,7 @@ function NewPatientForm() {
                       id="clientSearch"
                       placeholder={t(
                         "patients.form.searchOwnerPlaceholder",
-                        "Search clients by name or email...",
+                        "Search clients by name or email…",
                       )}
                       value={clientSearch}
                       maxLength={CLIENT_SEARCH_MAX_LENGTH}
@@ -649,7 +649,7 @@ function NewPatientForm() {
                               className="h-3.5 w-3.5 animate-spin"
                               aria-hidden="true"
                             />
-                            {t("patients.form.searchingOwners", "Searching clients...")}
+                            {t("patients.form.searchingOwners", "Searching clients…")}
                           </div>
                         ) : clientResults && clientResults.length > 0 ? (
                           clientResults.map((client, index) => (
@@ -758,7 +758,7 @@ function NewPatientForm() {
                     onChange={(e) => updateField("sex", e.target.value)}
                     className={formSelectClass}
                   >
-                    <option value="">{t("patients.form.selectSex", "Select sex...")}</option>
+                    <option value="">{t("patients.form.selectSex", "Select sex…")}</option>
                     {sexOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {t(`patients.form.${opt.key}`, opt.label)}
@@ -905,7 +905,7 @@ function NewPatientForm() {
                         className="mr-2 h-4 w-4 animate-spin"
                         aria-hidden="true"
                       />
-                      {t("patients.actions.creating", "Creating...")}
+                      {t("patients.actions.creating", "Creating…")}
                     </>
                   ) : (
                     t("patients.form.createPatient", "Create Patient")

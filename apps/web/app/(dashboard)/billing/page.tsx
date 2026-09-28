@@ -906,7 +906,7 @@ function DispenseChargeQueuePanel({
       ) : pending.isLoading ? (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {t("billing.dispense.loading", "Loading medication billing work...")}
+          {t("billing.dispense.loading", "Loading medication billing work…")}
         </div>
       ) : pending.data && pending.data.items.length > 0 ? (
         <div className="divide-y divide-border">
@@ -1149,7 +1149,7 @@ function WellnessBillingPanel({
               }`}
             >
               {dueQuery.isLoading
-                ? t("billing.wellness.checkingMemberships", "Checking due memberships...")
+                ? t("billing.wellness.checkingMemberships", "Checking due memberships…")
                 : dueQuery.error
                 ? dueQuery.error.message
                 : dueMembershipsMissing
@@ -1443,7 +1443,7 @@ function InvoiceRow({
             {detail.isLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {t("billing.row.loadingDetails", "Loading invoice details...")}
+                {t("billing.row.loadingDetails", "Loading invoice details…")}
               </div>
             ) : detail.data ? (
               <div className="space-y-4">
@@ -2218,7 +2218,7 @@ function PaymentSection({
               disabled={!canRecordPayment}
             >
               {recordPayment.isPending
-                ? t("billing.payments.recording", "Recording...")
+                ? t("billing.payments.recording", "Recording…")
                 : t("billing.payments.recordPayment", "Record Payment")}
             </Button>
             <Button
@@ -2300,7 +2300,7 @@ function PaymentSection({
               disabled={!canApplyAdjustment}
             >
               {applyAdjustment.isPending
-                ? t("billing.payments.applying", "Applying...")
+                ? t("billing.payments.applying", "Applying…")
                 : t("billing.payments.applyAdjustment", "Apply Adjustment")}
             </Button>
             <Button
@@ -2326,7 +2326,7 @@ function PaymentSection({
       {/* Payment list */}
       {paymentsQuery.isLoading ? (
         <p className="text-xs text-muted-foreground">
-          {t("billing.payments.loadingPayments", "Loading payments...")}
+          {t("billing.payments.loadingPayments", "Loading payments…")}
         </p>
       ) : paymentsQuery.data && paymentsQuery.data.length > 0 ? (
         <div className="overflow-x-auto">
@@ -2422,7 +2422,7 @@ function PaymentSection({
       )}
       {adjustmentsQuery.isLoading ? (
         <p className="text-xs text-muted-foreground">
-          {t("billing.payments.loadingAdjustments", "Loading adjustments...")}
+          {t("billing.payments.loadingAdjustments", "Loading adjustments…")}
         </p>
       ) : adjustmentsQuery.data && adjustmentsQuery.data.length > 0 ? (
         <div className="overflow-x-auto">

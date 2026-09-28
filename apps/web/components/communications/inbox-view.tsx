@@ -1195,7 +1195,7 @@ export function InboxView() {
             ) : inboxListLoading ? (
               <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {t("inbox.loadingMessages", "Loading messages...")}
+                {t("inbox.loadingMessages", "Loading messages…")}
               </div>
             ) : conversationGroups.length === 0 ? (
               <EmptyState
@@ -1371,7 +1371,7 @@ export function InboxView() {
                   <Input
                     placeholder={t(
                       "inbox.searchClientsPlaceholder",
-                      "Search clients...",
+                      "Search clients…",
                     )}
                     value={newClientSearch}
                     maxLength={CLIENT_SEARCH_MAX_LENGTH}
@@ -1392,7 +1392,7 @@ export function InboxView() {
                 ) : searchLoading ? (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("inbox.searchingClients", "Searching clients...")}
+                    {t("inbox.searchingClients", "Searching clients…")}
                   </div>
                 ) : searchResults && searchResults.length > 0 ? (
                   searchResults.map((client) => (
@@ -1539,7 +1539,7 @@ export function InboxView() {
                 {unmatchedThreadLoading && !unmatchedThread ? (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("inbox.loadingMessages", "Loading messages...")}
+                    {t("inbox.loadingMessages", "Loading messages…")}
                   </div>
                 ) : (
                   (unmatchedThread && unmatchedThread.length > 0 ? unmatchedThread : [selectedUnmatched]).map((msg) => (
@@ -1597,7 +1597,7 @@ export function InboxView() {
                       }}
                     >
                       <Search className="h-3 w-3 shrink-0" />
-                      <span>{t("inbox.searchOtherClient", "Priradiť inému klientovi...")}</span>
+                      <span>{t("inbox.searchOtherClient", "Priradiť inému klientovi…")}</span>
                       {showClientSearch ? (
                         <ChevronUp className="h-3 w-3 ml-auto shrink-0" />
                       ) : (
@@ -1609,7 +1609,7 @@ export function InboxView() {
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                           <Input
-                            placeholder={t("inbox.searchClientsPlaceholder", "Search clients...")}
+                            placeholder={t("inbox.searchClientsPlaceholder", "Search clients…")}
                             value={linkClientSearch}
                             maxLength={CLIENT_SEARCH_MAX_LENGTH}
                             autoFocus
@@ -1626,7 +1626,7 @@ export function InboxView() {
                             ) : linkClientLoading ? (
                               <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                {t("inbox.searchingClients", "Searching clients...")}
+                                {t("inbox.searchingClients", "Searching clients…")}
                               </div>
                             ) : linkClientResults && linkClientResults.length > 0 ? (
                               linkClientResults.map((client) => (
@@ -1695,7 +1695,7 @@ export function InboxView() {
                           <textarea
                             value={replyUnmatchedContent}
                             onChange={(e) => setReplyUnmatchedContent(e.target.value)}
-                            placeholder={t("inbox.replyContentPlaceholder", "Napíšte odpoveď...")}
+                            placeholder={t("inbox.replyContentPlaceholder", "Napíšte odpoveď…")}
                             className="w-full min-h-[52px] max-h-[120px] resize-none rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                             maxLength={5000}
                             autoFocus
@@ -1733,7 +1733,7 @@ export function InboxView() {
                           className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
                         >
                           <Send className="h-3.5 w-3.5 shrink-0" />
-                          <span className="flex-1 text-left truncate text-muted-foreground/70">{t("inbox.replyContentPlaceholder", "Napíšte odpoveď...")}</span>
+                          <span className="flex-1 text-left truncate text-muted-foreground/70">{t("inbox.replyContentPlaceholder", "Napíšte odpoveď…")}</span>
                           <span className="font-mono text-[10px] shrink-0 text-muted-foreground/50">{toEmail}</span>
                         </button>
                       )}
@@ -1827,7 +1827,7 @@ export function InboxView() {
                 ) : timelineDisplayLoading ? (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("inbox.loadingMessages", "Loading messages...")}
+                    {t("inbox.loadingMessages", "Loading messages…")}
                   </div>
                 ) : timeline && timeline.length > 0 ? (
                   [...timeline].reverse().map((msg) => {
@@ -1990,7 +1990,7 @@ export function InboxView() {
                   <textarea
                     placeholder={t(
                       "inbox.typeMessagePlaceholder",
-                      "Type a message...",
+                      "Type a message…",
                     )}
                     value={composeContent}
                     onChange={(e) => setComposeContent(e.target.value)}

@@ -276,7 +276,7 @@ function VetIntelContent() {
                     >
                       <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />
                       <span>
-                        {t("vetIntel.loading", "Načítavam Vet Intelligence...")}
+                        {t("vetIntel.loading", "Načítavam Vet Intelligence…")}
                       </span>
                     </td>
                   </tr>

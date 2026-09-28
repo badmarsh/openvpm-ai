@@ -318,7 +318,7 @@ export default function PetDetailPage() {
                           >
                             <Download className="h-3.5 w-3.5" aria-hidden="true" />
                             {certificatePendingId === v.id
-                              ? "Checking..."
+                              ? "Checking…"
                               : "Download"}
                           </button>
                         </td>

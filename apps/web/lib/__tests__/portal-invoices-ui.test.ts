@@ -33,7 +33,7 @@ describe("portal invoices UI", () => {
 
   it("makes the primary mobile payment action clear and easy to tap", () => {
     expect(source).toContain("Pay securely online");
-    expect(source).toContain("Opening secure checkout...");
+    expect(source).toContain("Opening secure checkout…");
     expect(source).toContain("min-h-11 w-full");
     expect(source).toContain("Powered by Stripe");
     expect(source).toContain('role="alert"');

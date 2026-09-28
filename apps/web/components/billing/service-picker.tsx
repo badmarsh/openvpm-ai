@@ -163,7 +163,7 @@ export function ServicePicker({
             ? selected.name
             : t(
                 "billing.servicePicker.placeholder",
-                "Search services or products...",
+                "Search services or products…",
               )}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -180,7 +180,7 @@ export function ServicePicker({
               onKeyDown={onKeyDown}
               placeholder={t(
                 "billing.servicePicker.typeServiceName",
-                "Type a service or product name...",
+                "Type a service or product name…",
               )}
               aria-label={t(
                 "billing.servicePicker.searchServicesAria",

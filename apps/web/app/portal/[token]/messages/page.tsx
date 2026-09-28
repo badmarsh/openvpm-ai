@@ -175,7 +175,7 @@ export default function PortalMessagesPage() {
             onChange={(event) => setContent(event.target.value)}
             maxLength={COMMUNICATION_CONTENT_MAX_LENGTH}
             rows={3}
-            placeholder="Type your message..."
+            placeholder="Type your message…"
             className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <div className="mt-3 flex items-center justify-between gap-3">
@@ -189,7 +189,7 @@ export default function PortalMessagesPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send className="h-4 w-4" aria-hidden="true" />
-              {sendMessage.isPending ? "Sending..." : "Send"}
+              {sendMessage.isPending ? "Sending…" : "Send"}
             </button>
           </div>
         </div>

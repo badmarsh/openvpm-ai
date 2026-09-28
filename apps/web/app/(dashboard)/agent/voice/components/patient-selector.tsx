@@ -49,13 +49,13 @@ export function PatientSelector({ value, onChange }: PatientSelectorProps) {
         >
           {value
             ? `${value.name} (${value.clientName})`
-            : "Vyhľadať pacienta..."}
+            : "Vyhľadať pacienta…"}
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-2" align="start">
         <Input
-          placeholder="Hľadať pacienta..."
+          placeholder="Hľadať pacienta…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-2 h-8"
@@ -68,7 +68,7 @@ export function PatientSelector({ value, onChange }: PatientSelectorProps) {
             </p>
           ) : results.isLoading ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              Hľadám...
+              Hľadám…
             </p>
           ) : !results.data || results.data.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">

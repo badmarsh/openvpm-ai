@@ -91,7 +91,7 @@ export function AgentComposer({
             {isPending ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>{t("agent.composer.sending", "Odosielam...")}</span>
+                <span>{t("agent.composer.sending", "Odosielam…")}</span>
               </>
             ) : (
               <>

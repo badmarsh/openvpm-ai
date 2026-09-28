@@ -535,7 +535,7 @@ test.describe.serial("Fresh clinic mock launch", () => {
 
     // Patient
     await page.goto("/patients/new", { waitUntil: "domcontentloaded" });
-    await page.getByPlaceholder("Search clients by name or email...").fill(state.clientLastName);
+    await page.getByPlaceholder("Search clients by name or email…").fill(state.clientLastName);
     await page
       .getByRole("button", {
         name: new RegExp(`${state.clientFirstName} ${state.clientLastName}`),
@@ -566,7 +566,7 @@ test.describe.serial("Fresh clinic mock launch", () => {
     await page.goto("/schedule", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
     await page.getByRole("button", { name: /New Appointment/i }).click();
-    await page.getByPlaceholder("Search patients...").fill(state.patientName);
+    await page.getByPlaceholder("Search patients…").fill(state.patientName);
     await page
       .getByRole("button", { name: new RegExp(state.patientName) })
       .first()
@@ -622,7 +622,7 @@ test.describe.serial("Fresh clinic mock launch", () => {
 
     // Invoice with the first starter service
     await page.goto("/billing/new", { waitUntil: "domcontentloaded" });
-    await page.getByPlaceholder("Search clients...").fill(state.clientLastName);
+    await page.getByPlaceholder("Search clients…").fill(state.clientLastName);
     await page
       .getByRole("button", {
         name: new RegExp(`${state.clientFirstName} ${state.clientLastName}`),

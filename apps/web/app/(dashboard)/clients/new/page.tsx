@@ -128,7 +128,7 @@ function NewClientPageFallback() {
         className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground"
       >
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        {t("clients.form.checkingAccess", "Checking client access...")}
+        {t("clients.form.checkingAccess", "Checking client access…")}
       </div>
     </div>
   );
@@ -814,7 +814,7 @@ function NewClientForm({ firstClinicDay }: { firstClinicDay: boolean }) {
                         className="mr-2 h-4 w-4 animate-spin"
                         aria-hidden="true"
                       />
-                      {t("clients.actions.creating", "Creating...")}
+                      {t("clients.actions.creating", "Creating…")}
                     </>
                   ) : (
                     t("clients.form.createClient", "Create Client")

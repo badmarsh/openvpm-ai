@@ -62,7 +62,7 @@ function SoapEditorLoading() {
   const { t } = useI18n();
   return (
     <div className="min-h-32 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-      {t("records.soap.loadingEditor", "Načítavam editor...")}
+      {t("records.soap.loadingEditor", "Načítavam editor…")}
     </div>
   );
 }
@@ -991,7 +991,7 @@ export default function NewSoapNotePage() {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("records.newSoap.checkingAccess", "Checking SOAP note access...")}
+        {t("records.newSoap.checkingAccess", "Checking SOAP note access…")}
       </div>
     );
   }
@@ -1018,7 +1018,7 @@ export default function NewSoapNotePage() {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("records.newSoap.loadingPatient", "Loading patient...")}
+        {t("records.newSoap.loadingPatient", "Loading patient…")}
       </div>
     );
   }
@@ -1049,7 +1049,7 @@ export default function NewSoapNotePage() {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("records.newSoap.loadingDraft", "Loading saved SOAP draft...")}
+        {t("records.newSoap.loadingDraft", "Loading saved SOAP draft…")}
       </div>
     );
   }
@@ -1231,7 +1231,7 @@ export default function NewSoapNotePage() {
                 <Sparkles className="mr-2 h-4 w-4" />
               )}
               {draftWithAi.isPending
-                ? t("records.newSoap.draftingAi", "Drafting...")
+                ? t("records.newSoap.draftingAi", "Drafting…")
                 : draftMode === "pro"
                   ? t("records.newSoap.draftConsilium", "Konziliárny rozbor (Pro)")
                   : t("records.newSoap.draftWithAi", "Draft with AI")}
@@ -1327,7 +1327,7 @@ export default function NewSoapNotePage() {
             )}
             <span>
               {saveState === "saving"
-                ? t("records.newSoap.savingDraft", "Saving draft...")
+                ? t("records.newSoap.savingDraft", "Saving draft…")
                 : saveState === "offline"
                   ? t("records.newSoap.offlinePaused", "Offline — autosave is paused")
                   : saveState === "saved"
@@ -1368,7 +1368,7 @@ export default function NewSoapNotePage() {
                 onClick={() => void handleDiscardDraft()}
               >
                 {discardMutation.isPending
-                  ? t("records.newSoap.discarding", "Discarding...")
+                  ? t("records.newSoap.discarding", "Discarding…")
                   : t("records.newSoap.discardDraft", "Discard draft")}
               </Button>
             ) : null}
@@ -1475,7 +1475,7 @@ export default function NewSoapNotePage() {
             <SoapNoteEditor
               value={subjective}
               onChange={setSubjective}
-              placeholder={t("records.soap.subjectivePlaceholder", "What the owner reports...")}
+              placeholder={t("records.soap.subjectivePlaceholder", "What the owner reports…")}
             />
           </div>
 
@@ -1490,7 +1490,7 @@ export default function NewSoapNotePage() {
             <SoapNoteEditor
               value={objective}
               onChange={setObjective}
-              placeholder={t("records.soap.objectivePlaceholder", "Physical exam findings, vitals, lab results...")}
+              placeholder={t("records.soap.objectivePlaceholder", "Physical exam findings, vitals, lab results…")}
             />
           </div>
 
@@ -1505,7 +1505,7 @@ export default function NewSoapNotePage() {
             <SoapNoteEditor
               value={assessment}
               onChange={setAssessment}
-              placeholder={t("records.soap.assessmentPlaceholder", "Diagnosis, differential diagnoses...")}
+              placeholder={t("records.soap.assessmentPlaceholder", "Diagnosis, differential diagnoses…")}
             />
           </div>
 
@@ -1518,7 +1518,7 @@ export default function NewSoapNotePage() {
             <SoapNoteEditor
               value={plan}
               onChange={setPlan}
-              placeholder={t("records.soap.planPlaceholder", "Treatment plan, medications, follow-up...")}
+              placeholder={t("records.soap.planPlaceholder", "Treatment plan, medications, follow-up…")}
             />
           </div>
         </div>
@@ -1539,7 +1539,7 @@ export default function NewSoapNotePage() {
           >
             <Save className="mr-2 h-4 w-4" />
             {finalizeMutation.isPending
-              ? t("records.newSoap.finalizing", "Finalizing...")
+              ? t("records.newSoap.finalizing", "Finalizing…")
               : t("records.newSoap.finalizeSoapNote", "Finalize SOAP note")}
           </Button>
           {!canSave ? (

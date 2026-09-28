@@ -660,7 +660,7 @@ export default function ReviewsPage() {
           id="marketing-reviews-search"
           value={searchQuery}
           maxLength={REVIEW_SEARCH_MAX_LENGTH}
-          placeholder={t("marketing.reviews.filterSearch", "Hľadať v recenziách...")}
+          placeholder={t("marketing.reviews.filterSearch", "Hľadať v recenziách…")}
           onChange={setSearchQuery}
         />
 
@@ -841,7 +841,7 @@ export default function ReviewsPage() {
         ) : listQuery.isLoading ? (
           <div
             role="status"
-            aria-label={t("marketing.reviews.queue.loading", "Načítavam recenzie...")}
+            aria-label={t("marketing.reviews.queue.loading", "Načítavam recenzie…")}
           >
             <TableSkeleton rows={5} cols={TABLE_COLUMNS} />
           </div>
@@ -1173,7 +1173,7 @@ export default function ReviewsPage() {
                                     maxLength={REVIEW_REPLY_MAX_LENGTH}
                                     placeholder={t(
                                       "marketing.reviews.replyPlaceholder",
-                                      "Napíšte oficiálnu odpoveď na recenziu...",
+                                      "Napíšte oficiálnu odpoveď na recenziu…",
                                     )}
                                     value={replyText}
                                     onChange={(e) => setReplyText(e.target.value)}
@@ -1446,7 +1446,7 @@ export default function ReviewsPage() {
                   onChange={(e) => setNewText(e.target.value)}
                   placeholder={t(
                     "marketing.reviews.dialog.reviewTextPlaceholder",
-                    "Vložte text hodnotenia alebo odporúčania od klienta...",
+                    "Vložte text hodnotenia alebo odporúčania od klienta…",
                   )}
                   className="text-xs"
                 />
@@ -1467,7 +1467,7 @@ export default function ReviewsPage() {
                   onChange={(e) => setNewReply(e.target.value)}
                   placeholder={t(
                     "marketing.reviews.dialog.replyPlaceholder",
-                    "Ak už klinika na recenziu odpovedala, zadajte odpoveď tu...",
+                    "Ak už klinika na recenziu odpovedala, zadajte odpoveď tu…",
                   )}
                   className="text-xs"
                 />
@@ -1567,7 +1567,7 @@ export default function ReviewsPage() {
                 onChange={(e) => setEscalateReason(e.target.value)}
                 placeholder={t(
                   "marketing.reviews.dialog.escalateReasonPlaceholder",
-                  "Napr.: Klient vyjadruje nespokojnosť s čakacou dobou a žiada spätné volanie...",
+                  "Napr.: Klient vyjadruje nespokojnosť s čakacou dobou a žiada spätné volanie…",
                 )}
                 className="text-xs"
               />

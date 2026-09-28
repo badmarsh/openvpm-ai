@@ -197,7 +197,7 @@ export function WeightHistoryTab({
                 <Plus className="mr-2 h-4 w-4" />
               )}
               {isAddingWeight
-                ? t("patients.actions.saving", "Saving...")
+                ? t("patients.actions.saving", "Saving…")
                 : t("patients.weight.recordWeight", "Record weight")}
             </Button>
           </div>

@@ -328,7 +328,7 @@ export default function EncountersPage() {
           onChange={setSearchQuery}
           placeholder={t(
             "encounters.hub.searchPlaceholder",
-            "Hľadať podľa mena pacienta, majiteľa, čipu alebo lekára..."
+            "Hľadať podľa mena pacienta, majiteľa, čipu alebo lekára…"
           )}
         />
         {activeTab === "all" ? (

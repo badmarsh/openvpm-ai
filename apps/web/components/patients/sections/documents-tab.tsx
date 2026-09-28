@@ -288,7 +288,7 @@ export function DocumentsTab({
   if (isLoading) {
     return (
       <PatientDetailLoadingPanel
-        label={t("patients.documentsTab.loading", "Loading documents...")}
+        label={t("patients.documentsTab.loading", "Loading documents…")}
       />
     );
   }

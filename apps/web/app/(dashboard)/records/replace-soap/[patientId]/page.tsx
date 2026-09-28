@@ -168,7 +168,7 @@ export default function ReplaceSoapNotePage() {
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> {t("records.replaceSoap.checkingAccess", "Checking access...")}
+        <Loader2 className="h-4 w-4 animate-spin" /> {t("records.replaceSoap.checkingAccess", "Checking access…")}
       </div>
     );
   }
@@ -205,7 +205,7 @@ export default function ReplaceSoapNotePage() {
     }
     return (
       <div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> {t("records.replaceSoap.loadingSignedSoap", "Loading signed SOAP...")}
+        <Loader2 className="h-4 w-4 animate-spin" /> {t("records.replaceSoap.loadingSignedSoap", "Loading signed SOAP…")}
       </div>
     );
   }
@@ -295,7 +295,7 @@ export default function ReplaceSoapNotePage() {
             onChange={(value) => updateSection(key, value)}
             placeholder={t(
               "records.replaceSoap.sectionPlaceholder",
-              `Enter corrected ${englishKey} documentation...`,
+              `Enter corrected ${englishKey} documentation…`,
               { label: label.toLowerCase() }
             )}
           />
@@ -341,7 +341,7 @@ export default function ReplaceSoapNotePage() {
             <FilePenLine className="mr-2 h-4 w-4" />
           )}
           {replace.isPending
-            ? t("records.replaceSoap.finalizing", "Finalizing...")
+            ? t("records.replaceSoap.finalizing", "Finalizing…")
             : t("records.replaceSoap.finalizeButton", "Finalize replacement")}
         </Button>
       </div>

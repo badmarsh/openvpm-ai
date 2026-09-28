@@ -213,7 +213,7 @@ export default function EkasaSettingsPage() {
         <Card>
           <CardContent className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-            {t("settings.ekasa.loading", "Načítavam nastavenia e-Kasa...")}
+            {t("settings.ekasa.loading", "Načítavam nastavenia e-Kasa…")}
           </CardContent>
         </Card>
       ) : configError ? (
@@ -533,7 +533,7 @@ export default function EkasaSettingsPage() {
                     <Settings2 className="mr-2 h-4 w-4" aria-hidden="true" />
                   )}
                   {savePending
-                    ? t("settings.ekasa.save.saving", "Ukladám nastavenia...")
+                    ? t("settings.ekasa.save.saving", "Ukladám nastavenia…")
                     : t("settings.ekasa.save.action", "Uložiť nastavenia e-Kasa")}
                 </Button>
                 {updateConfig.isError ? (

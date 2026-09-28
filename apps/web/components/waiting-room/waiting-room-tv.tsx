@@ -1122,7 +1122,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                 </label>
                 <Textarea
                   rows={3}
-                  placeholder="Krátky text pre klientov v čakárni..."
+                  placeholder="Krátky text pre klientov v čakárni…"
                   value={slideBody}
                   onChange={(e) => setSlideBody(e.target.value)}
                   className="text-xs resize-none"
@@ -1200,7 +1200,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                 {createSlideMutation.isPending || updateSlideMutation.isPending ? (
                   <span className="flex items-center gap-1">
                     <RefreshCw className="h-3 w-3 animate-spin" />
-                    {t("common.saving", "Ukladám...")}
+                    {t("common.saving", "Ukladám…")}
                   </span>
                 ) : editingSlide ? (
                   t("common.saveChanges", "Uložiť zmeny")

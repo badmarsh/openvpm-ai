@@ -161,7 +161,7 @@ test("fractional prescription persists and reconciliation actions can be selecte
 
 test("inventory markup persists a selling price", async ({ page }) => {
   await page.goto("/inventory");
-  await page.getByPlaceholder("Search by name or SKU...").fill(productName);
+  await page.getByPlaceholder("Search by name or SKU…").fill(productName);
   const row = page.getByRole("row").filter({ hasText: productName });
   await row.getByTitle("Edit", { exact: true }).click();
   await page.getByLabel("Markup on cost (%)").fill("99");

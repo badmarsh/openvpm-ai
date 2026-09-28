@@ -27,7 +27,7 @@ function EditPatientLoadingPanel() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
-      {t("patients.profile.loading", "Loading patient...")}
+      {t("patients.profile.loading", "Loading patient…")}
     </div>
   );
 }
@@ -57,7 +57,7 @@ export default function EditPatientPage() {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t("patients.form.checkingAccess", "Checking patient access...")}
+        {t("patients.form.checkingAccess", "Checking patient access…")}
       </div>
     );
   }
@@ -316,7 +316,7 @@ function EditPatientForm() {
               onChange={(e) => updateField("sex", e.target.value)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">{t("patients.form.selectSex", "Select sex...")}</option>
+              <option value="">{t("patients.form.selectSex", "Select sex…")}</option>
               {sexOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {t(`patients.form.${opt.key}`, opt.label)}
@@ -391,7 +391,7 @@ function EditPatientForm() {
             disabled={!canSubmit || updatePatient.isPending}
           >
             {updatePatient.isPending
-              ? t("patients.actions.saving", "Saving...")
+              ? t("patients.actions.saving", "Saving…")
               : t("patients.actions.saveChanges", "Save Changes")}
           </Button>
           <Button

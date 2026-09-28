@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useId, type Dispatch, type SetStateAction } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import {
@@ -111,6 +111,10 @@ export function VaccinationFormFields({
   currentUserId?: string;
 }) {
   const { t } = useI18n();
+  // Stable per-instance prefix so <label htmlFor> ↔ control ids stay unique
+  // even if two vaccination forms are mounted on the same page.
+  const idPrefix = useId();
+  const fieldId = (name: keyof VaccinationFormState) => `${idPrefix}${name}`;
   const rabies = isRabiesVaccineName(form.vaccineName);
   const update = <Field extends keyof VaccinationFormState>(
     field: Field,
@@ -120,10 +124,14 @@ export function VaccinationFormFields({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={fieldId("vaccineName")}
+          className="mb-1 block text-xs font-medium text-muted-foreground"
+        >
           {t("records.vaccinations.form.vaccine", "Vaccine *")}
         </label>
         <Input
+          id={fieldId("vaccineName")}
           name="vaccineName"
           required
           value={form.vaccineName}
@@ -147,10 +155,14 @@ export function VaccinationFormFields({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={fieldId("productName")}
+          className="mb-1 block text-xs font-medium text-muted-foreground"
+        >
           {t("records.vaccinations.form.productName", "Product name")}{rabies ? " *" : ""}
         </label>
         <Input
+          id={fieldId("productName")}
           name="productName"
           required={rabies}
           value={form.productName}
@@ -160,10 +172,14 @@ export function VaccinationFormFields({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={fieldId("nextDueDate")}
+          className="mb-1 block text-xs font-medium text-muted-foreground"
+        >
           {t("records.vaccinations.form.nextDue", "Next due")}{rabies ? " *" : ""}
         </label>
         <Input
+          id={fieldId("nextDueDate")}
           name="nextDueDate"
           type="date"
           required={rabies}
@@ -173,10 +189,14 @@ export function VaccinationFormFields({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={fieldId("lotNumber")}
+          className="mb-1 block text-xs font-medium text-muted-foreground"
+        >
           {t("records.vaccinations.form.lotNumber", "Lot number")}{rabies ? " *" : ""}
         </label>
         <Input
+          id={fieldId("lotNumber")}
           name="lotNumber"
           required={rabies}
           value={form.lotNumber}
@@ -186,10 +206,14 @@ export function VaccinationFormFields({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        <label
+          htmlFor={fieldId("manufacturer")}
+          className="mb-1 block text-xs font-medium text-muted-foreground"
+        >
           {t("records.vaccinations.form.manufacturer", "Manufacturer")}{rabies ? " *" : ""}
         </label>
         <Input
+          id={fieldId("manufacturer")}
           name="manufacturer"
           required={rabies}
           value={form.manufacturer}
@@ -201,10 +225,14 @@ export function VaccinationFormFields({
       {rabies ? (
         <>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={fieldId("productExpirationDate")}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("records.vaccinations.form.productExpiration", "Product expiration *")}
             </label>
             <Input
+              id={fieldId("productExpirationDate")}
               name="productExpirationDate"
               type="date"
               required
@@ -215,10 +243,14 @@ export function VaccinationFormFields({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={fieldId("doseType")}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("records.vaccinations.form.doseType", "Dose type *")}
             </label>
             <select
+              id={fieldId("doseType")}
               name="doseType"
               required
               value={form.doseType}
@@ -228,7 +260,7 @@ export function VaccinationFormFields({
                   event.target.value as VaccinationFormState["doseType"],
                 )
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">{t("records.vaccinations.form.chooseDoseType", "Choose dose type")}</option>
               <option value="initial">{t("records.vaccinations.form.initialDose", "Initial dose")}</option>
@@ -236,17 +268,21 @@ export function VaccinationFormFields({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={fieldId("licensedDurationMonths")}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("records.vaccinations.form.licensedDuration", "Licensed duration *")}
             </label>
             <select
+              id={fieldId("licensedDurationMonths")}
               name="licensedDurationMonths"
               required
               value={form.licensedDurationMonths}
               onChange={(event) =>
                 update("licensedDurationMonths", event.target.value)
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">{t("records.vaccinations.form.chooseDuration", "Choose duration")}</option>
               <option value="12">{t("records.vaccinations.form.duration1Year", "1 year")}</option>
@@ -255,10 +291,14 @@ export function VaccinationFormFields({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={fieldId("rabiesTagNumber")}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("records.vaccinations.form.rabiesTagNumber", "Rabies tag number")}
             </label>
             <Input
+              id={fieldId("rabiesTagNumber")}
               name="rabiesTagNumber"
               value={form.rabiesTagNumber}
               maxLength={VACCINATION_RABIES_TAG_MAX_LENGTH}
@@ -266,17 +306,21 @@ export function VaccinationFormFields({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={fieldId("supervisingVeterinarianId")}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("records.vaccinations.form.supervisingVeterinarian", "Supervising veterinarian *")}
             </label>
             <select
+              id={fieldId("supervisingVeterinarianId")}
               name="supervisingVeterinarianId"
               required
               value={form.supervisingVeterinarianId}
               onChange={(event) =>
                 update("supervisingVeterinarianId", event.target.value)
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="">{t("records.vaccinations.form.chooseVeterinarian", "Choose veterinarian")}</option>
               {providers?.map((provider) => (

@@ -208,7 +208,7 @@ describe("SOAP note editor UX", () => {
       'import { EmptyState } from "@/components/common/empty-state"'
     );
     expect(source).toContain("error: patientError");
-    expect(source).toContain("Loading patient...");
+    expect(source).toContain("Loading patient…");
     expect(source).toContain("if (patientError || !patient)");
     expect(source).toContain('title="Unable to load patient"');
     expect(source).toContain('label: "Back to Records"');
@@ -314,7 +314,7 @@ describe("records prescription form UX", () => {
     expect(inventoryPicker).toContain("search: normalizedSearch || undefined");
     expect(inventoryPicker).toContain("limit: PAGE_SIZE");
     expect(inventoryPicker).toContain("offset: pageOffset");
-    expect(inventoryPicker).toContain("Search inventory by name or SKU...");
+    expect(inventoryPicker).toContain("Search inventory by name or SKU…");
     expect(inventoryPicker).toContain("onScroll={(event) => {");
     expect(inventoryPicker).toContain("loadNextPage();");
     expect(inventoryPicker).toContain(
@@ -607,7 +607,7 @@ describe("records page state handling", () => {
     );
     expect(source).toContain("Unable to load records settings. Please retry.");
     expect(source).toContain(") : recordsSettingsLoading ? (");
-    expect(source).toContain('<RecordsLoadingPanel label="Loading records settings..." />');
+    expect(source).toContain('<RecordsLoadingPanel label="Loading records settings…" />');
     expect(source).toContain("const soapNotesMissing =");
     expect(source).toContain("{soapNotesError || soapNotesMissing ? (");
     expect(source).toContain(") : isLoadingSoapNotes ? (");

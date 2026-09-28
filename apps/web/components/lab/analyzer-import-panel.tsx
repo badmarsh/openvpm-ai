@@ -482,7 +482,7 @@ function AnalyzerUploadModal({
             <div>
               <label className="text-xs font-medium block mb-1">{t("labImport.assignPatient", "Priradiť pacientovi (voliteľné)")}</label>
               <Input
-                placeholder={t("labImport.searchPatientPlaceholder", "Hľadať pacienta podľa mena...")}
+                placeholder={t("labImport.searchPatientPlaceholder", "Hľadať pacienta podľa mena…")}
                 value={patientSearch}
                 onChange={(e) => setPatientSearch(e.target.value)}
                 className="text-xs h-9"
@@ -555,7 +555,7 @@ function AnalyzerUploadModal({
             <textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              placeholder="ALT, 45, U/L, 10, 100&#10;CREA, 180, µmol/L, 44, 159..."
+              placeholder="ALT, 45, U/L, 10, 100&#10;CREA, 180, µmol/L, 44, 159…"
               className="w-full h-24 rounded-md border border-input bg-background p-2 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>

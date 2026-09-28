@@ -49,7 +49,7 @@ function UnsubscribeContent() {
     return (
       <div className="rounded-2xl border border-border bg-card p-12 text-center space-y-3 shadow-sm">
         <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
-        <p className="text-sm text-muted-foreground">{t("odhlasenie.verifying", "Overujem údaje...")}</p>
+        <p className="text-sm text-muted-foreground">{t("odhlasenie.verifying", "Overujem údaje…")}</p>
       </div>
     );
   }
@@ -143,7 +143,7 @@ export default function UnsubscribePage() {
           fallback={
             <div className="rounded-2xl border border-border bg-card p-12 text-center space-y-3 shadow-sm">
               <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
-              <p className="text-sm text-muted-foreground">{t("odhlasenie.loading", "Načítavam...")}</p>
+              <p className="text-sm text-muted-foreground">{t("odhlasenie.loading", "Načítavam…")}</p>
             </div>
           }
         >

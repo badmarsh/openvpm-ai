@@ -891,7 +891,7 @@ function AppointmentDetailModal({
                       onChange={(e) => setInlineDoctorId(e.target.value)}
                       className="h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      <option value="">{t("whiteboard.selectDoctorPrompt", "Select doctor...")}</option>
+                      <option value="">{t("whiteboard.selectDoctorPrompt", "Select doctor…")}</option>
                       {(doctorsQuery.data ?? []).map((doc) => (
                         <option key={doc.id} value={doc.id}>
                           {formatDoctorName(doc.name, t, "whiteboard.doctor")}
@@ -1263,7 +1263,7 @@ export default function WhiteboardPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-            <span>{t("whiteboard.loading", "Loading whiteboard...")}</span>
+            <span>{t("whiteboard.loading", "Loading whiteboard…")}</span>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[1, 2, 3].map((colIdx) => (

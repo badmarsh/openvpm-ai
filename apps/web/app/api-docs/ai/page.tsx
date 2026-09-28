@@ -120,9 +120,9 @@ Content-Type: application/json`}
   -d '{
     "patient_id": "a1b2c3d4-...",
     "appointment_id": "b2c3d4e5-...",
-    "subjective": "Owner reports decreased appetite x3 days...",
-    "objective": "T: 101.5F, HR: 120, RR: 24. Mild dehydration...",
-    "assessment": "Suspect early-stage renal disease...",
+    "subjective": "Owner reports decreased appetite x3 days…",
+    "objective": "T: 101.5F, HR: 120, RR: 24. Mild dehydration…",
+    "assessment": "Suspect early-stage renal disease…",
     "plan": "CBC/Chem panel, urinalysis. Recheck in 2 weeks.",
     "source": "scribenote",
     "clinician_confirmed": true

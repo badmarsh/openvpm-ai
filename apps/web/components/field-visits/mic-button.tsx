@@ -30,27 +30,32 @@ export function MicButton({
     { lang }
   );
 
+  // One string for both the tooltip and the accessible name: `title` alone
+  // is not announced reliably by screen readers on icon-only buttons.
+  const label = !supported
+    ? t("fieldVisits.mic.unsupported", "Hlasové zadávanie nie je v tomto prehliadači dostupné")
+    : error === "microphone-denied"
+      ? t("fieldVisits.mic.permissionDenied", "Prístup k mikrofónu bol zamietnutý")
+      : state === "listening"
+        ? t("fieldVisits.mic.listening", "Zastaviť nahrávanie")
+        : state === "processing"
+          ? t("fieldVisits.mic.processing", "Spúšťam mikrofón…")
+          : t("fieldVisits.mic.dictate", "Diktovať hlasom (slovenčina)");
+
   return (
     <span className="relative inline-flex shrink-0">
       <button
         type="button"
         onClick={toggle}
         disabled={!supported || state === "processing"}
-        title={
-          !supported
-            ? t("fieldVisits.mic.unsupported", "Hlasové zadávanie nie je v tomto prehliadači dostupné")
-            : error === "microphone-denied"
-              ? t("fieldVisits.mic.permissionDenied", "Prístup k mikrofónu bol zamietnutý")
-              : state === "listening"
-                ? t("fieldVisits.mic.listening", "Zastaviť nahrávanie")
-                : state === "processing"
-                  ? t("fieldVisits.mic.processing", "Spúšťam mikrofón…")
-                  : t("fieldVisits.mic.dictate", "Diktovať hlasom (slovenčina)")
-        }
+        title={label}
+        aria-label={label}
+        aria-pressed={state === "listening"}
         className={cn(
           "inline-flex items-center justify-center rounded-md border h-8 w-8 transition-all",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           state === "listening"
-            ? "bg-red-500 border-red-400 text-white shadow-sm shadow-red-200 animate-pulse"
+            ? "bg-red-500 border-red-400 text-white shadow-sm shadow-red-200 motion-safe:animate-pulse"
             : !supported || state === "error"
               ? "bg-muted border-border text-muted-foreground opacity-60"
               : "bg-muted border-border text-muted-foreground hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700",

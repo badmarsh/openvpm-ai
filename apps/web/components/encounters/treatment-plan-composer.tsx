@@ -210,7 +210,7 @@ function TreatmentPlanCatalogPicker({
           >
             {queryIsStale || catalogQuery.isFetching ? (
               <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Searching...
+                <Loader2 className="h-4 w-4 animate-spin" /> Searching…
               </div>
             ) : catalogQuery.error ? (
               <div role="alert" className="px-3 py-6 text-sm text-destructive">

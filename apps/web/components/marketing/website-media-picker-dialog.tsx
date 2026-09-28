@@ -68,7 +68,7 @@ export function WebsiteMediaPickerDialog({
           {mediaQuery.isLoading ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm">Načítavam mediálnu knižnicu...</p>
+              <p className="text-sm">Načítavam mediálnu knižnicu…</p>
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground space-y-2">

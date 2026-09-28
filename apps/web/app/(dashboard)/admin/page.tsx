@@ -1662,7 +1662,7 @@ export default function AdminPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             {journeyError
               ? t("admin.journey.loadError", "Could not load journey cohorts.")
-              : t("admin.journey.loading", "Loading journey cohorts...")}
+              : t("admin.journey.loading", "Loading journey cohorts…")}
           </p>
         )}
       </div>
@@ -1868,7 +1868,7 @@ export default function AdminPage() {
           </>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
-            {funnelError ? t("admin.funnel.loadError", "Could not load the funnel.") : t("admin.funnel.loading", "Loading funnel...")}
+            {funnelError ? t("admin.funnel.loadError", "Could not load the funnel.") : t("admin.funnel.loading", "Loading funnel…")}
           </p>
         )}
       </div>

@@ -18,7 +18,7 @@ describe("service picker UI states", () => {
       'import { ServicePicker } from "@/components/billing/service-picker"'
     );
     expect(newInvoicePage).toContain("<ServicePicker");
-    expect(newInvoicePage).not.toContain("Select a service...");
+    expect(newInvoicePage).not.toContain("Select a service…");
   });
 
   it("ranks prefix matches first and searches codes and categories too", () => {
