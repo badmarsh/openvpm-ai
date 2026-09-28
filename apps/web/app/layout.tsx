@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter, DM_Sans } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import { SkipToContent } from "@/components/layout/skip-to-content";
+import { PreviewCookieBridge } from "@/components/preview/preview-cookie-bridge";
+import {
+  PREVIEW_FETCH_SHIM,
+  isPreviewCookieBridgeEnabled,
+} from "@/lib/preview-cookie-bridge";
 import "@/styles/globals.css";
 
 const inter = Inter({
@@ -35,13 +41,25 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const previewCookieBridge = isPreviewCookieBridgeEnabled();
   return (
     <html lang="sk" suppressHydrationWarning>
+      <head>
+        {previewCookieBridge ? (
+          // Sandbox previews only: re-send cookies the preview proxy strips.
+          <script dangerouslySetInnerHTML={{ __html: PREVIEW_FETCH_SHIM }} />
+        ) : null}
+      </head>
       <body
         className={`${inter.variable} ${dmSans.variable} font-sans antialiased`}
       >
         <Providers>
           <SkipToContent />
+          {previewCookieBridge ? (
+            <Suspense fallback={null}>
+              <PreviewCookieBridge />
+            </Suspense>
+          ) : null}
           {children}
         </Providers>
       </body>
