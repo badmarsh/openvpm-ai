@@ -135,16 +135,28 @@ Analýza vychádza z auditovaného zdrojového kódu repozitára OpenVPM AI:
 
 ## Štruktúra dokumentov
 
-| Súbor | Obsah |
-|-------|-------|
-| [01-clinical-journeys.md](01-clinical-journeys.md) | J1–J6 + Business Case: Klinická práca |
-| [02-frontdesk-journeys.md](02-frontdesk-journeys.md) | J7–J9 + Business Case: Recepcia |
-| [03-pharmacy-billing-journeys.md](03-pharmacy-billing-journeys.md) | J10–J12 + Business Case: Farmácia & faktúrácia |
-| [04-preventive-journeys.md](04-preventive-journeys.md) | J13–J15 + Business Case: Preventíva |
-| [05-lab-imaging-journeys.md](05-lab-imaging-journeys.md) | J16–J17 + Business Case: Lab & zobrazovanie |
-| [06-marketing-journeys.md](06-marketing-journeys.md) | J18–J19 + Business Case: Marketing |
-| [07-new-journeys.md](07-new-journeys.md) | J20–J30 + Business Cases |
-| [08-ai-value-chain.md](08-ai-value-chain.md) | AI value chain, trust-building, compliance journeys |
-| [09-multi-actor-journeys.md](09-multi-actor-journeys.md) | Multi-actor scénare |
-| [10-portal-journeys.md](10-portal-journeys.md) | Klientsky portál z perspektívy majiteľa |
-| [11-kpi-roadmap.md](11-kpi-roadmap.md) | KPI framework, ROI model, roadmap mapping |
+> **Zmenené 2026-09-28.** Journey dokumenty sa medzitým presunuli a prečíslovali. Tabuľka
+> pôvodne ukazovala na 11 súborov `NN-*.md`, ktoré v tomto priečinku už nie sú.
+>
+> **Autoritatívny register je [`docs/product/journeys/README.md`](../product/journeys/README.md)** —
+> má jedno číslovanie, jeden register a jeden zoznam súborov. Táto tabuľka sa preto
+> nerepokuje, lebo by znova zhnila pri ďalšej reorganizácii. Nižšie je mapovanie
+> len na orientáciu.
+
+| Pôvodný súbor (už neexistuje) | Obsah | Kde je dnes |
+|-------|-------|-------|
+| 01-clinical-journeys.md | J1–J6 + BC: Klinická práca | [`journeys/01-klinicka-praca.md`](../product/journeys/01-klinicka-praca.md) |
+| 02-frontdesk-journeys.md | J7–J9 + BC: Recepcia | [`journeys/02-recepcia-rozvrh.md`](../product/journeys/02-recepcia-rozvrh.md) |
+| 03-pharmacy-billing-journeys.md | J10–J12 + BC: Farmácia & faktúrácia | [`journeys/03-farmaka-faktura.md`](../product/journeys/03-farmaka-faktura.md) |
+| 04-preventive-journeys.md | J13–J15 + BC: Preventíva | [`journeys/04-preventiva.md`](../product/journeys/04-preventiva.md) |
+| 05-lab-imaging-journeys.md | J16–J17 + BC: Lab & zobrazovanie | [`journeys/05-lab-zobrazovanie.md`](../product/journeys/05-lab-zobrazovanie.md) |
+| 06-marketing-journeys.md | J18–J19 + BC: Marketing | [`journeys/06-marketing.md`](../product/journeys/06-marketing.md) |
+| 07-new-journeys.md | J20–J30 + Business Cases | rozdelené: [`07`](../product/journeys/07-nemocnica-a-urgent.md) J20–J23 · [`08`](../product/journeys/08-sklad-reporting-admin.md) J24–J26 · [`09`](../product/journeys/09-portal-compliance-onboarding.md) J27–J30 |
+| 08-ai-value-chain.md | AI value chain, trust, compliance | [`journeys/10-ai-value-chain-a-multi-actor.md`](../product/journeys/10-ai-value-chain-a-multi-actor.md) |
+| 09-multi-actor-journeys.md | Multi-actor scénare | [`journeys/10-ai-value-chain-a-multi-actor.md`](../product/journeys/10-ai-value-chain-a-multi-actor.md) |
+| 10-portal-journeys.md | Klientsky portál | [`journeys/09-portal-compliance-onboarding.md`](../product/journeys/09-portal-compliance-onboarding.md) |
+| 11-kpi-roadmap.md | KPI framework, ROI, roadmap | [`journeys/10-ai-value-chain-a-multi-actor.md`](../product/journeys/10-ai-value-chain-a-multi-actor.md) |
+
+Tento priečinok zostáva ako **produktové podklady a simulácia**:
+[`simulate-journeys.mjs`](simulate-journeys.mjs), [`simulation-report.json`](simulation-report.json),
+[`simulation.html`](simulation.html). Vlastný register journeys už tu nežije.
