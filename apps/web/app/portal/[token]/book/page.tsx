@@ -12,6 +12,7 @@ import {
   portalBookingTimeBounds,
 } from "@/lib/portal/booking";
 import { formatPortalDateInput } from "@/lib/portal/date";
+import { PORTAL_TEXT_CLASS } from "@/components/portal/portal-ui";
 
 export default function BookAppointmentPage() {
   const formId = useId();
@@ -377,7 +378,7 @@ export default function BookAppointmentPage() {
               <p
                 id={timeHelpId}
                 className={`mt-1.5 text-xs ${
-                  showTimeBoundsError ? "text-red-600" : "text-gray-500"
+                  showTimeBoundsError ? PORTAL_TEXT_CLASS.negative : "text-gray-500"
                 }`}
               >
                 {showTimeBoundsError
@@ -394,7 +395,7 @@ export default function BookAppointmentPage() {
           )}
 
           {slotsUnavailable && (
-            <p className="text-xs text-red-600">
+            <p className={`text-xs ${PORTAL_TEXT_CLASS.negative}`}>
               Suggested times could not be loaded. You can still enter a preferred time.
             </p>
           )}
@@ -458,7 +459,7 @@ export default function BookAppointmentPage() {
           </div>
 
           {request.error && (
-            <p className="text-sm text-red-600">{request.error.message}</p>
+            <p className={`text-sm ${PORTAL_TEXT_CLASS.negative}`}>{request.error.message}</p>
           )}
 
           <button

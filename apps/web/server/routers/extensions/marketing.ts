@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { createHash } from "node:crypto";
 import { createRouter, protectedProcedure, publicProcedure, requireRole } from "../../trpc";
 import { TRPCError } from "@trpc/server";
-import { configuredModel } from "@/lib/agent/runner";
+import { configuredModel, configuredModelId, isAgentConfigured } from "@/lib/agent/runner";
 import {
   UNTRUSTED_DATA_PROMPT_RULE,
   wrapUntrustedRecord,
@@ -73,6 +73,12 @@ import {
   ALIBABA_DEFAULT_VIDEO_MODEL,
 } from "@/lib/ai/alibaba-proxy";
 import { resolveFeatureConfig } from "@/lib/ai/ai-config-resolver";
+import {
+  AI_NOT_CONFIGURED,
+  aiProviderTrpcError,
+  isProviderConfigurationError,
+  providerErrorMessage,
+} from "@/lib/ai/provider-errors";
 import {
   generateGeminiImage,
   submitGeminiVideo,
@@ -319,6 +325,39 @@ export function validateWebsiteSections(sections: WebsiteSection[]): void {
   }
 }
 
+/**
+ * Fail-visible AI (owner decision 2026-09-28).
+ *
+ * Every generator below used to answer a missing provider with a substitute
+ * artefact: a curated stock photo in place of a generated image, a canned
+ * Slovak template in place of written copy. The clinic could not tell the
+ * difference and published it as its own — the module looked like it worked
+ * while it never called a model at all.
+ *
+ * Now the generators end in `PRECONDITION_FAILED` carrying
+ * `cause.code = AI_NOT_CONFIGURED`, the UI shows "AI nie je nastavené", and
+ * nothing is written to the media library or the content plan. Templates that
+ * the user picks explicitly (`listTemplates` + the studio's "load campaign"
+ * action) are untouched: those are a labelled product feature, not a silent
+ * substitution for AI.
+ */
+function aiNotConfiguredError(
+  kind: "text" | "image" | "video",
+  detail?: string,
+): TRPCError {
+  const what =
+    kind === "text"
+      ? "AI pre písanie textu nie je nastavené (chýba jazykový model za AliProxy alebo Google/Anthropic kľúč)."
+      : kind === "image"
+        ? "AI generovanie obrázkov nie je nastavené (AliProxy neodpovedá a Gemini Imagen nemá GEMINI_API_KEY)."
+        : "AI generovanie videa nie je nastavené (AliProxy neodpovedá a Google Veo nemá GEMINI_API_KEY).";
+  return new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: `${what} Nič sa nevygenerovalo a žiadna náhrada sa nepoužila. Nastavte poskytovateľa v Nastavenia → AI.${detail ? ` (${detail})` : ""}`,
+    cause: { code: AI_NOT_CONFIGURED, kind },
+  });
+}
+
 export const marketingRouter = createRouter({
   /**
    * Zoznam predpripravených veterinárnych klinických kampaní
@@ -415,32 +454,26 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
             emailSubject: parsed.emailSubject || matchedTemplate?.sampleEmailSubject || `Starostlivosť o zdravie: ${input.topic}`,
             emailBody: parsed.emailBody || matchedTemplate?.sampleEmailBody || "",
             usedAi: true,
+            // The engine that actually answered, so the toast never claims a
+            // provider the deployment does not use.
+            model: configuredModelId(),
           };
         }
-      } catch {
-        // AI unavailable – fall back to validated Slovak templates below.
-      }
 
-      // 3. Fallback na overené slovenské šablóny
-      if (matchedTemplate) {
-        return {
-          instagram: matchedTemplate.sampleInstagram,
-          facebook: matchedTemplate.sampleFacebook,
-          sms: matchedTemplate.sampleSms,
-          emailSubject: matchedTemplate.sampleEmailSubject,
-          emailBody: matchedTemplate.sampleEmailBody,
-          usedAi: false,
-        };
+        // The provider answered, but not with the JSON contract we asked for.
+        // That is a provider failure, not a reason to hand the clinic a canned
+        // template as if the AI had written it.
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message: "Generovanie textu zlyhalo: model nevrátil použiteľný JSON. Skúste znova.",
+        });
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        if (isProviderConfigurationError(err)) {
+          throw aiNotConfiguredError("text", providerErrorMessage(err));
+        }
+        throw aiProviderTrpcError(err, "Generovanie textu zlyhalo");
       }
-
-      return {
-        instagram: `🐾 ${input.topic} 🩺\n\nNezabúdajte na pravidelnú prevenciu a zdravie vášho chlpáča. V našej ambulancii sa radi postaráme o vašich miláčikov.\n\n📞 Objednajte sa: ${phoneInfo}\n\n#veterinar #zdraviezvierat #prevencia #pes #macka`,
-        facebook: `🐾 ${input.topic}\n\nZdravie vašich štvornohých priateľov je pre nás prioritou. Pripomíname dôležitosť včasnej kontroly a prevencie.\n\nAk spozorujete akékoľvek zmeny v správaní, chuti do jedla alebo aktivite, neváhajte nás kontaktovať.\n\n${clinicSignature}\n${phoneInfo}`,
-        sms: `${clinicSignature}: ${input.topic}. Nezabudnite na prevenciu vášho miláčika. ${phoneInfo}`,
-        emailSubject: `Zdravotné odporúčanie: ${input.topic}`,
-        emailBody: `Milí klienti,\n\nv našej ambulancii kladieme dôraz na prevenciu. V súvislosti s témou ${input.topic} vám radi poskytneme odbornú konzultáciu a starostlivosť na mieru.\n\n${clinicSignature}\n${phoneInfo}`,
-        usedAi: false,
-      };
     }),
 
 // ── Content Plan ──────────────────────────────────────────────────────────────
@@ -533,7 +566,7 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
 
       const p = input.prompt || `A warm, professional veterinary marketing photograph or illustration about: ${item.title}. Happy healthy pets, clear lighting, authentic veterinary clinic atmosphere.`;
       
-      let imageUrl = "/marketing/tick-prevention.jpg";
+      let imageUrl = "";
       try {
         const gen = await generateAlibabaImage({ prompt: p });
         if (gen?.b64_json) {
@@ -553,21 +586,39 @@ Odpovedz VÝHRADNE v JSON formáte podľa tejto schémy:
             imageUrl = gen.url;
           }
         }
-      } catch {
-        // Fallback relevant topic match
-        if (item.title.toLowerCase().includes("zub") || item.title.toLowerCase().includes("chrup")) {
-          imageUrl = "/marketing/dental-hygiene.jpg";
-        } else if (item.title.toLowerCase().includes("senior")) {
-          imageUrl = "/marketing/senior-pet-care.jpg";
-        } else if (item.title.toLowerCase().includes("čip")) {
-          imageUrl = "/marketing/pet-microchipping.svg";
-        } else if (item.title.toLowerCase().includes("výživ") || item.title.toLowerCase().includes("kastr")) {
-          imageUrl = "/marketing/pet-nutrition.svg";
-        } else if (item.title.toLowerCase().includes("cest")) {
-          imageUrl = "/marketing/travel-petpass.svg";
-        } else if (item.title.toLowerCase().includes("čokol")) {
-          imageUrl = "/marketing/toxic-chocolate.svg";
+      } catch (err) {
+        if (isGeminiMediaConfigured()) {
+          try {
+            const geminiResult = await generateGeminiImage({
+              prompt: p,
+              aspectRatio: "1:1",
+              sampleCount: 1,
+            });
+            imageUrl = geminiResult.url
+              ? geminiResult.url
+              : geminiResult.b64_json
+                ? `data:image/png;base64,${geminiResult.b64_json}`
+                : "";
+          } catch (geminiErr) {
+            throw new TRPCError({
+              code: "BAD_GATEWAY",
+              message:
+                "Generovanie vizuálu k príspevku zlyhalo (AliProxy aj Gemini Imagen 3): " +
+                providerErrorMessage(geminiErr),
+            });
+          }
+        } else if (isProviderConfigurationError(err)) {
+          throw aiNotConfiguredError("image", providerErrorMessage(err));
+        } else {
+          throw aiProviderTrpcError(err, "Generovanie vizuálu k príspevku zlyhalo");
         }
+      }
+
+      if (!imageUrl) {
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message: "Generovanie vizuálu k príspevku nevrátilo obrázok. Skúste znova.",
+        });
       }
 
       const [asset] = await ctx.db
@@ -820,6 +871,15 @@ getAlibabaProxyStatus: protectedProcedure.query(async () => {
   const geminiConfigured = isGeminiMediaConfigured();
   return {
     ...alibabaHealth,
+    /**
+     * The text engine is resolved by the agent runner (inference proxy, Vertex
+     * or Anthropic) rather than by AliProxy, so the studio has to ask about it
+     * separately — it is what `generatePost` will use.
+     */
+    text: {
+      isConfigured: isAgentConfigured(),
+      modelId: configuredModelId(),
+    },
     gemini: {
       isConfigured: geminiConfigured,
       /** Gemini AI Studio is always "online" if configured (no local process needed) */
@@ -855,34 +915,11 @@ generateImage: protectedProcedure
         apiKey: resolved.apiKey,
       });
       await recordUsage({ practiceId: ctx.practiceId, kind: "ai_run" });
-      return result;
+      return { ...result, provider: "aliproxy" as const };
     } catch (err: any) {
-      // Fallback matching logic when Alibaba proxy is offline/unreachable
-      const promptLower = input.prompt.toLowerCase();
-      let fallbackUrl = "/marketing/tick-prevention.jpg";
-      if (promptLower.includes("zub") || promptLower.includes("chrup") || promptLower.includes("dent")) {
-        fallbackUrl = "/marketing/dental-hygiene.jpg";
-      } else if (promptLower.includes("senior") || promptLower.includes("starc") || promptLower.includes("geriat")) {
-        fallbackUrl = "/marketing/senior-pet-care.jpg";
-      } else if (promptLower.includes("čip") || promptLower.includes("chip")) {
-        fallbackUrl = "/marketing/pet-microchipping.svg";
-      } else if (promptLower.includes("výživ") || promptLower.includes("krm") || promptLower.includes("diét")) {
-        fallbackUrl = "/marketing/pet-nutrition.svg";
-      } else if (promptLower.includes("cest") || promptLower.includes("pas") || promptLower.includes("travel")) {
-        fallbackUrl = "/marketing/travel-petpass.svg";
-      } else if (promptLower.includes("čokol") || promptLower.includes("otrav") || promptLower.includes("toxic")) {
-        fallbackUrl = "/marketing/toxic-chocolate.svg";
-      } else if (promptLower.includes("očkov") || promptLower.includes("vakc") || promptLower.includes("besnot")) {
-        fallbackUrl = "/marketing/vaccination-care.svg";
-      } else if (promptLower.includes("oper") || promptLower.includes("kastr") || promptLower.includes("ran")) {
-        fallbackUrl = "/marketing/postop-care.svg";
-      } else if (promptLower.includes("pohotov") || promptLower.includes("pomoc") || promptLower.includes("prvá")) {
-        fallbackUrl = "/marketing/first-aid.svg";
-      }
-
-      console.warn(
-        `[generateImage] Alibaba Proxy unavailable (${err?.message || "fetch failed"}), using curated clinical fallback visual: ${fallbackUrl}`
-      );
+      // Fail-visible: never hand back a curated stock photo as if the model had
+      // drawn it. A configured Gemini Imagen is a real second engine and stays;
+      // anything else is an honest error.
       if (isGeminiMediaConfigured()) {
         try {
           const geminiResult = await generateGeminiImage({
@@ -895,18 +932,18 @@ generateImage: protectedProcedure
             url: geminiResult.url ?? undefined,
             b64_json: geminiResult.b64_json,
             created: Math.floor(Date.now() / 1000),
+            provider: "gemini" as const,
           };
         } catch (geminiErr: any) {
           throw new TRPCError({
             code: "BAD_GATEWAY",
-            message: "Generovanie obrazka zlyhalo (AliProxy aj Gemini Imagen 3): " + (geminiErr?.message ?? ""),
+            message:
+              "Generovanie obrázka zlyhalo (AliProxy aj Gemini Imagen 3): " +
+              (geminiErr?.message ?? ""),
           });
         }
       }
-      return {
-        url: fallbackUrl,
-        created: Math.floor(Date.now() / 1000),
-      };
+      throw aiNotConfiguredError("image", providerErrorMessage(err));
     }
   }),
 
@@ -4734,9 +4771,12 @@ Vráť IBAN len text postu, bez uvodzoviek.`;
 
         const result = await generateText({ model, prompt, temperature: 0 });
         body = result.text.trim();
-      } catch {
-        // Deterministic fallback
-        body = `Prinášame dôležité informácie pre majiteľov zvierat. Naša veterinárna ambulancia vás informuje o novinkách v starostlivosti o vašich miláčikov. Neváhajte nás kontaktovať! #veterinar #zdraviezvierat`;
+      } catch (err) {
+        // Fail-visible: no deterministic canned post either.
+        if (isProviderConfigurationError(err)) {
+          throw aiNotConfiguredError("text", providerErrorMessage(err));
+        }
+        throw aiProviderTrpcError(err, "Vytvorenie príspevku z bulletinu zlyhalo");
       }
 
       // KVL SR validation

@@ -13,14 +13,19 @@ import {
   portalPaymentBanner,
 } from "@/lib/portal/payments";
 import { fetchWithClientTimeout } from "@/lib/client-fetch";
+import {
+  PORTAL_NOTICE_CLASS,
+  PORTAL_TEXT_CLASS,
+  PORTAL_TONE_CLASS,
+} from "@/components/portal/portal-ui";
 
 const statusStyles: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  void: "bg-gray-100 text-gray-400",
-  estimate: "bg-purple-100 text-purple-700",
+  draft: PORTAL_TONE_CLASS.neutral,
+  sent: PORTAL_TONE_CLASS.info,
+  paid: PORTAL_TONE_CLASS.done,
+  overdue: PORTAL_TONE_CLASS.problem,
+  void: PORTAL_TONE_CLASS.neutral,
+  estimate: PORTAL_TONE_CLASS.progress,
 };
 
 function formatDate(
@@ -75,7 +80,7 @@ function PayButton({ invoiceId }: { invoiceId: string }) {
       </button>
       <span className="text-xs text-gray-500">Powered by Stripe</span>
       {error && (
-        <span role="alert" className="text-xs text-red-600">
+        <span role="alert" className={`text-xs ${PORTAL_TEXT_CLASS.negative}`}>
           {error}
         </span>
       )}
@@ -151,8 +156,8 @@ export default function InvoicesPage() {
         <div
           className={`mb-6 rounded-lg border p-4 text-sm ${
             paymentBanner.kind === "success"
-              ? "border-green-200 bg-green-50 text-green-800"
-              : "border-blue-200 bg-blue-50 text-blue-800"
+              ? PORTAL_NOTICE_CLASS.done
+              : PORTAL_NOTICE_CLASS.info
           }`}
         >
           {paymentBanner.message}
@@ -231,7 +236,7 @@ export default function InvoicesPage() {
                       </span>
                     )}
                     {balance > 0 && (
-                      <span className="font-medium text-red-600">
+                      <span className={`font-medium ${PORTAL_TEXT_CLASS.negative}`}>
                         Balance:{" "}
                         {formatCurrency(balance, inv.currency, inv.country)}
                       </span>
@@ -317,7 +322,7 @@ export default function InvoicesPage() {
                         )}
                       </td>
                       <td
-                        className={`py-3 text-right font-medium ${balance > 0 ? "text-red-600" : "text-green-600"}`}
+                        className={`py-3 text-right font-medium ${balance > 0 ? PORTAL_TEXT_CLASS.negative : PORTAL_TEXT_CLASS.positive}`}
                       >
                         {formatCurrency(balance, inv.currency, inv.country)}
                       </td>

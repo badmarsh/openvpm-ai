@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { AlertCircle, LockKeyhole } from "lucide-react";
 import { fetchWithClientTimeout } from "@/lib/client-fetch";
+import { PORTAL_NOTICE_CLASS } from "@/components/portal/portal-ui";
 
 export default function PortalAccessPage() {
   const { token } = useParams<{ token: string }>();
@@ -62,7 +63,7 @@ export default function PortalAccessPage() {
       {error ? (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-left text-sm text-red-700"
+          className={`mt-4 flex items-start gap-2 rounded-lg p-3 text-left text-sm ${PORTAL_NOTICE_CLASS.problem}`}
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>

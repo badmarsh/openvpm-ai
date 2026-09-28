@@ -14,15 +14,16 @@ import { EmptyState } from "@/components/common/empty-state";
 import { splitPortalAppointments } from "@/lib/portal/appointments";
 import { formatPortalDateTime } from "@/lib/portal/date";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
+import { PORTAL_TONE_CLASS } from "@/components/portal/portal-ui";
 
 const statusStyles: Record<string, string> = {
-  scheduled: "bg-blue-100 text-blue-700",
+  scheduled: PORTAL_TONE_CLASS.info,
   confirmed: "bg-primary/10 text-primary",
-  checked_in: "bg-amber-100 text-amber-700",
-  in_exam: "bg-purple-100 text-purple-700",
-  checked_out: "bg-green-100 text-green-700",
-  no_show: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-500",
+  checked_in: PORTAL_TONE_CLASS.waiting,
+  in_exam: PORTAL_TONE_CLASS.progress,
+  checked_out: PORTAL_TONE_CLASS.done,
+  no_show: PORTAL_TONE_CLASS.problem,
+  cancelled: PORTAL_TONE_CLASS.neutral,
 };
 
 const speciesEmoji: Record<string, string> = PATIENT_SPECIES_EMOJI;
@@ -173,7 +174,7 @@ export default function AppointmentsPage() {
                   </div>
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-medium flex-shrink-0 ${
-                      statusStyles[appt.status] || "bg-gray-100 text-gray-600"
+                      statusStyles[appt.status] || PORTAL_TONE_CLASS.neutral
                     }`}
                   >
                     {formatStatusLabel(appt.status, appt.isClientRequest)}
@@ -237,7 +238,7 @@ export default function AppointmentsPage() {
                   </div>
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-medium flex-shrink-0 ${
-                      statusStyles[appt.status] || "bg-gray-100 text-gray-600"
+                      statusStyles[appt.status] || PORTAL_TONE_CLASS.neutral
                     }`}
                   >
                     {formatStatusLabel(appt.status, appt.isClientRequest)}

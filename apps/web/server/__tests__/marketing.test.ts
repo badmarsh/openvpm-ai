@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/agent/runner", () => ({
   configuredModel: mocks.configuredModel,
+  configuredModelId: () => "gemini-mock",
+  isAgentConfigured: () => true,
 }));
 
 vi.mock("ai", () => ({
@@ -86,6 +88,8 @@ describe("marketingRouter", () => {
     });
 
     expect(result.usedAi).toBe(true);
+    // The toast must not claim a provider the deployment does not use.
+    expect(result.model).toBe("gemini-mock");
     expect(result.instagram).toContain("AI Instagram post");
     expect(result.facebook).toContain("Kliešte sú opäť");
     expect(result.sms).toContain("Klinika: Kliešte");
@@ -93,39 +97,50 @@ describe("marketingRouter", () => {
     expect(result.emailBody).toContain("Vážení klienti");
   });
 
-  it("generatePost falls back to pre-configured templates when LLM throws error", async () => {
-    mocks.generateText.mockRejectedValueOnce(new Error("Gemini quota exceeded"));
+  it("generatePost fails visibly when the provider is not configured (no template substitute)", async () => {
+    // Owner decision 2026-09-28: no silent substitution. A clinic that has not
+    // configured an engine must see that, not a canned clinical template that
+    // looks like the model wrote it.
+    mocks.generateText.mockRejectedValueOnce(
+      new Error("OpenVPM Agent is not configured. Configure Google Vertex AI for Gemini."),
+    );
 
     const trpcCaller = caller();
-    const result = await trpcCaller.generatePost({
-      topic: "Ochrana pred kliešťami a blchami",
-      channel: "all",
-      tone: "professional",
-      clinicName: "VetClinic",
+    await expect(
+      trpcCaller.generatePost({
+        topic: "Ochrana pred kliešťami a blchami",
+        channel: "all",
+        tone: "professional",
+        clinicName: "VetClinic",
+      }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      cause: { code: "ai_not_configured", kind: "text" },
     });
-
-    expect(result.usedAi).toBe(false);
-    expect(result.instagram).toContain("kliešťov");
-    expect(result.facebook).toContain("ektoparazitov");
-    expect(result.sms).toBeDefined();
   });
 
-  it("generatePost creates generic veterinary post when topic does not match any template and LLM is unavailable", async () => {
-    mocks.generateText.mockRejectedValueOnce(new Error("Network offline"));
+  it("generatePost reports a provider failure instead of inventing a generic post", async () => {
+    mocks.generateText.mockRejectedValueOnce(new Error("socket hang up"));
 
     const trpcCaller = caller();
-    const result = await trpcCaller.generatePost({
-      topic: "Strihanie pazúrikov a čistenie uší",
-      channel: "all",
-      tone: "friendly",
-      clinicName: "Moja Klinika",
-      phoneNumber: "+421 911 222 333",
-    });
+    await expect(
+      trpcCaller.generatePost({
+        topic: "Strihanie pazúrikov a čistenie uší",
+        channel: "all",
+        tone: "friendly",
+        clinicName: "Moja Klinika",
+        phoneNumber: "+421 911 222 333",
+      }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+  });
 
-    expect(result.usedAi).toBe(false);
-    expect(result.instagram).toContain("Strihanie pazúrikov a čistenie uší");
-    expect(result.sms).toContain("Moja Klinika");
-    expect(result.sms).toContain("+421 911 222 333");
+  it("generatePost refuses to hand back a canned body when the model answers without JSON", async () => {
+    mocks.generateText.mockResolvedValueOnce({ text: "Prepáč, neviem." });
+
+    const trpcCaller = caller();
+    await expect(
+      trpcCaller.generatePost({ topic: "Kliešte", channel: "all", tone: "friendly" }),
+    ).rejects.toMatchObject({ code: "BAD_GATEWAY" });
   });
 
   it("syncExternalReviews pulls reviews from connected channels and tags negative reviews for escalation", async () => {
@@ -179,22 +194,32 @@ describe("marketingRouter", () => {
     expect(negative?.sentimentLabel).toBe("negative");
   });
 
-  it("generateImage returns curated clinical visual fallback when Alibaba proxy is offline (no TRPCError fetch failed)", async () => {
+  it("generateImage fails visibly when no image engine is configured (no stock substitute)", async () => {
+    // The curated clinical fallback photos used to be returned as if the model
+    // had generated them. They are still shipped as assets a user can attach
+    // deliberately; they are just no longer passed off as AI output.
     const trpcCaller = caller();
-    const dentalResult = await trpcCaller.generateImage({
-      prompt: "Dentálna hygiena a čistenie zubov ultrazvukom",
+
+    await expect(
+      trpcCaller.generateImage({
+        prompt: "Dentálna hygiena a čistenie zubov ultrazvukom",
+      }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      cause: { code: "ai_not_configured", kind: "image" },
     });
 
-    expect(dentalResult).toBeDefined();
-    expect(dentalResult.url).toBe("/marketing/dental-hygiene.jpg");
-    expect(dentalResult.created).toBeGreaterThan(0);
+    await expect(
+      trpcCaller.generateImage({ prompt: "Starostlivosť o psíka seniora" }),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  });
 
-    const seniorResult = await trpcCaller.generateImage({
-      prompt: "Starostlivosť o psíka seniora a geriatrická prevencia",
-    });
+  it("getAlibabaProxyStatus reports the text engine the copy generator will use", async () => {
+    const trpcCaller = caller();
+    const status = await trpcCaller.getAlibabaProxyStatus();
 
-    expect(seniorResult).toBeDefined();
-    expect(seniorResult.url).toBe("/marketing/senior-pet-care.jpg");
+    expect(status.text).toEqual({ isConfigured: true, modelId: "gemini-mock" });
+    expect(typeof status.anyMediaProviderOnline).toBe("boolean");
   });
 });
 
