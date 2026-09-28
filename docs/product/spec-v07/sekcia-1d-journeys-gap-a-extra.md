@@ -3,7 +3,9 @@
 > **Rozsah:** 7 medzier identifikovaných auditom (GAP 404) a 2 toky nájdené navyše (EXTRA 200 OK).
 > **Dôležité:** pri gap tokoch popisujeme **cieľový stav v0.7**. Všetko, čo dnes v kóde existuje, je označené
 > `EXISTUJE`; všetko nové je označené `NÁVRH`. Architektonický detail (Drizzle DDL, tRPC kontrakty, UI koncept)
-> je v [`sekcia-2-gap-moduly-v07.md`](sekcia-2-gap-moduly-v07.md).
+> je v `sekcia-2-gap-moduly-v07.md` — **tento súbor v repozitári zatiaľ neexistuje**
+> (naplánovaný v `docs/product/spec-v07/README.md` §4, nezapísaný). Medzitým pozri
+> [`_generated/financial-model.md`](_generated/financial-model.md) pre finančný dopad.
 >
 > **Zistenie auditu, ktoré mení prioritizáciu:** `GAP 404` znamená „routa neexistuje“, nie „funkcia neexistuje“.
 > Pri 4 zo 7 medzier (D-04, D-06, S-05, S-06) je backend hotový alebo čiastočne hotový — chýba UI, workflow

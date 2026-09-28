@@ -35,10 +35,16 @@
     "agent-ui": "pnpm --dir .agents/agno/agent-ui dev",
     "tasks": "node scripts/tasks/tasks.mjs",
     "test:tasks": "node --test scripts/tasks/tasks.test.mjs scripts/tasks/outline.test.mjs",
-    "tasks:outline": "node scripts/tasks/outline.mjs"
+    "tasks:outline": "node scripts/tasks/outline.mjs",
+    "docs:viewer": "node scripts/docs-viewer.mjs --serve",
+    "docs:build": "node scripts/docs-viewer.mjs",
+    "docs:check": "node scripts/docs-viewer/code-check.mjs",
+    "docs:links": "node scripts/docs-viewer/link-audit.mjs",
+    "docs:smoke": "node scripts/docs-viewer/smoke.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "jsdom": "26.1.0",
     "turbo": "^2.9.14"
   },
   "pnpm": {

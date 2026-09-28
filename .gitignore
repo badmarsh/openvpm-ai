@@ -154,3 +154,9 @@ tasks/sprint*/**/files/**
 tasks-ARCHIVED-*.tgz
 arena_sessions.json
 tasks/**/files/**
+
+# ─── docs-viewer build output ───
+# artifacts/ itself is tracked (hand-written reports are ground truth), but the
+# viewer's HTML/JSON is machine-generated and fully reproducible with
+# `pnpm docs:build` — same policy as .next/, dist/, out/.
+artifacts/docs-viewer/

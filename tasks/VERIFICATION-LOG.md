@@ -1,5 +1,13 @@
 # Prompt & Task Library — Verification Log (2026-09-27)
 
+> **Read-only history — 2026-09-28.** This is a point-in-time ledger against HEAD `6d8e6ac`.
+> The specs it links by path were subsequently moved to `tasks/archive/` and renamed
+> (date-prefixed), so **many in-body links below no longer resolve**. They are left
+> as they were written: the audit's value is that it records what was true on
+> 2026-09-27, and rewriting its links would falsify that record. Current sprint
+> status lives in spec frontmatter and in [`SPRINT-INDEX.md`](SPRINT-INDEX.md);
+> **git outranks this file.**
+
 Every prompt, task brief, sprint spec, Golden Ticket and Arena response that lived in `prompts/`, `.agents/prompts/`, `artifacts/audit-prompts/` and `tasks/` was checked **one by one, oldest to newest** against `git log`, `gh pr list` (PRs #1–#72) and the current code at HEAD `6d8e6ac`. Each file got a verification header (Status · Verdict · Evidence · Origin) and was moved to its new home.
 
 ## New layout
@@ -80,7 +88,7 @@ Every prompt, task brief, sprint spec, Golden Ticket and Arena response that liv
 | 29 | 2026-09-21 `b8ea08f7` | [`tasks/archive/2026-09-21-gt-005-visitcontext-do-ai-draftu.md`](archive/2026-09-21-gt-005-visitcontext-do-ai-draftu.md) | `tasks/proposed/gt-005-visitcontext-do-ai-draftu.md` | **DONE** | ARCHIVE | PR #29, reinforced by PR #72: `records/new-soap/[patientId]/page.tsx:437-519` builds `visitContext` and passes it to `ai.draftSoapNote`. |
 | 30 | 2026-09-21 `b8ea08f7` | [`tasks/archive/2026-09-21-gt-008-timeout-a-hygiena-chyb-v-imaging.md`](archive/2026-09-21-gt-008-timeout-a-hygiena-chyb-v-imaging.md) | `tasks/proposed/gt-008-timeout-a-hygiena-chyb-v-imaging.md` | **DONE** | ARCHIVE | PR #23 fix 4: `IMAGING_ANALYSIS_TIMEOUT_MS = 90_000` + AbortController (`server/routers/extensions/imaging.ts:37,264`). Upstream error text now goes to the server log. |
 | 31 | 2026-09-21 `b8ea08f7` | [`tasks/archive/2026-09-21-gt-009-ui-pre-wholesaler-import.md`](archive/2026-09-21-gt-009-ui-pre-wholesaler-import.md) | `tasks/proposed/gt-009-ui-pre-wholesaler-import.md` | **DONE** | ARCHIVE | UI shipped in PR #18 (import dialog, 10 wholesalers) and hardened in PR #31 and Sprint 27 (`components/inventory/wholesaler-import-dialog.tsx`). — The ticket's premise ('UI doesn't exist') was already out of date when it was filed. |
-| 32 | 2026-09-21 `b8ea08f7` | [`tasks/proposed/gt-001-ai-provenance-ledger-soap-finalization.md`](proposed/gt-001-ai-provenance-ledger-soap-finalization.md) | (same) | **NOT DONE** | KEEP | `lib/records/soap-lifecycle.ts` (finalizeAppointmentSoapDraft) still writes nothing to the AI audit ledger. Only discharge/imaging/voice routers use `extAiAuditLog`. — P0, still open. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23). |
+| 32 | 2026-09-21 `b8ea08f7` | [`tasks/archive/2026-09-27-gt-001-ai-provenance-ledger-soap-finalization.md`](archive/2026-09-27-gt-001-ai-provenance-ledger-soap-finalization.md) | (same) | **NOT DONE** | KEEP | `lib/records/soap-lifecycle.ts` (finalizeAppointmentSoapDraft) still writes nothing to the AI audit ledger. Only discharge/imaging/voice routers use `extAiAuditLog`. — P0, still open. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23). |
 | 33 | 2026-09-21 `b8ea08f7` | [`tasks/proposed/gt-006-prijatie-ai-navrhu-po-sekciach.md`](proposed/gt-006-prijatie-ai-navrhu-po-sekciach.md) | (same) | **NOT DONE** | KEEP | `draftWithAi.onSuccess` (`new-soap/[patientId]/page.tsx:492-500`) still overwrites all four SOAP sections at once. Since then the page only added a replace-confirmation dialog. There's no per-section accept and no AI-text marker. — Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23). |
 | 34 | 2026-09-21 `b8ea08f7` | [`tasks/proposed/gt-007-kontrola-role-knihy-opl.md`](proposed/gt-007-kontrola-role-knihy-opl.md) | (same) | **NOT DONE** | KEEP | `controlledSubstances.list` (`server/routers/controlled-substances.ts:344`) is still `protectedProcedure` with only `assertActivePractice`, so any role can read it. — Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23). |
 | 35 | 2026-09-21 `b8ea08f7` | [`tasks/proposed/gt-010-ai-settings-getsettings-rola.md`](proposed/gt-010-ai-settings-getsettings-rola.md) | (same) | **NOT DONE** | KEEP | `aiSettings.getSettings` is still `protectedProcedure` (`server/routers/extensions/ai-settings.ts:22`). — Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23). |

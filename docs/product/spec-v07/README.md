@@ -175,9 +175,9 @@ existuje a chýba len UI alebo chýba posledný krok integrácie (stĺpec *Skuto
 | [`sekcia-1b-journeys-recepcia-farmacia.md`](sekcia-1b-journeys-recepcia-farmacia.md) | **1** | J7–J12 — rozvrh, check-in/whiteboard, zmeny, predpis a výdaj, faktúra a e-Kasa, closeout |
 | [`sekcia-1c-journeys-preventiva-lab-marketing.md`](sekcia-1c-journeys-preventiva-lab-marketing.md) | **1** | J13–J19 — očkovanie, recall, wellness, laboratórium, RTG/VHS, marketing |
 | [`sekcia-1d-journeys-gap-a-extra.md`](sekcia-1d-journeys-gap-a-extra.md) | **1** | JG-C02, JG-C03, JG-C04, JG-D04, JG-D06, JG-S05, JG-S06 + JX-01, JX-02 |
-| [`sekcia-2-gap-moduly-v07.md`](sekcia-2-gap-moduly-v07.md) | **2** | Architektonický návrh C-02/C-03/C-04 (Drizzle DDL, tRPC, UI), sumarizácia D-04/D-06/S-05/S-06 |
-| [`sekcia-3-use-case-katalog.md`](sekcia-3-use-case-katalog.md) | **3** | UC-01…UC-33 s prioritami a Given-When-Then |
-| [`sekcia-4-business-cases-roi.md`](sekcia-4-business-cases-roi.md) | **4** | BC-01…BC-09, finančný model, payback, citlivosť |
+| `sekcia-2-gap-moduly-v07.md` | **2** | ⛔ **Zapísaná ešte nie je.** Plán: architektonický návrh C-02/C-03/C-04 (Drizzle DDL, tRPC, UI), sumarizácia D-04/D-06/S-05/S-06 |
+| `sekcia-3-use-case-katalog.md` | **3** | ⛔ **Zapísaná ešte nie je.** Plán: UC-01…UC-33 s prioritami a Given-When-Then |
+| `sekcia-4-business-cases-roi.md` | **4** | ⛔ **Narratívna sekcia zapísaná nie je**; jej číselné výstupy sú v [`_generated/financial-model.md`](_generated/financial-model.md) (payback, citlivosť, ROI, páky) |
 | [`_generated/financial-model.md`](_generated/financial-model.md) | — | generované tabuľky (ledger L01–L36, páky R1–R7, ROI, citlivosť, riziká) |
 
 ### 4.1 Kódovanie journey v tejto špecifikácii

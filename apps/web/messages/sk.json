@@ -1472,7 +1472,10 @@
       "placeholder": "Vyhľadať službu alebo produkt...",
       "typeServiceName": "Zadajte názov služby alebo produktu...",
       "searchServicesAria": "Hľadať služby a produkty",
-      "noMatch": "Žiadne položky nezodpovedajú výrazu „{query}“."
+      "noMatch": "Žiadne položky nezodpovedajú výrazu „{query}“.",
+      "loading": "Načítavam produkty…",
+      "retry": "Skúsiť znova",
+      "loadMore": "Načítať ďalšie"
     }
   },
   "canvas": {
