@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import {
   applyCapabilitySecurityHeaders,
   applySecurityHeaders,
 } from "./lib/security-headers";
 import { nextAuthSecret } from "./lib/auth-secret";
-import {
-  PREVIEW_COOKIE_HEADER,
-  isPreviewCookieBridgeEnabled,
-} from "./lib/preview-cookie-bridge";
 
 const CAPABILITY_PATH_PREFIXES = [
   "/capture",
@@ -76,30 +73,7 @@ function isVercelObservabilityPath(pathname: string): boolean {
 const VERCEL_INSIGHTS_STUB_SCRIPT =
   "(function(){window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};})();";
 
-// Preview-only cookie bridge (see lib/preview-cookie-bridge.ts). Some sandbox
-// preview proxies drop the request `Cookie` header entirely; when the bridge
-// is enabled the browser re-sends `document.cookie` in `x-preview-cookie`
-// and we restore it here so NextAuth, `cookies()` and route handlers see it.
-const PREVIEW_COOKIE_BRIDGE = isPreviewCookieBridgeEnabled();
-
-function withBridgedCookies(request: NextRequest): NextRequest {
-  if (!PREVIEW_COOKIE_BRIDGE || request.headers.has("cookie")) return request;
-  const bridged = request.headers.get(PREVIEW_COOKIE_HEADER);
-  if (!bridged) return request;
-  const headers = new Headers(request.headers);
-  headers.set("cookie", bridged);
-  headers.delete(PREVIEW_COOKIE_HEADER);
-  return new NextRequest(request, { headers });
-}
-
-function passThrough(request: NextRequest): NextResponse {
-  return PREVIEW_COOKIE_BRIDGE
-    ? NextResponse.next({ request: { headers: request.headers } })
-    : NextResponse.next();
-}
-
-export async function middleware(incomingRequest: NextRequest) {
-  const request = withBridgedCookies(incomingRequest);
+export async function middleware(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
 
@@ -121,11 +95,11 @@ export async function middleware(incomingRequest: NextRequest) {
   }
 
   if (isCapabilityPath(pathname)) {
-    return applyCapabilitySecurityHeaders(passThrough(request));
+    return applyCapabilitySecurityHeaders(NextResponse.next());
   }
 
   if (isPublicPath(pathname)) {
-    return applySecurityHeaders(passThrough(request));
+    return applySecurityHeaders(NextResponse.next());
   }
 
   const secret = nextAuthSecret();
@@ -143,7 +117,8 @@ export async function middleware(incomingRequest: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
-  return applySecurityHeaders(passThrough(request));
+  const response = NextResponse.next();
+  return applySecurityHeaders(response);
 }
 
 export const config = {

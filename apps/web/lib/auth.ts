@@ -11,7 +11,6 @@ import { clientIpFromRequest } from "@/lib/request-ip";
 import { AUTH_PASSWORD_MAX_LENGTH } from "@/lib/auth-password";
 import { AUTH_EMAIL_MAX_LENGTH } from "@/lib/auth-input-policy";
 import { nextAuthSecret } from "@/lib/auth-secret";
-import { isPreviewCookieBridgeEnabled } from "@/lib/preview-cookie-bridge";
 import {
   DEMO_ROLE_EMAILS,
   demoModeEnabled,
@@ -93,47 +92,7 @@ declare module "next-auth/jwt" {
   }
 }
 
-/**
- * Sandboxed live previews render the app inside a cross-site iframe. NextAuth's
- * default `SameSite=Lax` cookies are never sent from such a frame, so the CSRF
- * check fails silently and "Sign in" appears to do nothing. When a deployment
- * explicitly allows third-party framing (PREVIEW_FRAME_ANCESTORS — same switch
- * as lib/security-headers.js) and runs over https, issue the auth cookies as
- * `SameSite=None; Secure; Partitioned` instead. Unset in normal dev and
- * production, so behaviour there is unchanged. Cookie names stay the NextAuth
- * defaults so `getToken()` in middleware.ts keeps finding them.
- */
-function previewCookieOptions(): NextAuthOptions["cookies"] | undefined {
-  if (!process.env.PREVIEW_FRAME_ANCESTORS?.trim()) return undefined;
-  if (!process.env.NEXTAUTH_URL?.startsWith("https://")) return undefined;
-  // With the preview cookie bridge the browser has to re-send these cookies
-  // itself (the preview proxy drops the Cookie header), so they cannot be
-  // HttpOnly there. Sandbox previews only — see lib/preview-cookie-bridge.ts.
-  const httpOnly = !isPreviewCookieBridgeEnabled();
-  const crossSite = {
-    sameSite: "none" as const,
-    secure: true,
-    path: "/",
-    partitioned: true,
-  };
-  return {
-    sessionToken: {
-      name: "__Secure-next-auth.session-token",
-      options: { ...crossSite, httpOnly },
-    },
-    callbackUrl: {
-      name: "__Secure-next-auth.callback-url",
-      options: { ...crossSite },
-    },
-    csrfToken: {
-      name: "__Host-next-auth.csrf-token",
-      options: { ...crossSite, httpOnly },
-    },
-  };
-}
-
 export const authOptions: NextAuthOptions = {
-  cookies: previewCookieOptions(),
   providers: [
     CredentialsProvider({
       name: "credentials",
