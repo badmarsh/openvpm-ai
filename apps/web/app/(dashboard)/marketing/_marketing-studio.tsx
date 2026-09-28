@@ -29,6 +29,7 @@ import {
   Tv,
   HeartHandshake,
   Mail,
+  TriangleAlert,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,7 @@ export function MarketingStudioContent() {
     emailSubject: string;
     emailBody: string;
     usedAi?: boolean;
+    model?: string;
   }>({
     instagram: `🌲 Pozor na kliešte a blchy! 🐾\n\nVedeli ste, že kliešte na Slovensku prenášajú nebezpečnú babeziózu? Ochrana vášho chlpáča je teraz dôležitejšia než kedykoľvek predtým.\n\n🛡️ Odporúčame:\n• Ochutené žuvacie tablety\n• Kvalitné pipety (spot-on)\n• Antiparazitárne obojky\n\nZastavte sa u nás na klinike pre bezpečný výber na mieru pre vášho psíka či mačičku! 🐶🐱\n\n#veterinar #kliestie #zdraviezvierat #ochranapsa #babezoza`,
     facebook: `🌲 Kliešte sú späť – chráňte svojich miláčikov včas!\n\nS oteplením začína hlavná sezóna vonkajších ektoparazitov. Po každej prechádzke v tráve alebo lese dôkladne skontrolujte slabiny, uši a medziprstie vášho psa.\n\nV našej veterinárnej ambulancii máme k dispozícii kompletný sortiment certifikovaných veterinárnych antiparazitík s overenou účinnosťou.\n\n📞 Objednajte sa alebo sa zastavte osobne. Radi vám pomôžeme s výberom bezpečnej ochrany.`,
@@ -158,15 +160,24 @@ export function MarketingStudioContent() {
         emailSubject: result.emailSubject || "",
         emailBody: result.emailBody || "",
         usedAi: result.usedAi,
+        model: result.model,
       });
 
       toast.success(
-        result.usedAi
-          ? t("marketing.studio.toastGeneratedAi", "Príspevky boli úspešne vygenerované pomocou Gemini AI")
-          : t("marketing.studio.toastGeneratedTemplate", "Príspevky boli pripravené z klinickej šablóny")
+        t("marketing.studio.toastGeneratedAi", "Príspevky boli vygenerované modelom {model}", {
+          model: result.model ?? "AI",
+        })
       );
-    } catch (err) {
-      toast.error(t("marketing.studio.toastGenerateFailed", "Nepodarilo sa vygenerovať príspevok. Skúste znova."));
+    } catch (err: any) {
+      toast.error(
+        err?.data?.code === "PRECONDITION_FAILED"
+          ? t(
+              "marketing.studio.toastAiNotConfigured",
+              "AI nie je nastavené — nastavte poskytovateľa v Nastavenia → AI.",
+            )
+          : err?.message ||
+              t("marketing.studio.toastGenerateFailed", "Nepodarilo sa vygenerovať príspevok. Skúste znova.")
+      );
     }
   };
 
@@ -215,10 +226,21 @@ export function MarketingStudioContent() {
       if (res.url) {
         setGeneratedImageUrl(res.url);
         setGeneratedVideoUrl(null);
-        toast.success(t("marketing.studio.toastImageGenerated", "Obrázok bol vygenerovaný."));
+        toast.success(
+          t("marketing.studio.toastImageGeneratedBy", "Obrázok vygeneroval {provider}.", {
+            provider: res.provider === "gemini" ? "Gemini Imagen 3" : "AliProxy (Wanx 2.1)",
+          })
+        );
       }
     } catch (err: any) {
-      toast.error(err?.message || t("marketing.studio.toastImageFailed", "Chyba pri generovaní obrázka."));
+      toast.error(
+        err?.data?.code === "PRECONDITION_FAILED"
+          ? t(
+              "marketing.studio.toastAiNotConfiguredMedia",
+              "AI generovanie obrázkov nie je nastavené — AliProxy nebeží a Gemini Imagen nemá kľúč.",
+            )
+          : err?.message || t("marketing.studio.toastImageFailed", "Chyba pri generovaní obrázka.")
+      );
     } finally {
       setIsGeneratingImage(false);
     }
@@ -274,7 +296,14 @@ export function MarketingStudioContent() {
     } catch (err: any) {
       setIsVideoLoading(false);
       setVideoStatusText(null);
-      toast.error(err?.message || t("marketing.studio.toastVideoSubmitFailed", "Chyba pri odoslaní videa"));
+      toast.error(
+        err?.data?.code === "PRECONDITION_FAILED"
+          ? t(
+              "marketing.studio.toastAiNotConfiguredVideo",
+              "AI generovanie videa nie je nastavené — AliProxy nebeží a Google Veo nemá kľúč.",
+            )
+          : err?.message || t("marketing.studio.toastVideoSubmitFailed", "Chyba pri odoslaní videa")
+      );
     }
   };
 
@@ -293,6 +322,13 @@ export function MarketingStudioContent() {
 
   const isGenerating = generatePostMutation.isPending;
 
+  // Fail-visible AI (owner decision 2026-09-28): if no engine is reachable the
+  // studio says so up front. The generators used to answer a missing provider
+  // with a stock photo or a canned template, so the page looked like it worked
+  // while no model was ever called.
+  const textAiOff = aliStatusQuery.data?.text?.isConfigured === false;
+  const mediaAiOff = aliStatusQuery.data ? !aliStatusQuery.data.anyMediaProviderOnline : false;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -307,9 +343,22 @@ export function MarketingStudioContent() {
                 <h1 className="text-xl font-bold tracking-tight">
                   {t("marketing.studio.title", "Marketing Studio & Kampane")}
                 </h1>
-                <Badge variant="outline" className="text-[10px] font-mono gap-1 border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300">
-                  <Sparkles className="h-2.5 w-2.5" /> {t("marketing.studio.geminiBadge", "Gemini Copywriter")}
-                </Badge>
+                {aliStatusQuery.data?.text && !aliStatusQuery.data.text.isConfigured ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-mono gap-1 border-red-300 dark:border-red-900 text-red-700 dark:text-red-300"
+                  >
+                    <TriangleAlert className="h-2.5 w-2.5" />{" "}
+                    {t("marketing.studio.aiNotConfiguredTitle", "AI nie je nastavené")}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] font-mono gap-1 border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300">
+                    <Sparkles className="h-2.5 w-2.5" />{" "}
+                    {t("marketing.studio.modelBadge", "Copywriter: {model}", {
+                      model: aliStatusQuery.data?.text?.modelId ?? "AI",
+                    })}
+                  </Badge>
+                )}
                 {aliStatusQuery.data?.isConfigured && (
                   <Badge
                     variant="outline"
@@ -355,6 +404,39 @@ export function MarketingStudioContent() {
                 {t("marketing.studio.subtitle", "Tvorba edukačných a sezónnych príspevkov na sociálne siete, SMS a newslettery pre majiteľov zvierat.")}
               </p>
             </div>
+
+      {(textAiOff || mediaAiOff) && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+        >
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              {t("marketing.studio.aiNotConfiguredTitle", "AI nie je nastavené")}
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              {t(
+                "marketing.studio.aiNotConfiguredText",
+                "Generovanie beží cez AliProxy alebo Google/Anthropic kľúč. Kým nie je nastavený, nič sa nevygeneruje — namiesto AI sa nepoužije žiadna náhrada (fotka zo skladu ani hotová šablóna).",
+              )}
+            </p>
+            {textAiOff && (
+              <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                {t("marketing.studio.aiNotConfiguredTextEngine", "Text: chýba jazykový model (Nastavenia → AI).")}
+              </p>
+            )}
+            {mediaAiOff && (
+              <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                {t(
+                  "marketing.studio.aiNotConfiguredMedia",
+                  "Obrázky a video: AliProxy nebeží a Gemini Imagen 3 / Veo 2 nie je nakonfigurované (GEMINI_API_KEY).",
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
           </div>
         </div>
 

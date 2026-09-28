@@ -270,6 +270,17 @@ export function configuredModel(): LanguageModel {
   return resolveModel(modelId);
 }
 
+/**
+ * The model id `configuredModel()` will resolve right now.
+ *
+ * UI labels must name the engine that actually ran (`qwen-plus` through the
+ * inference proxy, `gemini-*` through Vertex, …) instead of claiming a provider
+ * the deployment may not use.
+ */
+export function configuredModelId(override?: string): string {
+  return activeModelId(override);
+}
+
 /** Build an AI SDK model instance for the given model id. */
 function resolveModel(modelId: string) {
   if (hasInferenceProxyConfiguration()) return inferenceProxyModel(modelId);

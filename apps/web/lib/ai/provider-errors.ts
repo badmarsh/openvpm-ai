@@ -45,6 +45,16 @@ const TIMEOUT_PATTERNS: RegExp[] = [
   /operation was aborted/i,
 ];
 
+/**
+ * Marker placed in `TRPCError.cause` when no provider is configured at all.
+ *
+ * Callers use this to *fail visibly*: a marketing generator that cannot reach a
+ * provider must say so instead of substituting a different artefact (a stock
+ * photo, a canned template) that the user would publish as their own. Owner
+ * decision 2026-09-28.
+ */
+export const AI_NOT_CONFIGURED = "ai_not_configured";
+
 /** Machine-readable reason, also stored with degraded AI results. */
 export type AiFailureReason =
   | "not_configured"
