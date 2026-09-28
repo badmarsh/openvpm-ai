@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScreenViewer } from "@/components/support/ScreenViewer";
 import { AgentJoinForm, SupportSessionControls } from "@/components/support/SupportSessionControls";
 import { Monitor, Shield } from "lucide-react";
@@ -69,12 +70,12 @@ export default function AdminSupportPage() {
         <CardContent>
           {!session ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                <Monitor className="w-4 h-4 shrink-0" />
-                <p>
+              <Alert variant="info" className="flex items-center gap-2">
+                <Monitor className="h-4 w-4 shrink-0" />
+                <AlertDescription>
                   {t("support.adminInstructions", "Vyžiadajte si od zákazníka 6-miestny kód z jeho support stránky.")}
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
               <AgentJoinForm onJoin={handleJoin} />
             </div>
           ) : (

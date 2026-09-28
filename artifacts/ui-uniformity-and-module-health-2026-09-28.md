@@ -155,3 +155,43 @@ pnpm --filter @openpims/web exec vitest run server/__tests__/marketing.test.ts  
 
 > Skripty `uikit-audit.mjs` a `proc-wiring.mjs` sú zatiaľ len lokálne (`.arena/scratch`).
 > Ak má byť §1 vynútiteľný (návrh D), prvý krok je presunúť ten prvý do `scripts/`.
+
+---
+
+## OPRAVA (merané 2026-09-28, po portal sweep-e `6608e17`)
+
+Tabuľka veľkostí v §1 (49 / 17 / 23) rátala **kombináciu signálov** (PageHeader, vlastný `<h1>`, paleta, hex,
+voľná tabuľka, pill TabsList) na všetkých 111 stránkach — a to aj na portáli a verejných stránkach.
+Po portal sweep-e treba od toho čísla odčítať vyriešené hranice a zámerné výnimky:
+
+- 13 portálových a 11 verejných/marketingových stránok (riešené alebo iná hranica),
+- ~16 jednostranových **presmerovaní a kiosk obrazoviek** (`/marketing/scripts` → `/marketing/consents`,
+  `/marketing/tv` → `/waiting-room`, `waiting-room` je full-screen TV bez page chrome) — „chýbajúci
+  PageHeader" tam nie je chyba, ale zámer.
+
+Premerané (`node ~/.arena/scratch/small-sweep-survey2.mjs`, `node scripts/ui/uniformity.mjs`):
+
+| čo | namerané |
+|---|---|
+| malé dashboard stránky (≤ 300 riadkov) s **akýmkoľvek** signálom | **19** (z toho 16 presmerovania/kiosk, 3 reálne) |
+| malé dashboard stránky so **sýtou** paletou | **2** (`admin/support` 3, `support` 4) — opravené v tomto PR |
+| sýte palety v `apps/web/app/**` | **1 722 výskytov / 54 súborov** |
+| z toho `(dashboard)` | **1 502 / 36 súborov** |
+
+Top 9 dashboard súborov drží ~1 000 zo 1 502 výskytov:
+`field-visits` 176 · `records` 135 · `_marketing-studio` 134 · `schedule` 128 · `patients/[id]` 105 ·
+`settings` 105 · `statutory` 77 · `kvepis` 70 · `agent` 69.
+
+**Dôsledok:** „49 malých stránok = mechanická práca" **neplatí**. Skutočná mechanická časť sú ~2 stránky;
+ťažisko uniformity je v 9 veľkých obrazovkách. **Dobrá správa:** dashboardový slovník už existuje —
+`Alert` má varianty `success/warning/info/destructive` a `StatusPulseBadge` 13 stavov nad tokenmi
+(`--success-muted`, `--warning-muted`, `--info-muted`, `--destructive`), takže sweep veľkých obrazoviek
+je mapovanie „sýty odtieň → sémantický variant", nie návrh nového kitu. Portál mal vlastný problém
+(žiadny takýto kit nemal), preto potreboval `portal-ui.tsx`.
+
+Nález mimo plánu: samotný `components/ui/status-pulse-badge.tsx` porušuje vlastný kontrakt —
+`HeartbeatDot` používa `bg-red-400/500` a `bg-emerald-400/500` namiesto `bg-destructive`/`bg-success`.
+Pred plošným sweepom ho treba opraviť, inak by kontrakt spadol na kite samotnom.
+
+Nástroje: `scripts/ui/uniformity.mjs` je v repozitári a beží ako `pnpm ui:check` pre portál; pre dashboard
+zatiaľ len report, lebo kontrakt by teraz spadol na 1 502 výskytoch.

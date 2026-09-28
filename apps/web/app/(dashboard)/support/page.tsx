@@ -70,7 +70,7 @@ export default function SupportPage() {
         <CardContent className="space-y-4">
           {!session && (
             <div className="space-y-4">
-              <p className="text-sm text-stone-600">
+              <p className="text-sm text-muted-foreground">
                 {t("support.instructions", "Kliknutím nižšie vytvoríte reláciu a získate 6-miestny kód, ktorý oznámite technickému podporte.")}
               </p>
               <Button onClick={handleCreate} disabled={createSession.isPending}>
@@ -88,8 +88,8 @@ export default function SupportPage() {
 
           {session && !started && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-stone-50 rounded-lg">
-                <ClipboardCopy className="w-4 h-4 text-stone-500" />
+              <div className="flex items-center gap-3 rounded-lg bg-muted p-4">
+                <ClipboardCopy className="h-4 w-4 text-muted-foreground" />
                 <span className="text-2xl font-mono font-bold tracking-widest">
                   {session.code}
                 </span>
@@ -104,7 +104,7 @@ export default function SupportPage() {
                   {t("button.copy", "Kopírovať")}
                 </Button>
               </div>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-muted-foreground">
                 {t("support.shareCode", "Oznámte tento kód technickému podporte. Relácia sa aktivuje po pripojení agenta.")}
               </p>
               <Button onClick={handleStart} disabled={startSession.isPending}>
