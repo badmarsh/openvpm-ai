@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -26,12 +26,24 @@ export function ServicePicker({
   onSelect,
   disabled,
   formatPrice,
+  onSearchChange,
+  loading = false,
+  hasMore = false,
+  onLoadMore,
+  searchError,
+  onRetry,
 }: {
   services: ServicePickerService[];
   value: string;
   onSelect: (serviceId: string) => void;
   disabled?: boolean;
   formatPrice?: (price: string) => string;
+  onSearchChange?: (query: string) => void;
+  loading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  searchError?: string;
+  onRetry?: () => void;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -40,6 +52,15 @@ export function ServicePicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  /** Clear the box through one path so a reset also resets the server query. */
+  const changeQuery = useCallback(
+    (next: string) => {
+      setQuery(next);
+      onSearchChange?.(next);
+    },
+    [onSearchChange],
+  );
 
   const selected = services.find((s) => s.id === value) ?? null;
 
@@ -69,12 +90,12 @@ export function ServicePicker({
     function onPointerDown(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
-        setQuery("");
+        changeQuery("");
       }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  }, [open, changeQuery]);
 
   useEffect(() => {
     setHighlight(0);
@@ -91,7 +112,7 @@ export function ServicePicker({
   function choose(service: ServicePickerService) {
     onSelect(service.id);
     setOpen(false);
-    setQuery("");
+    changeQuery("");
   }
 
   function onKeyDown(event: React.KeyboardEvent) {
@@ -113,7 +134,7 @@ export function ServicePicker({
       event.preventDefault();
     } else if (event.key === "Escape") {
       setOpen(false);
-      setQuery("");
+      changeQuery("");
       event.preventDefault();
     }
   }
@@ -155,7 +176,7 @@ export function ServicePicker({
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => changeQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder={t(
                 "billing.servicePicker.typeServiceName",
@@ -173,7 +194,7 @@ export function ServicePicker({
             role="listbox"
             className="max-h-64 overflow-y-auto overflow-x-hidden p-1"
           >
-            {results.length === 0 ? (
+            {results.length === 0 && !loading && !searchError ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 {t(
                   "billing.servicePicker.noMatch",
@@ -236,6 +257,34 @@ export function ServicePicker({
                 </button>
               ))
             )}
+            {loading ? (
+              <p className="px-3 py-3 text-center text-sm text-muted-foreground">
+                {t("billing.servicePicker.loading", "Loading products…")}
+              </p>
+            ) : null}
+            {searchError ? (
+              <div className="flex flex-col items-center gap-2 px-3 py-3 text-center">
+                <p className="text-sm text-destructive">{searchError}</p>
+                {onRetry ? (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"
+                  >
+                    {t("billing.servicePicker.retry", "Retry")}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {!loading && !searchError && hasMore && onLoadMore ? (
+              <button
+                type="button"
+                onClick={onLoadMore}
+                className="flex w-full items-center justify-center gap-2 rounded-sm px-2 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                {t("billing.servicePicker.loadMore", "Load more")}
+              </button>
+            ) : null}
           </div>
         </div>
       )}

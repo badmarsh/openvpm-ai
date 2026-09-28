@@ -3223,6 +3223,44 @@ export const billingRouter = createRouter({
         .limit(input.limit);
     }),
 
+  // Cursor-paginated product search for the charge catalog. `listProducts` caps
+  // out at a single page, so a clinic with a large catalog could not scroll to
+  // the item it was billing for. The id tiebreaker keeps paging stable when two
+  // products share a name.
+  searchProducts: protectedProcedure
+    .input(
+      z.object({
+        search: invoiceSearchInput,
+        cursor: z.number().int().min(0).nullish(),
+        limit: z.number().int().min(1).max(100).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL[] = [
+        eq(products.practiceId, ctx.practiceId),
+        isNull(products.deletedAt),
+      ];
+      if (input.search) {
+        conditions.push(ilike(products.name, `%${input.search}%`));
+      }
+
+      const rows = await ctx.db
+        .select()
+        .from(products)
+        .where(and(...conditions))
+        .orderBy(products.name, products.id)
+        .limit(input.limit + 1)
+        .offset(input.cursor ?? 0);
+
+      return {
+        items: rows.slice(0, input.limit),
+        nextCursor:
+          rows.length > input.limit
+            ? (input.cursor ?? 0) + input.limit
+            : undefined,
+      };
+    }),
+
   // --- Payments ---
 
   recordPayment: protectedProcedure

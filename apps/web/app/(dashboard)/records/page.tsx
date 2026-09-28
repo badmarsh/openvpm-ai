@@ -1141,14 +1141,27 @@ function RecordsPageContent() {
     prescriptionSafety.data
       ? prescriptionSafety.data
       : null;
+  // Re-read the linked product from the server instead of trusting the picker's
+  // client cache: stock is a financial guard, so it must be authoritative and
+  // fresh. While the fetch is in flight or has failed we fail closed.
+  const linkedProductQuery = trpc.inventory.getById.useQuery(
+    { id: prescriptionForm.productId || "00000000-0000-0000-0000-000000000000" },
+    { enabled: Boolean(prescriptionForm.productId), staleTime: 0 },
+  );
   const linkedPrescriptionProduct = prescriptionForm.productId
-    ? selectedPrescriptionProduct
+    ? selectedPrescriptionProduct && {
+        ...selectedPrescriptionProduct,
+        ...linkedProductQuery.data,
+      }
     : null;
   const prescriptionQuantity = optionalNumber(prescriptionForm.quantity);
   const hasValidPrescriptionQuantityForInventory =
     !prescriptionForm.productId ||
     (isPrescriptionQuantityInputValid(prescriptionForm.quantity) &&
       linkedPrescriptionProduct !== null &&
+      linkedPrescriptionProduct.inventoryTracked &&
+      !linkedProductQuery.isError &&
+      !linkedProductQuery.isFetching &&
       prescriptionQuantity !== undefined &&
       prescriptionQuantity <= linkedPrescriptionProduct.stockQuantity);
   const visibleTabs = tabs.filter(

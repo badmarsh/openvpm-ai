@@ -1472,7 +1472,10 @@
       "placeholder": "Search services or products...",
       "typeServiceName": "Type a service or product name...",
       "searchServicesAria": "Search services and products",
-      "noMatch": "No services match \"{query}\"."
+      "noMatch": "No services match \"{query}\".",
+      "loading": "Loading products…",
+      "retry": "Retry",
+      "loadMore": "Load more"
     }
   },
   "canvas": {

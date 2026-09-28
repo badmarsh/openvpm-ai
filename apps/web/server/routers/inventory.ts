@@ -196,6 +196,36 @@ async function practiceTimeZone(
 export const inventoryRouter = createRouter({
   // --- Products ---
 
+  // Authoritative single-product read. Prescription stock validation uses this
+  // instead of the client-side picker cache, so a stale list can never authorize
+  // a quantity the database would reject.
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      await assertActivePractice(ctx);
+
+      const [product] = await ctx.db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.id, input.id),
+            eq(products.practiceId, ctx.practiceId),
+            isNull(products.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (!product) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Inventory item not found.",
+        });
+      }
+
+      return product;
+    }),
+
   list: protectedProcedure
     .input(
       z.object({

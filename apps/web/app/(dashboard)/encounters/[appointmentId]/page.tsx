@@ -5107,6 +5107,7 @@ function ChargeCapture({
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [items, setItems] = useState<ChargeItem[]>([]);
+  const [productSearch, setProductSearch] = useState("");
   const [loadedInvoiceId, setLoadedInvoiceId] = useState<string | null>(null);
   const lastSavedItemsFingerprintRef = useRef(chargeItemsFingerprint([]));
   const configQuery = trpc.billing.getTaxConfig.useQuery(undefined, {
@@ -5130,9 +5131,13 @@ function ChargeCapture({
       invoiceStateReady &&
       (!activeInvoice || (activeInvoiceIsDraft && invoiceDetailReady)),
   });
-  const productsQuery = trpc.billing.listProducts.useQuery(
-    { limit: 100 },
+  // Cursor-paginated so a clinic with more products than one page can still
+  // reach the item it is billing for; the server trims the search server-side.
+  const productsQuery = trpc.billing.searchProducts.useInfiniteQuery(
+    { limit: 50, search: productSearch.trim() || undefined },
     {
+      getNextPageParam: (page) => page.nextCursor,
+      retry: false,
       enabled:
         canManage &&
         configReady &&
@@ -5140,6 +5145,11 @@ function ChargeCapture({
         (!activeInvoice || (activeInvoiceIsDraft && invoiceDetailReady)),
     },
   );
+  // tRPC types the error of an infinite query as `never` here, so widen before
+  // narrowing; the picker surfaces this string on the Retry affordance.
+  const productsError: unknown = productsQuery.error;
+  const productsErrorMessage =
+    productsError instanceof Error ? productsError.message : undefined;
 
   useEffect(() => {
     if (!activeInvoice) {
@@ -5242,7 +5252,7 @@ function ChargeCapture({
         sourcePrescriptionId: undefined as string | undefined,
         sourceDispenseChargeId: prescription.dispenseChargeId!,
       }));
-    const products = (productsQuery.data ?? [])
+    const products = (productsQuery.data?.pages.flatMap((page) => page.items) ?? [])
       .filter((product) => !linkedProductIds.has(product.id))
       .map((product) => ({
         id: `product:${product.id}`,
@@ -5709,6 +5719,12 @@ function ChargeCapture({
                 onSelect={setSelectedCatalogId}
                 disabled={isSaving}
                 formatPrice={fmt}
+                onSearchChange={setProductSearch}
+                loading={productsQuery.isFetching}
+                hasMore={productsQuery.hasNextPage}
+                onLoadMore={() => void productsQuery.fetchNextPage()}
+                searchError={productsErrorMessage}
+                onRetry={() => void productsQuery.refetch()}
               />
               <Input
                 type="number"
