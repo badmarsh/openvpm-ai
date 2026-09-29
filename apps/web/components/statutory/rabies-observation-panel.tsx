@@ -12,12 +12,19 @@ import {
   Plus,
   Loader2,
   Search,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 function formatDate(val: Date | string | null | undefined): string {
@@ -475,16 +482,17 @@ export function RabiesObservationPanel() {
                             </Button>
                           )}
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs px-2 gap-1"
-                            onClick={() => handlePrintCertificate(obs)}
-                            title={t("statutory.rabies.btnPrintTitle", "Print veterinary certificate")}
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                            {t("statutory.rabies.btnCertificate", "Certificate")}
-                          </Button>
+                          <TooltipHint content={t("statutory.rabies.btnPrintTitle", "Print veterinary certificate")}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs px-2 gap-1"
+                              onClick={() => handlePrintCertificate(obs)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              {t("statutory.rabies.btnCertificate", "Certificate")}
+                            </Button>
+                          </TooltipHint>
                         </div>
                       </td>
                     </tr>
@@ -497,21 +505,16 @@ export function RabiesObservationPanel() {
       </div>
 
       {/* MODAL 1: Nový prípad pohryznutia */}
-      {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="fixed inset-0" onClick={() => setIsNewModalOpen(false)} />
-          <div className="relative z-10 w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-rose-600" />
-                <h3 className="font-semibold text-base text-foreground">
-                  {t("statutory.rabies.modalNewTitle", "New Animal Bite Injury Case")}
-                </h3>
-              </div>
-              <button onClick={() => setIsNewModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
+      <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
+        <DialogContent className="w-full max-w-lg gap-4 bg-background p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+          <DialogHeader className="text-left border-b pb-3 pr-8">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-rose-600" aria-hidden="true" />
+              <DialogTitle className="font-semibold text-base text-foreground">
+                {t("statutory.rabies.modalNewTitle", "New Animal Bite Injury Case")}
+              </DialogTitle>
             </div>
+          </DialogHeader>
 
             <div className="space-y-3 text-xs">
               <div>
@@ -620,29 +623,27 @@ export function RabiesObservationPanel() {
                 {t("statutory.rabies.btnStartObservation", "Record & Start 14-Day Observation")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL 2: Zápis kontrolného vyšetrenia (1., 5. alebo 14. deň) */}
-      {checkpointModalObs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="fixed inset-0" onClick={() => setCheckpointModalObs(null)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="font-semibold text-base text-foreground">
-                  {t("statutory.rabies.modalCheckpointTitle", "Record Rabies Clinical Examination")}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Pacient: <strong>{checkpointModalObs.patientName}</strong>
-                </p>
-              </div>
-              <button onClick={() => setCheckpointModalObs(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <Dialog
+        open={checkpointModalObs !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setCheckpointModalObs(null);
+        }}
+      >
+        <DialogContent className="w-full max-w-md gap-4 bg-background p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+          <DialogHeader className="text-left border-b pb-3 pr-8">
+            <DialogTitle className="font-semibold text-base text-foreground">
+              {t("statutory.rabies.modalCheckpointTitle", "Record Rabies Clinical Examination")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Pacient: <strong>{checkpointModalObs?.patientName}</strong>
+            </DialogDescription>
+          </DialogHeader>
 
+          {checkpointModalObs && (<>
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-medium text-foreground">
@@ -740,9 +741,9 @@ export function RabiesObservationPanel() {
                 {t("statutory.rabies.btnRecordCheckpoint", "Record Examination")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>)}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

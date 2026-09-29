@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
@@ -272,15 +273,17 @@ export function ContentCalendarTab() {
 
           <div className="flex items-center gap-2">
             <div className="flex items-center border rounded-lg overflow-hidden bg-background">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePrev}
-                className="h-8 px-2.5 text-xs rounded-none"
-                title={t("marketing.calendar.prev", "Predchádzajúci")}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+              <TooltipHint content={t("marketing.calendar.prev", "Predchádzajúci")}>
+                <Button
+                  aria-label={t("marketing.calendar.prev", "Predchádzajúci")}
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePrev}
+                  className="h-8 px-2.5 text-xs rounded-none"
+                >
+                  <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              </TooltipHint>
               <Button
                 variant="ghost"
                 size="sm"
@@ -289,15 +292,17 @@ export function ContentCalendarTab() {
               >
                 {t("marketing.calendar.today", "Dnes")}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleNext}
-                className="h-8 px-2.5 text-xs rounded-none"
-                title={t("marketing.calendar.next", "Ďalší")}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <TooltipHint content={t("marketing.calendar.next", "Ďalší")}>
+                <Button
+                  aria-label={t("marketing.calendar.next", "Ďalší")}
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNext}
+                  className="h-8 px-2.5 text-xs rounded-none"
+                >
+                  <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              </TooltipHint>
             </div>
           </div>
         </div>
@@ -355,19 +360,25 @@ export function ContentCalendarTab() {
                       </span>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenNewBriefForDate(dateStr)}
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-muted"
-                      title={t(
+                    <TooltipHint content={t(
+                        "marketing.calendar.scheduleForDate",
+                        `Naplánovať na ${dateStr}`,
+                        { date: dateStr }
+                      )}>
+                      <Button
+                        aria-label={t(
                         "marketing.calendar.scheduleForDate",
                         `Naplánovať na ${dateStr}`,
                         { date: dateStr }
                       )}
-                    >
-                      <Plus className="h-3.5 w-3.5 text-primary" />
-                    </Button>
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenNewBriefForDate(dateStr)}
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-muted"
+                      >
+                        <Plus aria-hidden="true" className="h-3.5 w-3.5 text-primary" />
+                      </Button>
+                    </TooltipHint>
                   </div>
 
                   {/* Briefs on this day */}

@@ -11,7 +11,6 @@ import {
   Clock,
   Plane,
   Loader2,
-  X,
   Download,
   Globe,
   Flag,
@@ -21,6 +20,12 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { toast } from "sonner";
 import { validateMicrochipNumber } from "@/lib/crsz/microchip";
@@ -683,17 +688,14 @@ function RegisterMicrochipModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.registerTitle")}</h3>
+            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.registerTitle")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -785,8 +787,8 @@ function RegisterMicrochipModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -836,17 +838,14 @@ function IssuePassportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <Plane className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.passportTitle")}</h3>
+            <Plane className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.passportTitle")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -929,8 +928,8 @@ function IssuePassportModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 function IssueKvlCrPassportModal({
@@ -989,17 +988,14 @@ function IssueKvlCrPassportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <Flag className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.kvlCrTitle", "Vystaviť pas KVL ČR")}</h3>
+            <Flag className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.kvlCrTitle", "Vystaviť pas KVL ČR")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -1127,7 +1123,7 @@ function IssueKvlCrPassportModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -52,6 +52,7 @@ import {
 } from "@/components/layout/page-kit";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDoctorName, formatSpecies } from "@/lib/locale/format";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
@@ -1822,33 +1823,35 @@ function AppointmentDetailPopover({
 
           <div className="flex items-center gap-1">
             {canManageSchedule && canMoveAppointment && (
-              <button
-                type="button"
-                title={t("schedule.btnEditAppointment", "Edit appointment")}
-                aria-label={t("schedule.btnEditAppointment", "Edit appointment")}
-                onClick={() => {
-                  setShowConfirmationForm(false);
-                  setShowRescheduleForm((show) => !show);
-                }}
-                className={cn(
-                  "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                  showRescheduleForm && "bg-muted text-foreground"
-                )}
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
+              <TooltipHint content={t("schedule.btnEditAppointment", "Edit appointment")}>
+                <button
+                  type="button"
+                  aria-label={t("schedule.btnEditAppointment", "Edit appointment")}
+                  onClick={() => {
+                    setShowConfirmationForm(false);
+                    setShowRescheduleForm((show) => !show);
+                  }}
+                  className={cn(
+                    "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                    showRescheduleForm && "bg-muted text-foreground"
+                  )}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </TooltipHint>
             )}
             {canManageSchedule && ["scheduled", "confirmed", "cancelled", "no_show"].includes(current) && (
-              <button
-                type="button"
-                title={t("schedule.deleteAppointment.button", "Delete appointment")}
-                aria-label={t("schedule.deleteAppointment.button", "Delete appointment")}
-                disabled={isDeleting}
-                onClick={() => setConfirmDelete(true)}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <TooltipHint content={t("schedule.deleteAppointment.button", "Delete appointment")}>
+                <button
+                  type="button"
+                  aria-label={t("schedule.deleteAppointment.button", "Delete appointment")}
+                  disabled={isDeleting}
+                  onClick={() => setConfirmDelete(true)}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipHint>
             )}
             <button
               type="button"
@@ -2344,19 +2347,20 @@ function AppointmentDetailPopover({
                             </option>
                           ))}
                         </select>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs shrink-0 h-8"
-                          disabled={isUpdating || !inlineDoctorId}
-                          title={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}
-                          onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
-                        >
-                          {isUpdating ? (
-                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                          ) : null}
-                          {action.label}
-                        </Button>
+                        <TooltipHint content={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs shrink-0 h-8"
+                            disabled={isUpdating || !inlineDoctorId}
+                            onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            ) : null}
+                            {action.label}
+                          </Button>
+                        </TooltipHint>
                       </div>
                     );
                   }
@@ -2367,41 +2371,41 @@ function AppointmentDetailPopover({
                   const isNoShow = action.status === "no_show";
 
                   return (
-                    <Button
-                      key={action.status}
-                      size="sm"
-                      variant="outline"
-                      disabled={isUpdating || action.disabled}
-                      title={action.disabledReason}
-                      className={cn(
-                        "h-8 text-xs font-medium justify-center transition-colors shadow-2xs",
-                        isConfirm && "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
-                        isCheckIn && "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300",
-                        isNoShow && "border-border text-muted-foreground hover:text-foreground hover:bg-muted/80",
-                        isCancel && "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
-                      )}
-                      onClick={() => {
-                        if (action.status === "confirmed") {
-                          setShowRescheduleForm(false);
-                          setShowConfirmationForm(true);
-                          return;
-                        }
-                        onStatusChange(appointment.id, action.status);
-                      }}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                      ) : isConfirm ? (
-                        <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                      ) : isCheckIn ? (
-                        <UserCheck className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                      ) : isNoShow ? (
-                        <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                      ) : isCancel ? (
-                        <CalendarX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                      ) : null}
-                      {action.label}
-                    </Button>
+                    <TooltipHint key={action.status} content={action.disabledReason}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isUpdating || action.disabled}
+                        className={cn(
+                          "h-8 text-xs font-medium justify-center transition-colors shadow-2xs",
+                          isConfirm && "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
+                          isCheckIn && "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300",
+                          isNoShow && "border-border text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                          isCancel && "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
+                        )}
+                        onClick={() => {
+                          if (action.status === "confirmed") {
+                            setShowRescheduleForm(false);
+                            setShowConfirmationForm(true);
+                            return;
+                          }
+                          onStatusChange(appointment.id, action.status);
+                        }}
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : isConfirm ? (
+                          <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        ) : isCheckIn ? (
+                          <UserCheck className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        ) : isNoShow ? (
+                          <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                        ) : isCancel ? (
+                          <CalendarX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                        ) : null}
+                        {action.label}
+                      </Button>
+                    </TooltipHint>
                   );
                 })}
               </div>

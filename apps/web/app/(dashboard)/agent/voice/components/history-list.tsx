@@ -16,6 +16,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -274,16 +275,18 @@ export function HistoryList({
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 rounded-md"
-                      title="Zmazať záznam"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    <TooltipHint content="Zmazať záznam">
+                      <Button
+                        aria-label="Zmazať záznam"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 rounded-md"
+                      >
+                        <Trash2 aria-hidden="true" className="h-3 w-3" />
+                      </Button>
+                    </TooltipHint>
                   </div>
                 </div>
               </div>

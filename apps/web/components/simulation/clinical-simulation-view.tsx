@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export interface ClinicalSimulationViewProps {
@@ -389,33 +390,35 @@ export function ClinicalSimulationView({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReload}
-                title={t("settings.simulation.reload", "Znovu načítať")}
-              >
-                <RotateCcw className="mr-1.5 h-4 w-4" />
-                {t("settings.simulation.reload", "Znovu načítať")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggleFullscreen}
-                title={isFullscreen ? t("settings.simulation.exitFullscreen", "Ukončiť celú obrazovku") : t("settings.simulation.fullscreen", "Celá obrazovka")}
-              >
-                {isFullscreen ? (
-                  <>
-                    <Minimize2 className="mr-1.5 h-4 w-4" />
-                    {t("settings.simulation.exitFullscreen", "Zmenšiť")}
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 className="mr-1.5 h-4 w-4" />
-                    {t("settings.simulation.fullscreen", "Celá obrazovka")}
-                  </>
-                )}
-              </Button>
+              <TooltipHint content={t("settings.simulation.reload", "Znovu načítať")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReload}
+                >
+                  <RotateCcw className="mr-1.5 h-4 w-4" />
+                  {t("settings.simulation.reload", "Znovu načítať")}
+                </Button>
+              </TooltipHint>
+              <TooltipHint content={isFullscreen ? t("settings.simulation.exitFullscreen", "Ukončiť celú obrazovku") : t("settings.simulation.fullscreen", "Celá obrazovka")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleFullscreen}
+                >
+                  {isFullscreen ? (
+                    <>
+                      <Minimize2 className="mr-1.5 h-4 w-4" />
+                      {t("settings.simulation.exitFullscreen", "Zmenšiť")}
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="mr-1.5 h-4 w-4" />
+                      {t("settings.simulation.fullscreen", "Celá obrazovka")}
+                    </>
+                  )}
+                </Button>
+              </TooltipHint>
               <a
                 href="/simulation.html"
                 target="_blank"

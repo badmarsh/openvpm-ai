@@ -47,6 +47,7 @@ import {
   underlineTabsTriggerClass,
 } from "@/components/layout/page-kit";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -565,26 +566,27 @@ function EkasaReceiptsContent() {
                                 />
                               )}
                               {r.status === "OFFLINE_STORED" && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    retryMutation.mutate({ receiptId: r.id });
-                                  }}
-                                  disabled={retryMutation.isPending}
-                                  title={t(
+                                <TooltipHint content={t(
                                     "ekasa.page.receipts.syncHint",
                                     "Synchronizovať offline doklad s Finančnou správou",
-                                  )}
-                                  className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-2xs font-semibold text-warning-muted-foreground hover:bg-warning/25 transition-all shadow-2xs"
-                                >
-                                  <RefreshCw
-                                    className={`h-2.5 w-2.5 ${
-                                      retryMutation.isPending ? "animate-spin" : ""
-                                    }`}
-                                  />
-                                  <span>{t("ekasa.page.receipts.syncFs", "Sync FS")}</span>
-                                </button>
+                                  )}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      retryMutation.mutate({ receiptId: r.id });
+                                    }}
+                                    disabled={retryMutation.isPending}
+                                    className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-2xs font-semibold text-warning-muted-foreground hover:bg-warning/25 transition-all shadow-2xs"
+                                  >
+                                    <RefreshCw
+                                      className={`h-2.5 w-2.5 ${
+                                        retryMutation.isPending ? "animate-spin" : ""
+                                      }`}
+                                    />
+                                    <span>{t("ekasa.page.receipts.syncFs", "Sync FS")}</span>
+                                  </button>
+                                </TooltipHint>
                               )}
                             </div>
                           </TableCell>
@@ -593,66 +595,70 @@ function EkasaReceiptsContent() {
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 gap-1.5 px-2 text-xs"
-                                onClick={() => setSelectedReceipt(r)}
-                                title={t("ekasa.page.receipts.previewHint", "Náhľad termálneho dokladu")}
-                              >
-                                <ReceiptEuro className="h-3.5 w-3.5 text-muted-foreground" />
-                                {t("ekasa.page.receipts.preview", "Náhľad")}
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 gap-1.5 px-2 text-xs"
-                                onClick={() => handlePrint(r.id)}
-                                disabled={isPrintingThis}
-                                title={t("ekasa.page.receipts.printHint", "Tlačiť doklad")}
-                              >
-                                {isPrintingThis ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-                                )}
-                                {t("ekasa.page.receipts.print", "Tlačiť")}
-                              </Button>
-
-                              {r.receiptType !== "STORNO" &&
-                                (r.status === "CONFIRMED" || r.status === "OFFLINE_STORED") && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 gap-1.5 border-destructive/30 bg-destructive/5 px-2 text-xs text-destructive hover:bg-destructive/15"
-                                    onClick={() => {
-                                      setStornoTarget(r);
-                                      setStornoReason("");
-                                    }}
-                                    title={t("ekasa.page.receipts.stornoHint", "Stornovať doklad")}
-                                  >
-                                    <Ban className="h-3 w-3" />
-                                    {t("ekasa.page.verification.storno", "Storno")}
-                                  </Button>
-                                )}
-
-                              {r.status === "FAILED" && (
+                              <TooltipHint content={t("ekasa.page.receipts.previewHint", "Náhľad termálneho dokladu")}>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 gap-1.5 border-warning-muted/50 bg-warning-muted/30 px-2 text-xs text-warning-muted-foreground hover:bg-warning-muted/50"
-                                  onClick={() => retryMutation.mutate({ receiptId: r.id })}
-                                  disabled={retryMutation.isPending}
-                                  title={t("ekasa.page.receipts.retryHint", "Opakovať odoslanie")}
+                                  className="h-7 gap-1.5 px-2 text-xs"
+                                  onClick={() => setSelectedReceipt(r)}
                                 >
-                                  <RefreshCw
-                                    className={`h-3 w-3 ${
-                                      retryMutation.isPending ? "animate-spin" : ""
-                                    }`}
-                                  />
-                                  {t("ekasa.page.receipts.retry", "Odoslať")}
+                                  <ReceiptEuro className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {t("ekasa.page.receipts.preview", "Náhľad")}
                                 </Button>
+                              </TooltipHint>
+
+                              <TooltipHint content={t("ekasa.page.receipts.printHint", "Tlačiť doklad")}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 gap-1.5 px-2 text-xs"
+                                  onClick={() => handlePrint(r.id)}
+                                  disabled={isPrintingThis}
+                                >
+                                  {isPrintingThis ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                  {t("ekasa.page.receipts.print", "Tlačiť")}
+                                </Button>
+                              </TooltipHint>
+
+                              {r.receiptType !== "STORNO" &&
+                                (r.status === "CONFIRMED" || r.status === "OFFLINE_STORED") && (
+                                  <TooltipHint content={t("ekasa.page.receipts.stornoHint", "Stornovať doklad")}>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 gap-1.5 border-destructive/30 bg-destructive/5 px-2 text-xs text-destructive hover:bg-destructive/15"
+                                      onClick={() => {
+                                        setStornoTarget(r);
+                                        setStornoReason("");
+                                      }}
+                                    >
+                                      <Ban className="h-3 w-3" />
+                                      {t("ekasa.page.verification.storno", "Storno")}
+                                    </Button>
+                                  </TooltipHint>
+                                )}
+
+                              {r.status === "FAILED" && (
+                                <TooltipHint content={t("ekasa.page.receipts.retryHint", "Opakovať odoslanie")}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1.5 border-warning-muted/50 bg-warning-muted/30 px-2 text-xs text-warning-muted-foreground hover:bg-warning-muted/50"
+                                    onClick={() => retryMutation.mutate({ receiptId: r.id })}
+                                    disabled={retryMutation.isPending}
+                                  >
+                                    <RefreshCw
+                                      className={`h-3 w-3 ${
+                                        retryMutation.isPending ? "animate-spin" : ""
+                                      }`}
+                                    />
+                                    {t("ekasa.page.receipts.retry", "Odoslať")}
+                                  </Button>
+                                </TooltipHint>
                               )}
                             </div>
                           </TableCell>

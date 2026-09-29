@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import {
   PageHeader,
@@ -897,30 +898,31 @@ function RabiesRegisterTab() {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-3 py-2.5 whitespace-nowrap text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title={t("statutory.rabies.printBiteReport")}
-                        onClick={() =>
-                          printRabiesBiteInspectionReport({
-                            language: locale,
-                            patientName: r.patientName,
-                            species: r.species,
-                            breed: r.breed ?? undefined,
-                            microchipNumber: r.microchipNumber ?? undefined,
-                            clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
-                            clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
-                            clientPhone: r.clientPhone ?? undefined,
-                            vaccineName: r.vaccineName,
-                            lotNumber: r.lotNumber ?? undefined,
-                            administeredAt: r.administeredAt,
-                          })
-                        }
-                        className="h-7 shrink-0 gap-1 whitespace-nowrap px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
-                      >
-                        <Printer className="h-3 w-3" />
-                        <span>RVPS</span>
-                      </Button>
+                      <TooltipHint content={t("statutory.rabies.printBiteReport")}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            printRabiesBiteInspectionReport({
+                              language: locale,
+                              patientName: r.patientName,
+                              species: r.species,
+                              breed: r.breed ?? undefined,
+                              microchipNumber: r.microchipNumber ?? undefined,
+                              clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
+                              clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
+                              clientPhone: r.clientPhone ?? undefined,
+                              vaccineName: r.vaccineName,
+                              lotNumber: r.lotNumber ?? undefined,
+                              administeredAt: r.administeredAt,
+                            })
+                          }
+                          className="h-7 shrink-0 gap-1 whitespace-nowrap px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                        >
+                          <Printer className="h-3 w-3" />
+                          <span>RVPS</span>
+                        </Button>
+                      </TooltipHint>
                     </TableCell>
                   </TableRow>
                 );

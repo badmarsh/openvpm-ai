@@ -37,8 +37,10 @@ export function soapEditorNeedsLeaveGuard(input: {
 export async function runSoapSafeLeave(input: {
   readState: () => SoapLeaveState;
   persistDraft: () => Promise<unknown>;
-  confirmFinalizedLocalTextLeave: () => boolean;
-  confirmUnsavedLeave: () => boolean;
+  // Confirmations may be synchronous (legacy window.confirm) or asynchronous
+  // (the themed ConfirmDialog); both are awaited the same way.
+  confirmFinalizedLocalTextLeave: () => boolean | Promise<boolean>;
+  confirmUnsavedLeave: () => boolean | Promise<boolean>;
   navigate: () => void;
 }): Promise<boolean> {
   let state = input.readState();
@@ -53,14 +55,14 @@ export async function runSoapSafeLeave(input: {
     state.finalizedElsewhere &&
     state.hasLocalText &&
     !state.localTextCopied &&
-    !input.confirmFinalizedLocalTextLeave()
+    !(await input.confirmFinalizedLocalTextLeave())
   ) {
     return false;
   }
   if (
     !state.finalizedElsewhere &&
     state.needsGuard &&
-    !input.confirmUnsavedLeave()
+    !(await input.confirmUnsavedLeave())
   ) {
     return false;
   }

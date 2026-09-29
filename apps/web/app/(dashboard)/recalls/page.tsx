@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -437,13 +438,14 @@ export default function VaccinationRecallsPage() {
                     </td>
                     <td className={cn(TD, "max-w-[220px]")}>
                       <div className="min-w-0">
-                        <Link
-                          href={`/patients/${recipient.patientId}`}
-                          className="block truncate font-medium text-foreground hover:underline"
-                          title={recipient.patientName}
-                        >
-                          {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
-                        </Link>
+                        <TooltipHint content={recipient.patientName}>
+                          <Link
+                            href={`/patients/${recipient.patientId}`}
+                            className="block truncate font-medium text-foreground hover:underline"
+                          >
+                            {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
+                          </Link>
+                        </TooltipHint>
                         <p
                           className="mt-0.5 truncate text-2xs text-muted-foreground"
                           title={recipient.clientName}

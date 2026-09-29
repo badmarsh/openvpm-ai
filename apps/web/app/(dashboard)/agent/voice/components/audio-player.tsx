@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, RotateCcw, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface AudioPlayerProps {
@@ -187,16 +188,18 @@ export function AudioPlayer({
             )}
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRestart}
-            className="h-7 w-7 p-0 rounded-full text-muted-foreground hover:text-foreground"
-            title="Prehrať od začiatku"
-          >
-            <RotateCcw className="h-3 w-3" />
-          </Button>
+          <TooltipHint content="Prehrať od začiatku">
+            <Button
+              aria-label="Prehrať od začiatku"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRestart}
+              className="h-7 w-7 p-0 rounded-full text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw aria-hidden="true" className="h-3 w-3" />
+            </Button>
+          </TooltipHint>
 
           <span className="text-xs font-mono text-muted-foreground tabular-nums">
             {formatTime(currentTime)} <span className="opacity-50">/</span> {formatTime(duration)}
@@ -204,16 +207,17 @@ export function AudioPlayer({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRateChange}
-            className="h-7 px-2 text-xs font-mono font-medium rounded-md"
-            title="Rýchlosť prehrávania"
-          >
-            {playbackRate}x
-          </Button>
+          <TooltipHint content="Rýchlosť prehrávania">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRateChange}
+              className="h-7 px-2 text-xs font-mono font-medium rounded-md"
+            >
+              {playbackRate}x
+            </Button>
+          </TooltipHint>
         </div>
       </div>
     </div>

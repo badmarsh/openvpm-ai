@@ -5,6 +5,7 @@ import { Mic, X, Search, ChevronRight, Sparkles, ArrowRight } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
@@ -44,15 +45,16 @@ export function ScribeWidget() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          size="lg"
-          suppressHydrationWarning
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center z-50 text-primary-foreground focus:outline-none focus:ring-4 focus:ring-primary/25"
-          title={t("scribe.title", "AI Voice Scribe - Voice Consultation")}
-          aria-label="AI Voice Scribe"
-        >
-          <Mic className="h-6 w-6 text-primary-foreground" />
-        </Button>
+        <TooltipHint content={t("scribe.title", "AI Voice Scribe - Voice Consultation")}>
+          <Button
+            size="lg"
+            suppressHydrationWarning
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all p-0 flex items-center justify-center z-50 text-primary-foreground focus:outline-none focus:ring-4 focus:ring-primary/25"
+            aria-label="AI Voice Scribe"
+          >
+            <Mic className="h-6 w-6 text-primary-foreground" />
+          </Button>
+        </TooltipHint>
       </PopoverTrigger>
       <PopoverContent
         side="top"

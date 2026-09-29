@@ -27,6 +27,7 @@ import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { EmptyState } from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   emitGuideSignal,
   GUIDE_SIGNALS,
@@ -861,24 +862,25 @@ function WellnessEnrollmentPanel({
                   </td>
                   <td className="px-4 py-3 text-right">
                     {canManageWellnessMemberships ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={cancelEnrollment.isPending}
-                        onClick={() =>
-                          handleCancelEnrollment(enrollment.enrollmentId)
-                        }
-                        title={t(
+                      <TooltipHint content={t(
                           "clients.detail.cancelEnrollmentTitle",
                           "Cancel enrollment",
-                        )}
-                      >
-                        {cancelEnrollment.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4 text-destructive" />
-                        )}
-                      </Button>
+                        )}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={cancelEnrollment.isPending}
+                          onClick={() =>
+                            handleCancelEnrollment(enrollment.enrollmentId)
+                          }
+                        >
+                          {cancelEnrollment.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4 text-destructive" />
+                          )}
+                        </Button>
+                      </TooltipHint>
                     ) : (
                       <span className="text-xs text-muted-foreground">
                         {t("clients.detail.readOnly", "Read-only")}

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { TableScroll } from "@/components/common/table-scroll";
 import {
   Upload,
@@ -740,14 +741,16 @@ export function WholesalerImportDialog({
                                     {displayProduct.name}
                                   </span>
                                   {linked && (
-                                    <button
-                                      type="button"
-                                      className="text-muted-foreground hover:text-destructive"
-                                      title={t("inventory.wholesalerImport.unlinkProduct", "Zrušiť prepojenie")}
-                                      onClick={() => setItemState(idx, { linkedProduct: null, action: "create_product" })}
-                                    >
-                                      <Link2Off className="h-3 w-3" />
-                                    </button>
+                                    <TooltipHint content={t("inventory.wholesalerImport.unlinkProduct", "Zrušiť prepojenie")}>
+                                      <button
+                                        aria-label={t("inventory.wholesalerImport.unlinkProduct", "Zrušiť prepojenie")}
+                                        type="button"
+                                        className="text-muted-foreground hover:text-destructive"
+                                        onClick={() => setItemState(idx, { linkedProduct: null, action: "create_product" })}
+                                      >
+                                        <Link2Off aria-hidden="true" className="h-3 w-3" />
+                                      </button>
+                                    </TooltipHint>
                                   )}
                                 </div>
                               ) : (

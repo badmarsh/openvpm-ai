@@ -16,6 +16,7 @@ import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 export function ClinicalGuardianWidget() {
@@ -127,20 +128,21 @@ export function ClinicalGuardianWidget() {
             </Badge>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => auditMutation.mutate()}
-            disabled={auditMutation.isPending}
-            title={t("clinicalGuardian.widget.runAudit", "Skontrolovať zákonné lehoty teraz")}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${auditMutation.isPending ? "animate-spin text-primary" : ""}`}
-            />
-            <span className="sr-only sm:not-sr-only sm:ml-1 text-xs">
-              {t("clinicalGuardian.widget.auditButton", "Audit")}
-            </span>
-          </Button>
+          <TooltipHint content={t("clinicalGuardian.widget.runAudit", "Skontrolovať zákonné lehoty teraz")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => auditMutation.mutate()}
+              disabled={auditMutation.isPending}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${auditMutation.isPending ? "animate-spin text-primary" : ""}`}
+              />
+              <span className="sr-only sm:not-sr-only sm:ml-1 text-xs">
+                {t("clinicalGuardian.widget.auditButton", "Audit")}
+              </span>
+            </Button>
+          </TooltipHint>
 
           <Link
             href="/automations?tab=clinical"

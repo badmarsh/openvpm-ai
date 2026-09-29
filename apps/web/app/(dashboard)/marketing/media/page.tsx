@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { MediaFrame, type FrameBrand } from "@/components/marketing/media-frame";
 import { AiCanvas } from "@/components/marketing/ai-canvas";
@@ -370,18 +371,20 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
           >
             <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
           </button>
-          <button
-            disabled={deleteMutation.isPending}
-            onClick={() => {
-              if (confirm("Naozaj chcete zmazať toto médium z knižnice?")) {
-                deleteMutation.mutate({ id: asset.id });
-              }
-            }}
-            className="rounded-lg border border-border px-2 py-1.5 text-2xs font-bold text-muted-foreground hover:text-destructive hover:border-destructive/30 transition cursor-pointer"
-            title={t("marketing.media.deleteMedia", "Zmazať médium")}
-          >
-            <Trash2 size={11} />
-          </button>
+          <TooltipHint content={t("marketing.media.deleteMedia", "Zmazať médium")}>
+            <button
+              aria-label={t("marketing.media.deleteMedia", "Zmazať médium")}
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (confirm("Naozaj chcete zmazať toto médium z knižnice?")) {
+                  deleteMutation.mutate({ id: asset.id });
+                }
+              }}
+              className="rounded-lg border border-border px-2 py-1.5 text-2xs font-bold text-muted-foreground hover:text-destructive hover:border-destructive/30 transition cursor-pointer"
+            >
+              <Trash2 aria-hidden="true" size={11} />
+            </button>
+          </TooltipHint>
         </div>
 
         <Link

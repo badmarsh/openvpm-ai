@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import type { SectionType } from "@/lib/marketing/website-builder-types";
 
 export interface TemplateDefinition {
@@ -284,15 +285,17 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
                   </div>
                 </div>
 
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => onAddSection(t.type)}
-                  className="h-7 w-7 shrink-0 text-primary hover:bg-primary/10"
-                  title="Pridať na stránku"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <TooltipHint content="Pridať na stránku">
+                  <Button
+                    aria-label="Pridať na stránku"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onAddSection(t.type)}
+                    className="h-7 w-7 shrink-0 text-primary hover:bg-primary/10"
+                  >
+                    <Plus aria-hidden="true" className="h-4 w-4" />
+                  </Button>
+                </TooltipHint>
               </div>
             );
           })

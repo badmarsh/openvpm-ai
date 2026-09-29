@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { getHandoutThematicImage } from "@/lib/marketing/handout-themes";
 import { FlyerPreviewModal } from "@/components/marketing/flyer-preview-modal";
@@ -480,16 +481,17 @@ export default function HandoutsPage() {
                         </div>
                       </div>
 
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 px-2.5 text-2xs gap-1 shrink-0 font-semibold"
-                        onClick={() => setPreviewHandout(handout)}
-                        title="Zobraziť plný leták pripravený na tlač"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                        Náhľad letáku
-                      </Button>
+                      <TooltipHint content="Zobraziť plný leták pripravený na tlač">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 px-2.5 text-2xs gap-1 shrink-0 font-semibold"
+                          onClick={() => setPreviewHandout(handout)}
+                        >
+                          <Eye className="w-3.5 h-3.5 text-primary" />
+                          Náhľad letáku
+                        </Button>
+                      </TooltipHint>
                     </div>
 
                     {/* Action buttons */}
@@ -513,16 +515,17 @@ export default function HandoutsPage() {
                         )}
                       </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-1 text-2xs h-8 px-1.5"
-                        onClick={() => window.open(`/h/${handout.slug}`, "_blank")}
-                        title="Vytlačiť leták"
-                      >
-                        <Printer className="h-3 w-3 text-muted-foreground" />
-                        <span>Tlačiť</span>
-                      </Button>
+                      <TooltipHint content="Vytlačiť leták">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full gap-1 text-2xs h-8 px-1.5"
+                          onClick={() => window.open(`/h/${handout.slug}`, "_blank")}
+                        >
+                          <Printer className="h-3 w-3 text-muted-foreground" />
+                          <span>Tlačiť</span>
+                        </Button>
+                      </TooltipHint>
 
                       <a
                         href={`/h/${handout.slug}`}

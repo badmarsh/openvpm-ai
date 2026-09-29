@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import type { PersistedChatMessage } from "./agent-chat-history";
 import { PrescriptionProposalCard } from "./prescription-proposal-card";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const MarkdownView = dynamic(
   () =>
@@ -78,18 +79,19 @@ export function AgentMessageBubble({
         )}
 
         {!isUser && (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
-            title={t("agent.copyReply", "Kopírovať odpoveď")}
-          >
-          {isCopied ? (
-            <Check className="h-3 w-3 text-success" />
-          ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </button>
+          <TooltipHint content={t("agent.copyReply", "Kopírovať odpoveď")}>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
+            >
+            {isCopied ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </button>
+          </TooltipHint>
         )}
 
         {message.toolCalls && message.toolCalls.length > 0 ? (

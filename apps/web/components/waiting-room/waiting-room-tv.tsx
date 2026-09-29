@@ -34,6 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { PATIENT_SPECIES_EMOJI } from "@/lib/patients/species";
 import { useI18n } from "@/lib/i18n";
 import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
@@ -512,50 +513,51 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
             <span>{formatTime(currentTime)}</span>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSoundEnabled((v) => !v)}
-            title={
-              soundEnabled
+          <TooltipHint content={soundEnabled
                 ? t("waitingRoom.muteSound", "Mute sound notifications")
-                : t("waitingRoom.enableSound", "Enable sound notifications")
-            }
-            className="h-9 w-9 p-0"
-          >
-            {soundEnabled ? (
-              <Volume2 className="h-4 w-4 text-primary" />
-            ) : (
-              <VolumeX className="h-4 w-4 text-muted-foreground" />
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsSlideManagerOpen(true)}
-            className="gap-1.5"
-            title={t("marketing.tv.manageSlides", "Správa TV slajdov")}
-          >
-            <Sliders className="h-4 w-4 text-purple-600" />
-            <span className="hidden sm:inline">
-              {t("marketing.tv.manageSlides", "Správa slajdov")}
-            </span>
-          </Button>
-
-          {practiceId && (
+                : t("waitingRoom.enableSound", "Enable sound notifications")}>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/tv/${practiceId}`, "_blank")}
-              className="gap-1.5"
-              title={t("marketing.tv.openPublicScreen", "Otvoriť TV obrazovku")}
+              onClick={() => setSoundEnabled((v) => !v)}
+              className="h-9 w-9 p-0"
             >
-              <ExternalLink className="h-4 w-4" />
-              <span className="hidden md:inline">
-                {t("marketing.tv.openPublicScreen", "TV Obrazovka")}
+              {soundEnabled ? (
+                <Volume2 className="h-4 w-4 text-primary" />
+              ) : (
+                <VolumeX className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          </TooltipHint>
+
+          <TooltipHint content={t("marketing.tv.manageSlides", "Správa TV slajdov")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSlideManagerOpen(true)}
+              className="gap-1.5"
+            >
+              <Sliders className="h-4 w-4 text-purple-600" />
+              <span className="hidden sm:inline">
+                {t("marketing.tv.manageSlides", "Správa slajdov")}
               </span>
             </Button>
+          </TooltipHint>
+
+          {practiceId && (
+            <TooltipHint content={t("marketing.tv.openPublicScreen", "Otvoriť TV obrazovku")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/tv/${practiceId}`, "_blank")}
+                className="gap-1.5"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden md:inline">
+                  {t("marketing.tv.openPublicScreen", "TV Obrazovka")}
+                </span>
+              </Button>
+            </TooltipHint>
           )}
 
           <Button
@@ -1008,46 +1010,51 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleSlideActive(slide)}
-                              className="cursor-pointer"
-                              title={slide.isActive ? "Kliknutím deaktivujete" : "Kliknutím aktivujete"}
-                            >
-                              {slide.isActive ? (
-                                <Badge
-                                  variant="default"
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-3xs py-0 px-1.5"
-                                >
-                                  {t("marketing.tv.active", "Aktívny")}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-3xs py-0 px-1.5 text-muted-foreground">
-                                  {t("marketing.tv.inactive", "Vypnutý")}
-                                </Badge>
-                              )}
-                            </button>
+                            <TooltipHint content={slide.isActive ? "Kliknutím deaktivujete" : "Kliknutím aktivujete"}>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSlideActive(slide)}
+                                className="cursor-pointer"
+                              >
+                                {slide.isActive ? (
+                                  <Badge
+                                    variant="default"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-3xs py-0 px-1.5"
+                                  >
+                                    {t("marketing.tv.active", "Aktívny")}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-3xs py-0 px-1.5 text-muted-foreground">
+                                    {t("marketing.tv.inactive", "Vypnutý")}
+                                  </Badge>
+                                )}
+                              </button>
+                            </TooltipHint>
                           </td>
                           <td className="px-3 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                                onClick={() => openEditSlide(slide)}
-                                title={t("common.edit", "Upraviť")}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteSlide(slide)}
-                                title={t("common.delete", "Odstrániť")}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              <TooltipHint content={t("common.edit", "Upraviť")}>
+                                <Button
+                                  aria-label={t("common.edit", "Upraviť")}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                  onClick={() => openEditSlide(slide)}
+                                >
+                                  <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipHint>
+                              <TooltipHint content={t("common.delete", "Odstrániť")}>
+                                <Button
+                                  aria-label={t("common.delete", "Odstrániť")}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDeleteSlide(slide)}
+                                >
+                                  <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipHint>
                             </div>
                           </td>
                         </tr>

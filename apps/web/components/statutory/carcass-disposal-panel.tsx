@@ -12,14 +12,20 @@ import {
   Search,
   CheckCircle2,
   Calendar,
-  X,
   Building2,
   Scale,
   FileCheck,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
@@ -435,16 +441,17 @@ export function CarcassDisposalPanel() {
                       {r.storageLocation || t("statutory.carcass.freezerBox", "Mraziaci box")}
                     </td>
                     <td className="p-3 whitespace-nowrap text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handlePrintDisposalSlip(r)}
-                        className="h-7 gap-1 px-2 text-xs text-primary hover:bg-primary/10"
-                        title="Vytlačiť sprievodný doklad pre kafilériu a RVPS"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                        <span>{t("statutory.carcass.printSlip", "Tlačiť")}</span>
-                      </Button>
+                      <TooltipHint content="Vytlačiť sprievodný doklad pre kafilériu a RVPS">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePrintDisposalSlip(r)}
+                          className="h-7 gap-1 px-2 text-xs text-primary hover:bg-primary/10"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          <span>{t("statutory.carcass.printSlip", "Tlačiť")}</span>
+                        </Button>
+                      </TooltipHint>
                     </td>
                   </tr>
                 ))}
@@ -455,25 +462,16 @@ export function CarcassDisposalPanel() {
       </div>
 
       {/* New Carcass Disposal Modal */}
-      {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
+      <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
+        <DialogContent className="w-full max-w-xl gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+            <DialogHeader className="text-left pb-3 border-b border-border pr-8">
               <div className="flex items-center gap-2">
-                <Skull className="h-5 w-5 text-rose-600" />
-                <h3 className="font-semibold text-base">{t("statutory.carcass.modalTitle", "Záznam o eutanázii a odovzdaní kadáveru")}</h3>
+                <Skull className="h-5 w-5 text-rose-600" aria-hidden="true" />
+                <DialogTitle className="font-semibold text-base">{t("statutory.carcass.modalTitle", "Záznam o eutanázii a odovzdaní kadáveru")}</DialogTitle>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setIsNewModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            </DialogHeader>
 
-            <form onSubmit={handleSubmitNew} className="mt-4 space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <form onSubmit={handleSubmitNew} className="mt-1 space-y-4 pr-1">
               <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200">
                 {t("statutory.carcass.sympathyNotice", "Upozornenie (Clinical Sympathy Gate): Uložením tohto záznamu bude pacient trvalo označený ako uhynutý, automaticky sa zrušia všetky preventívne pripomienky a aktivuje sa ochrana pred marketingovou komunikáciou voči majiteľovi.")}
               </div>
@@ -636,9 +634,8 @@ export function CarcassDisposalPanel() {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
