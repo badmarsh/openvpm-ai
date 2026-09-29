@@ -104,7 +104,7 @@ export const underlineTabsTriggerClass =
   "gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none";
 
 export const tableHeadClass =
-  "h-9 px-3 py-2 text-left align-middle text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
+  "h-9 px-3 py-2 text-left align-middle text-2xs font-semibold uppercase tracking-wider text-muted-foreground";
 
 export const tableCellClass = "px-3 py-2 align-middle text-xs";
 
@@ -197,7 +197,7 @@ export function KpiCard({
         {value}
       </span>
       {hint ? (
-        <span className="mt-0.5 block text-[11px] font-medium text-destructive truncate">
+        <span className="mt-0.5 block text-2xs font-medium text-destructive truncate">
           {hint}
         </span>
       ) : null}

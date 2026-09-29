@@ -1357,7 +1357,7 @@ function InvoiceRow({
         <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
           <span>{formatCurrency(invoice.paidAmount)}</span>
           {adjustedAmount > 0 && (
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-2xs text-muted-foreground">
               {t("billing.row.adjPrefix", `Adj ${formatCurrency(adjustedAmount)}`, {
                 amount: formatCurrency(adjustedAmount),
               })}

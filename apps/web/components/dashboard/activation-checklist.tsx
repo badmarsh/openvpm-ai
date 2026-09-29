@@ -501,7 +501,7 @@ export function ActivationChecklist() {
                 </span>
                 <p
                   className={cn(
-                    "min-w-0 flex-1 truncate text-[13px] font-medium",
+                    "min-w-0 flex-1 truncate text-sm font-medium",
                     m.done && "text-zinc-400 line-through",
                   )}
                 >

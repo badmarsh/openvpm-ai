@@ -254,7 +254,7 @@ export function VoiceCommandsModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold">Hlasové Príkazy</h2>
-                <Badge variant="outline" className="text-[10px] font-mono gap-1 border-violet-300 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                <Badge variant="outline" className="text-3xs font-mono gap-1 border-violet-300 dark:border-violet-800 text-violet-700 dark:text-violet-300">
                   <Sparkles className="h-2.5 w-2.5" /> STT Control
                 </Badge>
               </div>
@@ -340,7 +340,7 @@ export function VoiceCommandsModal({
                         </span>
                         <Badge
                           variant="outline"
-                          className={cn("text-[10px] font-medium border", cmd.badgeColor)}
+                          className={cn("text-3xs font-medium border", cmd.badgeColor)}
                         >
                           {cmd.categoryLabel}
                         </Badge>
@@ -350,7 +350,7 @@ export function VoiceCommandsModal({
                         {cmd.description}
                       </p>
 
-                      <div className="mt-1 text-[11px] text-muted-foreground/80 italic">
+                      <div className="mt-1 text-2xs text-muted-foreground/80 italic">
                         Príklad: {cmd.exampleUsage}
                       </div>
                     </div>

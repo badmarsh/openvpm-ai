@@ -117,7 +117,7 @@ function PrescriptionStatusBadge({
   return (
     <Badge
       variant="outline"
-      className={cn("h-5 px-2 text-[10px] font-semibold tracking-wide uppercase", tokenClasses[status])}
+      className={cn("h-5 px-2 text-3xs font-semibold tracking-wide uppercase", tokenClasses[status])}
     >
       {label}
     </Badge>
@@ -468,7 +468,7 @@ export default function MedicationOversightPage() {
               "Omamné a psychotropné látky (Zákon 139/1998 Z. z. a Zákon 39/2007 Z. z.) vyžadujú manuálny zápis, nulový AI prefill a potvrdenie podpisom veterinárneho lekára.",
             )}
           </p>
-          <p className="text-[11px]">
+          <p className="text-2xs">
             {t(
               "medications.veterinarianSignatureRequired",
               "Overenie podpisu veterinárneho lekára je povinné pred výdajom liečiva.",
@@ -509,7 +509,7 @@ export default function MedicationOversightPage() {
                 <span>{pillLabels[pillKey]}</span>
                 <span
                   className={cn(
-                    "ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-mono tabular-nums",
+                    "ml-0.5 rounded-full px-1.5 py-0.2 text-3xs font-mono tabular-nums",
                     isSelected
                       ? "bg-primary-foreground/20 text-primary-foreground"
                       : "bg-muted text-muted-foreground",
@@ -642,7 +642,7 @@ export default function MedicationOversightPage() {
                         {row.isControlled && (
                           <Badge
                             variant="destructive"
-                            className="h-4 gap-1 px-1.5 text-[10px]"
+                            className="h-4 gap-1 px-1.5 text-3xs"
                           >
                             <ShieldAlert className="h-2.5 w-2.5" />
                             OPL
@@ -650,7 +650,7 @@ export default function MedicationOversightPage() {
                         )}
                       </div>
                       {row.instructions && (
-                        <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
+                        <p className="mt-0.5 line-clamp-1 text-2xs text-muted-foreground">
                           {row.instructions}
                         </p>
                       )}
@@ -659,7 +659,7 @@ export default function MedicationOversightPage() {
                     {/* Dense Mono Dosage Units */}
                     <td className={cn(tableCellClass, "font-mono tabular-nums text-xs text-foreground")}>
                       <div>{row.dosage}</div>
-                      <div className="text-[11px] text-muted-foreground font-sans">
+                      <div className="text-2xs text-muted-foreground font-sans">
                         {row.frequency}
                       </div>
                     </td>
@@ -679,7 +679,7 @@ export default function MedicationOversightPage() {
                     <td className={cn(tableCellClass, "text-right font-mono tabular-nums text-xs text-foreground")}>
                       <span>{row.quantity != null ? row.quantity : "—"}</span>
                       {row.refillsRemaining > 0 && (
-                        <span className="block text-[10px] text-muted-foreground font-sans">
+                        <span className="block text-3xs text-muted-foreground font-sans">
                           {t("medications.refills", "+{count} opakovaní", {
                             count: row.refillsRemaining,
                           })}
@@ -707,7 +707,7 @@ export default function MedicationOversightPage() {
                           {row.signedByName}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[10px] text-muted-foreground">
+                      <div className="mt-0.5 text-3xs text-muted-foreground">
                         {row.isSigned ? (
                           <span className="text-success-muted-foreground">
                             {t("medications.statutorySigned", "Autorizované (Z. 39/2007)")}
@@ -849,7 +849,7 @@ export default function MedicationOversightPage() {
                     <ShieldAlert className="h-4 w-4" />
                     <span>Zákon 139/1998 Z. z. & Zákon 39/2007 Z. z.</span>
                   </div>
-                  <p className="text-[11px] text-destructive leading-relaxed">
+                  <p className="text-2xs text-destructive leading-relaxed">
                     {t(
                       "medications.controlledSubstanceDetected",
                       "Detegovaná omamná látka (Zákon 139/1998 Z. z.). Automatický prefill je blokovaný; vyžaduje sa explicitný manuálny zápis a potvrdenie ošetrujúcim veterinárom.",
@@ -862,7 +862,7 @@ export default function MedicationOversightPage() {
                         setNewControlledConfirmed(checked)
                       }
                     />
-                    <span className="text-[11px]">
+                    <span className="text-2xs">
                       {t(
                         "medications.confirmControlledSubstance",
                         "Potvrdzujem klinickú indikáciu a zodpovednosť za túto omamnú/psychotropnú látku podľa Zákona 139/1998 Z. z. a Zákona 39/2007 Z. z.",

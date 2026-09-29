@@ -189,7 +189,7 @@ export function AiFlyerGenerator({
             maxLength={500}
             className="rounded-xl bg-background text-sm resize-none"
           />
-          <p className="text-[10px] text-muted-foreground text-right">
+          <p className="text-3xs text-muted-foreground text-right">
             {prompt.length}/500
           </p>
         </div>
@@ -198,11 +198,11 @@ export function AiFlyerGenerator({
         {handoutTitle && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Kontext letáku:</span>
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge variant="secondary" className="text-3xs">
               {handoutTitle}
             </Badge>
             {species && species.length > 0 && (
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-3xs">
                 {species.join(", ")}
               </Badge>
             )}
@@ -281,7 +281,7 @@ export function AiFlyerGenerator({
           </div>
 
           <div className="rounded-xl bg-muted/40 border p-2.5 space-y-1">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-3xs font-semibold text-muted-foreground uppercase tracking-wider">
               Použitý prompt
             </p>
             <p className="text-xs text-foreground italic">"{result.prompt}"</p>

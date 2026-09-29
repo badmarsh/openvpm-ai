@@ -608,7 +608,7 @@ function AppointmentBlock({
         <span className="min-w-0 truncate font-semibold tracking-tight">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
       </div>
       {height >= 36 && (
-        <div className="min-w-0 text-muted-foreground overflow-hidden text-ellipsis truncate mt-0.5 font-mono tabular-nums text-[11px]">
+        <div className="min-w-0 text-muted-foreground overflow-hidden text-ellipsis truncate mt-0.5 font-mono tabular-nums text-2xs">
           <span className="font-sans font-medium text-foreground/80">{appointment.typeName || t("schedule.appointmentFallback", "Appointment")}</span> &middot;{" "}
           <span>{formatTime(start, timeZone)} - {formatTime(end, timeZone)}</span>
           {appointment.locationName ? ` · ${appointment.locationName}` : ""}
@@ -895,7 +895,7 @@ function PhoneAgenda({
                           {patientName}
                         </span>
                       </span>
-                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-2xs font-medium text-muted-foreground">
                         <StatusDot status={appointment.status} />
                         {appointmentStatusLabel(appointment, t)}
                       </span>
@@ -1070,7 +1070,7 @@ function AppointmentChip({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-6 w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 py-1 text-left text-[11px] leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      className="flex min-h-6 w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 py-1 text-left text-2xs leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
       style={{
         backgroundColor: `${color}18`,
         borderColor: `${color}55`,
@@ -1186,7 +1186,7 @@ function MonthCalendar({
                 {hiddenCount > 0 && (
                   <button
                     type="button"
-                    className="w-full rounded-md px-2 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md px-2 py-1 text-left text-2xs font-medium text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
                     onClick={() => onDayOpen(day.date)}
                   >
                     {t("schedule.moreAppointments", "+{count} more", { count: hiddenCount })}
@@ -1331,7 +1331,7 @@ function ScheduleListView({
                   <div className="font-semibold text-foreground">
                     {formatTime(start, timeZone)}
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-2xs text-muted-foreground">
                     – {formatTime(end, timeZone)}
                   </div>
                 </td>
@@ -1356,7 +1356,7 @@ function ScheduleListView({
                       </span>
                     )}
                     {appointment.patientSpecies && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         ({formatSpecies(appointment.patientSpecies, t)})
                       </span>
                     )}
@@ -1368,7 +1368,7 @@ function ScheduleListView({
                       t("schedule.clientNotListed", "Client not listed")}
                   </div>
                   {appointment.clientPhone && (
-                    <div className="truncate text-[11px] text-muted-foreground">
+                    <div className="truncate text-2xs text-muted-foreground">
                       {appointment.clientPhone}
                     </div>
                   )}
@@ -1926,7 +1926,7 @@ function AppointmentDetailPopover({
                 )}
                 {appointment.roomName && (
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[11px] text-muted-foreground">#</span>
+                    <span className="font-bold text-2xs text-muted-foreground">#</span>
                     <span>{appointment.roomName}</span>
                   </div>
                 )}

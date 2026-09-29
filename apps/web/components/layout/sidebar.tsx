@@ -384,7 +384,7 @@ export function Sidebar({
                 {branding?.name ?? t("common.defaultClinicNameShort", "MVDr. Martin Sýkora")}
               </span>
               <span
-                className="text-[10px] text-muted-foreground block font-medium truncate leading-tight mt-0.5"
+                className="text-3xs text-muted-foreground block font-medium truncate leading-tight mt-0.5"
                 title={t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
               >
                 {t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
@@ -450,7 +450,7 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={() => toggleSection(section.id)}
-                    className="flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer group"
+                    className="flex w-full items-center justify-between px-3 py-1 text-3xs font-bold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer group"
                   >
                     <span>{t(section.titleKey, section.titleFallback)}</span>
                     {isSectionCollapsed ? (
@@ -520,14 +520,14 @@ export function Sidebar({
                               unreadInboxCount > 0 && (
                                 <span
                                   aria-label={`${unreadInboxCount} unread inbox conversations`}
-                                  className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground"
+                                  className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-3xs font-semibold leading-none text-primary-foreground"
                                 >
                                   {unreadInboxLabel}
                                 </span>
                               )}
 
                             {!isCollapsed && item.badge && (
-                              <span className="ml-auto rounded-md bg-background px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-wider text-foreground ring-1 ring-border">
+                              <span className="ml-auto rounded-md bg-background px-1.5 py-0.5 text-4xs font-extrabold uppercase leading-none tracking-wider text-foreground ring-1 ring-border">
                                 {item.badge}
                               </span>
                             )}
@@ -559,7 +559,7 @@ export function Sidebar({
                   .slice(0, 2)}
               </div>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-[11px] text-muted-foreground capitalize font-medium">
+                <p className="truncate text-2xs text-muted-foreground capitalize font-medium">
                   {session.user.role
                     ? t(
                         `roles.${session.user.role}`,

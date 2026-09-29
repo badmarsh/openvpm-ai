@@ -805,7 +805,7 @@ export function CommandSearch({
                       </div>
                     </div>
                     {patient.microchipNumber && (
-                      <span className="shrink-0 rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">
+                      <span className="shrink-0 rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-3xs text-muted-foreground tabular-nums">
                         {t("commandSearch.chipPrefix", "Chip: ")}{patient.microchipNumber}
                       </span>
                     )}
@@ -977,18 +977,18 @@ export function CommandSearch({
           </Command.List>
 
           {/* Footer Shortcuts Bar */}
-          <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3 py-2 text-2xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">↑↓</kbd>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-3xs">↑↓</kbd>
               <span>{t("commandSearch.navToNavigate", "to navigate")}</span>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">↵</kbd>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-3xs">↵</kbd>
               <span>{t("commandSearch.navToSelect", "to select")}</span>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">esc</kbd>
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-3xs">esc</kbd>
               <span>{t("commandSearch.navToClose", "to close")}</span>
             </div>
-            <span className="font-mono text-[10px] opacity-70">{t("commandSearch.spotlightLabel", "Cmd+K Spotlight")}</span>
-            <span className="font-mono text-[10px] opacity-50">·</span>
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">F1</kbd>
+            <span className="font-mono text-3xs opacity-70">{t("commandSearch.spotlightLabel", "Cmd+K Spotlight")}</span>
+            <span className="font-mono text-3xs opacity-50">·</span>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-3xs">F1</kbd>
           </div>
         </Command>
       </div>

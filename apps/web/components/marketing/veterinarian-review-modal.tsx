@@ -247,13 +247,13 @@ export function VeterinarianReviewModal({
           {/* Target Channels & Audience */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="border rounded-lg p-2.5 space-y-1 bg-background">
-              <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+              <span className="text-3xs text-muted-foreground font-medium flex items-center gap-1">
                 <Globe className="h-3 w-3" />
                 {t("marketing.reviewDrawer.channelsLabel", "Cieľové kanály")}
               </span>
               <div className="flex flex-wrap gap-1 pt-0.5">
                 {brief.targetChannels?.map((ch) => (
-                  <Badge key={ch} variant="secondary" className="text-[10px]">
+                  <Badge key={ch} variant="secondary" className="text-3xs">
                     {ch.replace("_", " ")}
                   </Badge>
                 ))}
@@ -261,7 +261,7 @@ export function VeterinarianReviewModal({
             </div>
 
             <div className="border rounded-lg p-2.5 space-y-1 bg-background">
-              <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+              <span className="text-3xs text-muted-foreground font-medium flex items-center gap-1">
                 <Users className="h-3 w-3" />
                 {t("marketing.reviewDrawer.audienceLabel", "Cieľová skupina")}
               </span>
@@ -290,11 +290,11 @@ export function VeterinarianReviewModal({
                     className="rounded-lg border border-amber-300/70 bg-amber-50/40 p-3 space-y-1.5 dark:border-amber-800/60 dark:bg-amber-950/20"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <Badge variant="outline" className="text-[10px] bg-background">
+                      <Badge variant="outline" className="text-3xs bg-background">
                         {getClaimKindLabel(claimItem.kind)}
                       </Badge>
                       {claimItem.sourceRef && (
-                        <span className="text-[10px] text-muted-foreground italic">
+                        <span className="text-3xs text-muted-foreground italic">
                           Zdroj: {claimItem.sourceRef}
                         </span>
                       )}
@@ -311,7 +311,7 @@ export function VeterinarianReviewModal({
           {/* Statutory KVL SR Declaration */}
           <Alert className="border-emerald-300 bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-200 py-2.5">
             <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-            <AlertDescription className="text-[11px] leading-relaxed">
+            <AlertDescription className="text-2xs leading-relaxed">
               {t(
                 "marketing.reviewDrawer.statutoryDeclaration",
                 "Potvrdzujem ako veterinárny lekár, že obsah spĺňa etické a odborné požiadavky Komory veterinárnych lekárov SR a Zákona 39/2007 Z. z. o veterinárnej starostlivosti."
@@ -329,7 +329,7 @@ export function VeterinarianReviewModal({
                 )}
               </Label>
               {brief.reviewerName && (
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <span className="text-3xs text-muted-foreground flex items-center gap-1">
                   <UserCheck className="h-3 w-3 text-emerald-600" />
                   {brief.reviewerName}
                 </span>
@@ -355,7 +355,7 @@ export function VeterinarianReviewModal({
               disabled={!isDoctor}
             />
             {noteError && (
-              <p className="text-[11px] text-destructive font-medium">{noteError}</p>
+              <p className="text-2xs text-destructive font-medium">{noteError}</p>
             )}
           </div>
 
@@ -363,7 +363,7 @@ export function VeterinarianReviewModal({
           {!isDoctor && (
             <Alert className="border-rose-300 bg-rose-50/60 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 py-2">
               <ShieldAlert className="h-4 w-4 text-rose-600 dark:text-rose-400 mt-0.5" />
-              <AlertDescription className="text-[11px]">
+              <AlertDescription className="text-2xs">
                 {t(
                   "marketing.reviewDrawer.roleRestricted",
                   "Schválenie a zamietnutie klinického obsahu smie vykonať iba registrovaný veterinárny lekár alebo správca kliniky."

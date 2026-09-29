@@ -692,7 +692,7 @@ export default function MarketingWebsitePage() {
         }
       >
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant={config?.published ? "success" : "secondary"} className="text-[11px]">
+          <Badge variant={config?.published ? "success" : "secondary"} className="text-2xs">
             {config?.published
               ? t("marketing.website.statusPublished", "Online / Publikovaná")
               : t("marketing.website.statusDraft", "Príprava (Koncept)")}
@@ -773,7 +773,7 @@ export default function MarketingWebsitePage() {
             <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
             {t("marketing.website.tabInquiries", "Dopyty z webu")}
             {(config?.inquiriesCount ?? 0) > 0 ? (
-              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-3xs">
                 {config?.inquiriesCount}
               </Badge>
             ) : null}
@@ -789,7 +789,7 @@ export default function MarketingWebsitePage() {
                 <span className="text-xs font-semibold text-foreground">
                   {t("marketing.website.editor.heading", "Editor webstránky kliniky")}
                 </span>
-                <Badge variant="outline" className="text-[11px] font-medium">
+                <Badge variant="outline" className="text-2xs font-medium">
                   {sectionCountLabel(sections.length, t)}
                 </Badge>
               </div>
@@ -1024,7 +1024,7 @@ export default function MarketingWebsitePage() {
                         <td className={tableCellClass}>
                           <Badge
                             variant="outline"
-                            className="max-w-[18rem] gap-1 truncate text-[11px] font-normal"
+                            className="max-w-[18rem] gap-1 truncate text-2xs font-normal"
                             title={t(
                               "marketing.website.sections.previewChipTitle",
                               "Náhľad obsahu sekcie: {preview}",
@@ -1038,7 +1038,7 @@ export default function MarketingWebsitePage() {
                         <td className={tableCellClass}>
                           <Badge
                             variant={section.visible ? "success" : "secondary"}
-                            className="text-[11px] font-medium"
+                            className="text-2xs font-medium"
                           >
                             {section.visible
                               ? t("marketing.website.sections.visible", "Zobrazená")
@@ -1278,7 +1278,7 @@ export default function MarketingWebsitePage() {
                               type="button"
                               variant="link"
                               size="sm"
-                              className="h-6 gap-1 px-0 text-[11px]"
+                              className="h-6 gap-1 px-0 text-2xs"
                             >
                               <Link href={`/clients/${inquiry.clientId}`}>
                                 <UserCheck className="h-3 w-3" aria-hidden="true" />
@@ -1318,7 +1318,7 @@ export default function MarketingWebsitePage() {
                           </p>
                         </td>
                         <td className={tableCellClass}>
-                          <Badge variant={badge.variant} className="text-[11px] font-medium">
+                          <Badge variant={badge.variant} className="text-2xs font-medium">
                             {badge.label}
                           </Badge>
                         </td>

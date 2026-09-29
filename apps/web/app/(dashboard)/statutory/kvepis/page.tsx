@@ -560,15 +560,15 @@ export default function KvepisPage() {
                 }
               />
               {chip.state === "invalidLength" ? (
-                <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                <p className="text-2xs font-medium text-amber-600 dark:text-amber-400">
                   {t("statutory.kvepis.chipLength", "The transponder must be exactly 15 digits (ISO 11784).")}
                 </p>
               ) : chip.state === "invalidLuhn" ? (
-                <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                <p className="text-2xs font-medium text-amber-600 dark:text-amber-400">
                   {t("statutory.kvepis.chipLuhn", "Luhn checksum does not match – verify the transponder number.")}
                 </p>
               ) : chip.state === "valid" ? (
-                <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                <p className="text-2xs font-medium text-emerald-600 dark:text-emerald-400">
                   {t("statutory.kvepis.chipOk", "Valid 15-digit ISO 11784 transponder.")}
                   {chip.slovak
                     ? ` ${t("statutory.kvepis.chipSlovakPrefix", "Slovak national code prefix 703.")}`
@@ -741,7 +741,7 @@ export default function KvepisPage() {
                         <div className="text-xs font-medium text-foreground">
                           {s.patientName || "—"}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           {[
                             s.species,
                             s.farmIco
@@ -801,7 +801,7 @@ export default function KvepisPage() {
                                         {t("statutory.kvepis.errorTitle", "Transmission failed")}
                                       </span>
                                       {s.errorCode && (
-                                        <span className="rounded bg-red-600/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-700 dark:text-red-300">
+                                        <span className="rounded bg-red-600/10 px-1.5 py-0.5 font-mono text-2xs font-semibold text-red-700 dark:text-red-300">
                                           {t("statutory.kvepis.failureCode", "Failure code: {code}", {
                                             code: s.errorCode,
                                           })}
@@ -957,7 +957,7 @@ export default function KvepisPage() {
                                     )}
                                     <span>
                                       <span className="font-mono font-semibold">{issue.field}</span> — {issue.message}{" "}
-                                      <span className="font-mono text-[10px] opacity-70">[{issue.code}]</span>
+                                      <span className="font-mono text-3xs opacity-70">[{issue.code}]</span>
                                     </span>
                                   </div>
                                 ))}

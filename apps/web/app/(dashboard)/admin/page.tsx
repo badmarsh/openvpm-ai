@@ -509,7 +509,7 @@ export default function AdminPage() {
                           <div className="max-w-sm">
                             <div className="truncate">{session.module}</div>
                             {session.promptSummary ? (
-                              <div className="truncate text-[11px] text-muted-foreground">
+                              <div className="truncate text-2xs text-muted-foreground">
                                 {session.promptSummary}
                               </div>
                             ) : null}
@@ -517,37 +517,37 @@ export default function AdminPage() {
                         </td>
                         <td className={tableCellClass}>
                           {session.status === "COMPLETED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-success-muted px-2 py-0.5 text-[11px] font-medium text-success-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-success-muted px-2 py-0.5 text-2xs font-medium text-success-muted-foreground">
                               <CheckCircle className="h-3 w-3" />
                               {t("admin.systemHealth.merged", "Merged")}
                             </span>
                           ) : session.status === "RUNNING" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-[11px] font-medium text-info-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-2xs font-medium text-info-muted-foreground">
                               <Radio className="h-3 w-3 animate-pulse" />
                               {t("admin.systemHealth.running", "Running")}
                             </span>
                           ) : session.status === "FAILED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
                               <AlertTriangle className="h-3 w-3" />
                               {t("admin.systemHealth.failed", "Failed")}
                             </span>
                           ) : session.status === "PENDING" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-[11px] font-medium text-warning-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-2xs font-medium text-warning-muted-foreground">
                               <Clock className="h-3 w-3" />
                               {t("admin.systemHealth.pending", "Pending")}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                               {t("admin.systemHealth.unknown", "Unknown")}
                             </span>
                           )}
                         </td>
                         <td className={tableCellClass}>
-                          <div className="max-w-xs truncate text-[11px] text-muted-foreground">
+                          <div className="max-w-xs truncate text-2xs text-muted-foreground">
                             {session.progress || "—"}
                           </div>
                         </td>
-                        <td className={cn(tableCellClass, "font-mono text-[11px] text-muted-foreground")}>
+                        <td className={cn(tableCellClass, "font-mono text-2xs text-muted-foreground")}>
                           {session.createdAt || "—"}
                         </td>
                       </tr>
@@ -1458,7 +1458,7 @@ export default function AdminPage() {
                             {event.providerCampaignStatus ?? "—"}
                           </p>
                         </td>
-                        <td className={cn(tableCellClass, "font-mono text-[11px]")}>
+                        <td className={cn(tableCellClass, "font-mono text-2xs")}>
                           <p className="break-all">event {event.id}</p>
                           <p className="mt-1 break-all text-muted-foreground">
                             operation {event.operationId}

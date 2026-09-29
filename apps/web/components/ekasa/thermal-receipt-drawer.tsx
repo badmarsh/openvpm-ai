@@ -242,10 +242,10 @@ export function ThermalReceiptDrawer({
             {/* Receipt Header */}
             <div className="text-center space-y-1 pb-3 border-b border-dashed border-zinc-400 dark:border-zinc-700">
               <p className="font-bold text-sm tracking-wide uppercase">{clinicName}</p>
-              <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+              <p className="text-2xs text-zinc-600 dark:text-zinc-400">
                 {t("ekasa.drawer.receiptType", "Electronic Cash Register")}
               </p>
-              <div className="pt-1 text-[11px] space-y-0.5 text-zinc-700 dark:text-zinc-300">
+              <div className="pt-1 text-2xs space-y-0.5 text-zinc-700 dark:text-zinc-300">
                 <p>
                   {t("ekasa.drawer.dicLabel", "Tax ID:")}{" "}
                   <span className="tabular-nums font-semibold">{dic}</span>
@@ -264,7 +264,7 @@ export function ThermalReceiptDrawer({
             </div>
 
             {/* Receipt Metadata */}
-            <div className="py-2.5 border-b border-dashed border-zinc-400 dark:border-zinc-700 text-[11px] space-y-1">
+            <div className="py-2.5 border-b border-dashed border-zinc-400 dark:border-zinc-700 text-2xs space-y-1">
               <div className="flex justify-between">
                 <span>{t("ekasa.drawer.docNumber", "RECEIPT NUMBER:")}</span>
                 <span className="font-bold tabular-nums">{receipt.receiptNumber}</span>
@@ -287,11 +287,11 @@ export function ThermalReceiptDrawer({
                 <p className="font-bold text-xs uppercase tracking-wider">
                   {t("ekasa.drawer.stornoBanner", "*** RECEIPT STORNO ***")}
                 </p>
-                <p className="text-[10px] mt-0.5">
+                <p className="text-3xs mt-0.5">
                   {t("ekasa.drawer.originalDocUid", "Pôvodný doklad UID: {uid}", { uid: receipt.originalUid ?? "—" })}
                 </p>
                 {receipt.stornoReason && (
-                  <p className="text-[10px] italic">
+                  <p className="text-3xs italic">
                     {t("ekasa.drawer.stornoReason", "Dôvod: {reason}", { reason: receipt.stornoReason })}
                   </p>
                 )}
@@ -300,7 +300,7 @@ export function ThermalReceiptDrawer({
 
             {/* Itemized Table */}
             <div className="py-3 border-b border-dashed border-zinc-400 dark:border-zinc-700 space-y-2">
-              <div className="flex justify-between font-bold text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <div className="flex justify-between font-bold text-3xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 <span>{t("ekasa.drawer.colItem", "Item / Service")}</span>
                 <span className="tabular-nums">
                   {t("ekasa.drawer.colPriceVat", "Price / VAT")}
@@ -313,12 +313,12 @@ export function ThermalReceiptDrawer({
                   const itemTotal = Number(it.total || unitPrice * qty);
                   const itemVat = it.vatRate ? (VAT_PERCENT_MAP[it.vatRate] ?? it.vatRate) : activeRateNum;
                   return (
-                    <div key={idx} className="flex justify-between text-[11px]">
+                    <div key={idx} className="flex justify-between text-2xs">
                       <div className="flex-1 pr-2 truncate">
                         <p className="font-medium">
                           {it.name || it.description || t("ekasa.drawer.itemFallback", "Item")}
                         </p>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        <p className="text-3xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                           {t("ekasa.drawer.itemLine", "{qty}.000 pcs × {price}", {
                             qty,
                             price: formatAmount(unitPrice),
@@ -327,16 +327,16 @@ export function ThermalReceiptDrawer({
                       </div>
                       <div className="text-right tabular-nums font-semibold">
                         <p>{formatAmount(itemTotal)}</p>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{itemVat} %</p>
+                        <p className="text-3xs text-zinc-500 dark:text-zinc-400">{itemVat} %</p>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="flex justify-between text-[11px]">
+                <div className="flex justify-between text-2xs">
                   <div className="flex-1 pr-2 truncate">
                     <p className="font-medium">{t("ekasa.drawer.defaultService", "Veterinárne vyšetrenie a starostlivosť")}</p>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                    <p className="text-3xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {t("ekasa.drawer.itemLine", "{qty}.000 pcs × {price}", {
                         qty: 1,
                         price: formatAmount(totalNum),
@@ -345,7 +345,7 @@ export function ThermalReceiptDrawer({
                   </div>
                   <div className="text-right tabular-nums font-semibold">
                     <p>{formatAmount(totalNum)}</p>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{activeRateNum} %</p>
+                    <p className="text-3xs text-zinc-500 dark:text-zinc-400">{activeRateNum} %</p>
                   </div>
                 </div>
               )}
@@ -353,10 +353,10 @@ export function ThermalReceiptDrawer({
 
             {/* VAT Rates Breakdown (0%, 5%, 10%, 19%, 23%) */}
             <div className="py-3 border-b border-dashed border-zinc-400 dark:border-zinc-700 space-y-1.5">
-              <p className="font-bold text-[10px] uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              <p className="font-bold text-3xs uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                 {t("ekasa.drawer.vatLaw", "VAT breakdown (Act No. 222/2004 Coll.)")}
               </p>
-              <table className="w-full text-[10px] tabular-nums">
+              <table className="w-full text-3xs tabular-nums">
                 <thead>
                   <tr className="border-b border-zinc-300 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400">
                     <th className="text-left font-semibold pb-1">
@@ -407,7 +407,7 @@ export function ThermalReceiptDrawer({
                 <span>{t("ekasa.drawer.totalAmount", "TOTAL AMOUNT:")}</span>
                 <span className="text-lg tabular-nums">{formatAmount(totalNum)}</span>
               </div>
-              <div className="flex justify-between text-[11px] text-zinc-600 dark:text-zinc-400">
+              <div className="flex justify-between text-2xs text-zinc-600 dark:text-zinc-400">
                 <span>
                   {t("ekasa.drawer.paidTotal", "PAID ({method}):", {
                     method: paymentMethodLabel,
@@ -420,7 +420,7 @@ export function ThermalReceiptDrawer({
             </div>
 
             {/* Cryptographic Security Block (e-Kasa UID / OKP / PKP) */}
-            <div className="pt-3 pb-2 space-y-2 text-[10px]">
+            <div className="pt-3 pb-2 space-y-2 text-3xs">
               {receipt.uid ? (
                 <div>
                   <div className="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
@@ -435,12 +435,12 @@ export function ThermalReceiptDrawer({
                       {t("ekasa.drawer.copy", "Kopírovať")}
                     </button>
                   </div>
-                  <p className="font-mono break-all text-[9.5px] select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
+                  <p className="font-mono break-all text-3xs select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
                     {receipt.uid}
                   </p>
                 </div>
               ) : (
-                <div className="rounded bg-amber-50 dark:bg-amber-950/30 p-1.5 text-amber-800 dark:text-amber-200 text-[10px] flex items-center gap-1.5">
+                <div className="rounded bg-amber-50 dark:bg-amber-950/30 p-1.5 text-amber-800 dark:text-amber-200 text-3xs flex items-center gap-1.5">
                   <AlertTriangle className="h-3 w-3 shrink-0" />
                   <span>{t("ekasa.drawer.offlineNoUid", "Doklad neobsahuje UID z dôvodu offline evidencie.")}</span>
                 </div>
@@ -460,7 +460,7 @@ export function ThermalReceiptDrawer({
                       {t("ekasa.drawer.copy", "Kopírovať")}
                     </button>
                   </div>
-                  <p className="font-mono break-all text-[9.5px] select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
+                  <p className="font-mono break-all text-3xs select-all bg-zinc-100 dark:bg-zinc-900 p-1 rounded mt-0.5">
                     {receipt.okp}
                   </p>
                 </div>
@@ -472,7 +472,7 @@ export function ThermalReceiptDrawer({
               <div className="bg-white p-2 rounded inline-block shadow-xs">
                 <QRCodeSVG value={qrPayload} size={96} level="M" />
               </div>
-              <p className="text-[9px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+              <p className="text-4xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
                 {t("ekasa.drawer.verifyAppNotice", "Overte doklad pomocou aplikácie Over doklad (FS SR)")}
               </p>
             </div>

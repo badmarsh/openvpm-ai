@@ -537,7 +537,7 @@ export default function InteropBridgePage() {
                       {message.failureCode ? (
                         <span
                           title={message.failureCode}
-                          className="font-mono text-[11px] text-muted-foreground"
+                          className="font-mono text-2xs text-muted-foreground"
                         >
                           {reasonLabel(message.failureCode, "interopBridge.reason")}
                         </span>
@@ -681,7 +681,7 @@ export default function InteropBridgePage() {
                     {t(`interopBridge.runtime.${key.runtime}`, key.runtime)}
                   </td>
                   <td className={`${tableCellClass} font-mono`}>{key.keyId}</td>
-                  <td className={`${tableCellClass} truncate font-mono text-[11px]`}>
+                  <td className={`${tableCellClass} truncate font-mono text-2xs`}>
                     {key.fingerprint}
                   </td>
                   <td className={`${tableCellClass} whitespace-nowrap tabular-nums`}>

@@ -435,42 +435,42 @@ export function ClinicalSimulationView({
               <Layers className="h-4 w-4 text-primary shrink-0" />
               <div>
                 <p className="font-semibold">30 Workflowov</p>
-                <p className="text-[11px] text-muted-foreground">J1 až J30 tokov</p>
+                <p className="text-2xs text-muted-foreground">J1 až J30 tokov</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-2.5 shadow-2xs">
               <Stethoscope className="h-4 w-4 text-emerald-600 shrink-0" />
               <div>
                 <p className="font-semibold">12 Prípadov</p>
-                <p className="text-[11px] text-muted-foreground">Kompletná ambulancia</p>
+                <p className="text-2xs text-muted-foreground">Kompletná ambulancia</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-2.5 shadow-2xs">
               <Bot className="h-4 w-4 text-violet-600 shrink-0" />
               <div>
                 <p className="font-semibold">Hermes AI Copilot</p>
-                <p className="text-[11px] text-muted-foreground">Autonómny pozorovateľ</p>
+                <p className="text-2xs text-muted-foreground">Autonómny pozorovateľ</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-2.5 shadow-2xs">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <div>
                 <p className="font-semibold">4 858 Testov</p>
-                <p className="text-[11px] text-muted-foreground">100% Pass Rate</p>
+                <p className="text-2xs text-muted-foreground">100% Pass Rate</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-2.5 shadow-2xs">
               <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0" />
               <div>
                 <p className="font-semibold">Z39 / Z139 / Z289</p>
-                <p className="text-[11px] text-muted-foreground">Slovenská legislatíva</p>
+                <p className="text-2xs text-muted-foreground">Slovenská legislatíva</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 p-2.5 shadow-2xs">
               <Sparkles className="h-4 w-4 text-purple-600 shrink-0" />
               <div>
                 <p className="font-semibold">114 AI Evalov</p>
-                <p className="text-[11px] text-muted-foreground">Klinická presnosť</p>
+                <p className="text-2xs text-muted-foreground">Klinická presnosť</p>
               </div>
             </div>
           </div>
@@ -498,13 +498,13 @@ export function ClinicalSimulationView({
 
         <CardContent className="p-4 space-y-3">
           <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 text-xs space-y-1.5 font-mono">
-            <div className="text-violet-400 font-bold uppercase tracking-wider text-[11px]">
+            <div className="text-violet-400 font-bold uppercase tracking-wider text-2xs">
               [HERMES AUTONÓMNA POZNÁMKA & DIAGNOSTICKÁ HYPOTÉZA]
             </div>
             <p className="text-slate-200 leading-relaxed text-xs">
               {activeScenarioObj.hermesSummary}
             </p>
-            <div className="pt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-400 border-t border-slate-800/80">
+            <div className="pt-2 flex flex-wrap items-center gap-3 text-2xs text-slate-400 border-t border-slate-800/80">
               <span>🩺 Signalment: <strong>{activeScenarioObj.species}</strong></span>
               <span>🛡️ Clinical Guardian: <strong className="text-emerald-400">100% Active</strong></span>
               <span>📜 KVL SR HMAC: <strong className="text-sky-400">sha256:verified</strong></span>
@@ -588,12 +588,12 @@ export function ClinicalSimulationView({
                     <span>{s.icon}</span>
                     <span>{s.name}</span>
                   </span>
-                  <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-medium", s.badgeColor)}>
+                  <Badge variant="outline" className={cn("text-3xs px-1.5 py-0 font-medium", s.badgeColor)}>
                     {s.highlight}
                   </Badge>
                 </div>
-                <p className="text-[11px] font-medium text-muted-foreground mb-1">{s.species}</p>
-                <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-relaxed">{s.desc}</p>
+                <p className="text-2xs font-medium text-muted-foreground mb-1">{s.species}</p>
+                <p className="text-2xs text-muted-foreground/90 line-clamp-2 leading-relaxed">{s.desc}</p>
               </button>
             );
           })}
@@ -698,12 +698,12 @@ export function ClinicalSimulationView({
                   <div key={p.id} className="rounded-lg border border-border bg-card p-3.5 space-y-1.5 shadow-2xs">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-xs text-primary">{p.id} · {p.name}</span>
-                      <Badge variant="secondary" className="text-[10px] py-0">{p.role}</Badge>
+                      <Badge variant="secondary" className="text-3xs py-0">{p.role}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{p.profile}</p>
                     <div className="pt-1 border-t border-border/60">
-                      <span className="text-[11px] font-semibold text-foreground/80">Kľúčové toky: </span>
-                      <span className="text-[11px] text-muted-foreground">{p.focus}</span>
+                      <span className="text-2xs font-semibold text-foreground/80">Kľúčové toky: </span>
+                      <span className="text-2xs text-muted-foreground">{p.focus}</span>
                     </div>
                   </div>
                 ))}
@@ -718,12 +718,12 @@ export function ClinicalSimulationView({
                     <div key={g.id} className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-3.5 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-xs text-amber-900 dark:text-amber-300">GAP {g.id}: {g.title}</span>
-                        <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 text-[10px]">
+                        <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 text-3xs">
                           {g.severity}
                         </Badge>
                       </div>
                       <p className="text-xs text-amber-800/90 dark:text-amber-300/80">{g.desc}</p>
-                      <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      <p className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400">
                         Riešenie: {g.solution}
                       </p>
                     </div>
@@ -774,7 +774,7 @@ export function ClinicalSimulationView({
                       <span>{l.law}</span>
                     </div>
                     <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">{l.name}</p>
-                    <ul className="space-y-1 text-[11px] text-emerald-900/80 dark:text-emerald-300/80 list-disc list-inside">
+                    <ul className="space-y-1 text-2xs text-emerald-900/80 dark:text-emerald-300/80 list-disc list-inside">
                       {l.points.map((pt, i) => (
                         <li key={i} className="leading-relaxed">{pt}</li>
                       ))}

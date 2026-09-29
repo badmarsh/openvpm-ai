@@ -127,7 +127,7 @@ export function WebsiteRenderer({
           {practice?.address && `${practice.address} · `}
           {practice?.phone && `Tel: ${practice.phone}`}
         </p>
-        <p className="text-[11px] text-muted-foreground/70 pt-2">
+        <p className="text-2xs text-muted-foreground/70 pt-2">
           Poháňané systémom <span className="font-bold text-foreground">OpenVPM AI</span> · Veterinárna klinická správa & marketing
         </p>
       </footer>

@@ -71,7 +71,7 @@ export function MicButton({
         )}
       </button>
       {interim && (
-        <span className="absolute top-full left-0 mt-1 z-50 text-[11px] italic text-muted-foreground bg-background border rounded px-2 py-0.5 shadow-sm whitespace-nowrap max-w-[220px] truncate pointer-events-none">
+        <span className="absolute top-full left-0 mt-1 z-50 text-2xs italic text-muted-foreground bg-background border rounded px-2 py-0.5 shadow-sm whitespace-nowrap max-w-[220px] truncate pointer-events-none">
           {interim}
         </span>
       )}

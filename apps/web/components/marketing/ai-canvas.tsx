@@ -136,10 +136,10 @@ export function AiCanvas({ onGenerated }: { onGenerated?: () => void }) {
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             Nálezy veterinárneho validátora etiky:
           </div>
-          <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300">
+          <ul className="list-disc list-inside space-y-1 text-2xs text-amber-800 dark:text-amber-300">
             {report.findings.map((f: any, i: number) => (
               <li key={i}>
-                <span className="font-semibold uppercase text-[10px] bg-amber-200 dark:bg-amber-900 px-1 py-0.5 rounded mr-1">
+                <span className="font-semibold uppercase text-3xs bg-amber-200 dark:bg-amber-900 px-1 py-0.5 rounded mr-1">
                   {f.severity || f.type}
                 </span>
                 {f.message || f.rule}

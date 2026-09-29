@@ -122,7 +122,7 @@ export function ClinicIntentBuilder({
         {beforeChoices}
 
         {resolvedIntro ? (
-          <p className="max-w-2xl text-[15px] leading-7 text-slate-600 sm:text-base">
+          <p className="max-w-2xl text-base leading-7 text-slate-600">
             {resolvedIntro}
           </p>
         ) : null}
@@ -160,7 +160,7 @@ export function ClinicIntentBuilder({
                     >
                       <Icon className="h-5 w-5" strokeWidth={1.8} />
                     </span>
-                    <span className="mt-2.5 block max-w-[10rem] text-[13px] font-semibold leading-[1.3] text-slate-900 sm:text-sm">
+                    <span className="mt-2.5 block max-w-[10rem] text-sm font-semibold leading-[1.3] text-slate-900">
                       {t(
                         `onboarding.models.${option.value}.label`,
                         option.label,
@@ -216,7 +216,7 @@ export function ClinicIntentBuilder({
                     >
                       <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                     </span>
-                    <span className="min-w-0 flex-1 text-[13px] font-medium leading-5 text-slate-800 sm:text-sm">
+                    <span className="min-w-0 flex-1 text-sm font-medium leading-5 text-slate-800">
                       {t(
                         `onboarding.firstGoals.${option.value}.label`,
                         option.label,
@@ -288,7 +288,7 @@ export function ClinicIntentBuilder({
                     style={{ animationDelay: `${index * 90}ms` }}
                     className="onboarding-task-in relative flex items-center gap-3 rounded-2xl border border-white bg-white/90 p-2.5 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.4)] sm:p-3"
                   >
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground shadow-sm">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-2xs font-bold text-primary-foreground shadow-sm">
                       {index + 1}
                     </span>
                     <span className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

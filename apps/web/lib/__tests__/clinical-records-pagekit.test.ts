@@ -169,7 +169,7 @@ describe("clinical records hub page-kit adoption", () => {
     );
     expect(src).not.toContain('<div className="overflow-x-auto rounded-lg border border-border">');
     expect(src).not.toContain(
-      '<th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">',
+      '<th className="px-3 py-2 text-left text-2xs font-semibold uppercase tracking-wider text-muted-foreground">',
     );
     expect(src).not.toMatch(/<td className="px-3 py-2/);
     expect(src).toContain("<th className={tableHeadClass}>");

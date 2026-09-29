@@ -406,7 +406,7 @@ export function WholesalerImportDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   {t(
                     "inventory.wholesalerImport.wholesalerHint",
                     "Voľba „Automaticky rozpoznať“ detekuje formát podľa obsahu súboru."
@@ -656,7 +656,7 @@ export function WholesalerImportDialog({
                     retailPriceOverride: undefined,
                   }])));
                 }}>{t("inventory.wholesalerImport.applyCategoryMarkup")}</Button>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   {t(
                     "inventory.wholesalerImport.markupHint",
                     "Navrhovaná predajná cena = nákupná cena bez DPH × (1 + marža). Jednotlivé riadky môžete upraviť ručne."
@@ -710,7 +710,7 @@ export function WholesalerImportDialog({
                               <div className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
                                 {item.name}
                                 {isControlled && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-semibold">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 text-3xs font-semibold">
                                     <ShieldAlert className="h-3 w-3" />
                                     {t("inventory.wholesalerImport.controlledBadge", "Zákon 139/1998 Z. z. – Omamná látka")}
                                   </span>
@@ -734,7 +734,7 @@ export function WholesalerImportDialog({
                                 </div>
                               )}
                               {displayProduct ? (
-                                <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                                <div className="mt-1 flex items-center gap-1.5 text-2xs">
                                   <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
                                   <span className="text-emerald-700 dark:text-emerald-400 truncate max-w-[220px]" title={displayProduct.name}>
                                     {displayProduct.name}
@@ -753,7 +753,7 @@ export function WholesalerImportDialog({
                               ) : (
                                 <button
                                   type="button"
-                                  className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:underline"
+                                  className="mt-1 flex items-center gap-1 text-2xs text-primary hover:underline"
                                   disabled={isControlled}
                                   onClick={() => openLinkSearch(idx, item.name)}
                                 >
@@ -773,13 +773,13 @@ export function WholesalerImportDialog({
                                         "inventory.wholesalerImport.linkSearchPlaceholder",
                                         "Hľadať produkt podľa názvu alebo kódu…"
                                       )}
-                                      className="h-7 text-[11px]"
+                                      className="h-7 text-2xs"
                                     />
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="ghost"
-                                      className="h-7 px-2 text-[11px]"
+                                      className="h-7 px-2 text-2xs"
                                       onClick={() => {
                                         setLinkSearchIndex(null);
                                         setLinkSearchText("");
@@ -791,12 +791,12 @@ export function WholesalerImportDialog({
                                   {linkSearchText.trim().length >= 2 && (
                                     <div className="max-h-28 overflow-y-auto rounded border border-border bg-background divide-y divide-border">
                                       {linkSearchQuery.isFetching ? (
-                                        <div className="p-2 text-[11px] text-muted-foreground flex items-center gap-1">
+                                        <div className="p-2 text-2xs text-muted-foreground flex items-center gap-1">
                                           <Loader2 className="h-3 w-3 animate-spin" />
                                           {t("inventory.wholesalerImport.linkSearching", "Hľadám…")}
                                         </div>
                                       ) : (linkSearchQuery.data ?? []).length === 0 ? (
-                                        <div className="p-2 text-[11px] text-muted-foreground">
+                                        <div className="p-2 text-2xs text-muted-foreground">
                                           {t("inventory.wholesalerImport.linkNoResults", "Nenašiel sa žiadny produkt.")}
                                         </div>
                                       ) : (
@@ -804,7 +804,7 @@ export function WholesalerImportDialog({
                                           <button
                                             key={p.id}
                                             type="button"
-                                            className="w-full text-left px-2 py-1.5 text-[11px] hover:bg-muted/50 flex items-center justify-between gap-2"
+                                            className="w-full text-left px-2 py-1.5 text-2xs hover:bg-muted/50 flex items-center justify-between gap-2"
                                             onClick={() => {
                                               setItemState(idx, {
                                                 linkedProduct: {
@@ -833,19 +833,19 @@ export function WholesalerImportDialog({
                               )}
                             </td>
                             {/* Item code */}
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                            <td className="py-2.5 px-3 font-mono text-2xs text-muted-foreground">
                               {item.sku || item.ean || item.suklOrAdcCode || "—"}
                             </td>
                             {/* Batch & expiry */}
                             <td className="py-2.5 px-3">
                               {item.batchNumber && item.batchNumber !== "BEZ-SARZE" ? (
-                                <span className="font-mono text-[11px] font-medium">{item.batchNumber}</span>
+                                <span className="font-mono text-2xs font-medium">{item.batchNumber}</span>
                               ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-semibold">
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-mono text-3xs font-semibold">
                                   {t("inventory.wholesalerImport.noBatch")}
                                 </span>
                               )}
-                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                              <div className="text-3xs text-muted-foreground mt-0.5">
                                 {item.expirationDate
                                   ? `${t("inventory.wholesalerImport.expiryShort", "Exp")}: ${item.expirationDate}`
                                   : t("inventory.wholesalerImport.noExpiry", "Bez expirácie")}
@@ -880,7 +880,7 @@ export function WholesalerImportDialog({
                                     retailPriceOverride: e.target.value,
                                   })
                                 }
-                                className="h-7 w-24 text-right font-mono text-[11px] ml-auto"
+                                className="h-7 w-24 text-right font-mono text-2xs ml-auto"
                                 aria-label={t(
                                   "inventory.wholesalerImport.retailPriceAria",
                                   "Predajná cena za jednotku"
@@ -890,7 +890,7 @@ export function WholesalerImportDialog({
                                 {isControlled ? "—" : t("inventory.wholesalerImport.grossPrice", undefined, { price: priceIncludingVat(retailPriceFor(item, idx), vat) === null ? "—" : formatCurrency(priceIncludingVat(retailPriceFor(item, idx), vat)!) })}
                               </div>
                               {displayProduct?.currentUnitPrice && (
-                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                <div className="text-3xs text-muted-foreground mt-0.5">
                                   {t("inventory.wholesalerImport.currentPrice", "akt.")}{" "}
                                   {formatCurrency(Number(displayProduct.currentUnitPrice))}
                                 </div>
@@ -903,7 +903,7 @@ export function WholesalerImportDialog({
                                 value={action}
                                 onValueChange={(val: ItemAction) => setItemState(idx, { action: val })}
                               >
-                                <SelectTrigger className="h-7 text-[11px] w-[150px]">
+                                <SelectTrigger className="h-7 text-2xs w-[150px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -927,7 +927,7 @@ export function WholesalerImportDialog({
                                 </SelectContent>
                               </Select>
                               {isControlled && action === "skip" && (
-                                <div className="text-[10px] text-purple-600 dark:text-purple-300 mt-0.5">
+                                <div className="text-3xs text-purple-600 dark:text-purple-300 mt-0.5">
                                   {t("inventory.wholesalerImport.controlledNeedsReview", "Vyžaduje kontrolu")}
                                 </div>
                               )}

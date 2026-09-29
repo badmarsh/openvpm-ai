@@ -242,12 +242,12 @@ export function ServicePicker({
                     {service.code || service.category ? (
                       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                         {service.code ? (
-                          <span className="shrink-0 font-mono text-[11px] rounded bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">
+                          <span className="shrink-0 font-mono text-2xs rounded bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">
                             {service.code}
                           </span>
                         ) : null}
                         {service.category ? (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             {service.category}
                           </span>
                         ) : null}

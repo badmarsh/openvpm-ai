@@ -44,7 +44,7 @@ export function IntegrationModeBanner({
           variant="outline"
           className={`bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-200 ${
             isSm
-              ? "text-[10px] px-2 py-0.5 gap-1 font-semibold"
+              ? "text-3xs px-2 py-0.5 gap-1 font-semibold"
               : "text-xs px-2.5 py-1 gap-1.5 font-bold"
           }`}
           title={
@@ -73,7 +73,7 @@ export function IntegrationModeBanner({
         variant="outline"
         className={`bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-200 ${
           isSm
-            ? "text-[10px] px-2 py-0.5 gap-1 font-semibold"
+            ? "text-3xs px-2 py-0.5 gap-1 font-semibold"
           : "text-xs px-2.5 py-1 gap-1.5 font-bold"
         }`}
         title={

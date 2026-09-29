@@ -165,7 +165,7 @@ export function SoapPreview({
           <h3 className="text-sm font-semibold tracking-tight">
             {t("voice.soap.title", "SOAP štruktúrovaný záznam")}
           </h3>
-          <Badge variant="outline" className="text-[11px] font-mono">
+          <Badge variant="outline" className="text-2xs font-mono">
             {t("voice.soap.sectionsCount", "{count}/4 sekcií", {
               count: filledCount,
             })}
@@ -222,7 +222,7 @@ export function SoapPreview({
                   }}
                   disabled={isReformatting}
                   className={cn(
-                    "px-2 py-0.5 text-[11px] font-medium rounded-md transition-all",
+                    "px-2 py-0.5 text-2xs font-medium rounded-md transition-all",
                     activeStyle === st
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -291,13 +291,13 @@ export function SoapPreview({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {charCount > 0 && (
-                    <span className="text-[10px] font-mono text-muted-foreground">
+                    <span className="text-3xs font-mono text-muted-foreground">
                       {t("voice.soap.charCount", "{count} zn.", {
                         count: charCount,
                       })}
                     </span>
                   )}
-                  <span className="text-[11px] text-muted-foreground/80 hidden sm:inline max-w-[220px] xl:max-w-none truncate">
+                  <span className="text-2xs text-muted-foreground/80 hidden sm:inline max-w-[220px] xl:max-w-none truncate">
                     {description}
                   </span>
                 </div>

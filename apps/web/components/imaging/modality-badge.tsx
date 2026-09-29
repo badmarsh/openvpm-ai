@@ -44,7 +44,7 @@ export function ModalityBadge({
       title={label}
       data-modality={code}
       className={cn(
-        "inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide tabular-nums",
+        "inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-3xs font-semibold uppercase tracking-wide tabular-nums",
         BADGE_CLASS[code],
         className,
       )}

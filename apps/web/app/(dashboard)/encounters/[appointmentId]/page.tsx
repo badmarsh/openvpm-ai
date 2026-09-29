@@ -806,7 +806,7 @@ export default function EncounterWorkspacePage() {
                 {patient?.microchipNumber ? (
                   <span
                     data-testid="patient-banner-chip"
-                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-2xs"
                   >
                     <span>{t("encounters.banner.chipLabel", "Chip:")}</span>
                     <span className="font-semibold">{patient.microchipNumber}</span>
@@ -814,7 +814,7 @@ export default function EncounterWorkspacePage() {
                 ) : (
                   <span
                     data-testid="patient-banner-chip"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground italic"
+                    className="inline-flex items-center gap-1 text-2xs text-muted-foreground italic"
                   >
                     {t("encounters.banner.noChip", "No microchip")}
                   </span>

@@ -79,11 +79,11 @@ export function WellnessSection({
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
                   {plan.badge ? (
-                    <Badge variant="default" className="text-[10px] font-semibold">
+                    <Badge variant="default" className="text-3xs font-semibold">
                       {plan.badge}
                     </Badge>
                   ) : isFeatured ? (
-                    <Badge variant="secondary" className="text-[10px] font-medium">
+                    <Badge variant="secondary" className="text-3xs font-medium">
                       Najobľúbenejší
                     </Badge>
                   ) : null}

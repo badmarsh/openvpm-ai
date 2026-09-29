@@ -674,7 +674,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                         </CardTitle>
                         <Badge
                           variant="outline"
-                          className="mt-0.5 text-[10px] font-mono"
+                          className="mt-0.5 text-3xs font-mono"
                         >
                           {ag.badge}
                         </Badge>
@@ -776,7 +776,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                       {t("agent.morningBrief.title", "Ranný prehľad")}
                       {dateLabel ? ` — ${dateLabel}` : ""}
                     </p>
-                    <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+                    <p className="text-2xs text-amber-700/80 dark:text-amber-400/80">
                       {t(
                         "agent.morningBrief.subtitle",
                         "Spustite AI dopyt pre okamžitý prehľad dňa",
@@ -924,7 +924,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                         "AI is built into OpenVPM. Ask a question in plain words, or start with one of these.",
                       )}
                     </p>
-                    <p className="mt-4 text-[11px] text-muted-foreground/80">
+                    <p className="mt-4 text-2xs text-muted-foreground/80">
                       {t("agent.welcome.hint", "Vyberte si otázku z ľavého panelu alebo napíšte vlastnú nižšie.")}
                     </p>
                   </div>
@@ -1018,13 +1018,13 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                         {deepThinking && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] h-4 px-1 border-violet-400 text-violet-600 dark:text-violet-400"
+                            className="text-3xs h-4 px-1 border-violet-400 text-violet-600 dark:text-violet-400"
                           >
                             Pro
                           </Badge>
                         )}
                       </label>
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-3xs text-muted-foreground font-mono">
                         {instruction.length > 0 && `${instruction.length}/${AGENT_INSTRUCTION_MAX_LENGTH}`}
                       </span>
                     </div>
@@ -1053,7 +1053,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                 </div>
 
                 {allowWrites ? (
-                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-[11px] text-amber-900 dark:text-amber-200">
+                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-2xs text-amber-900 dark:text-amber-200">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <p>
                       {t(
@@ -1189,7 +1189,7 @@ function AgentRunner({ isAdmin }: { isAdmin: boolean }) {
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "text-[10px] font-medium",
+                            "text-3xs font-medium",
                             item.type === "voice" && "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
                             item.type === "imaging" && "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
                             item.type === "discharge" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",

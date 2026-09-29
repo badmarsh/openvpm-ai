@@ -528,7 +528,7 @@ function EkasaReceiptsContent() {
                                 {r.receiptNumber}
                               </span>
                               {r.receiptType === "RETURN" && (
-                                <Badge variant="outline" className="h-4 border-warning/40 bg-warning-muted px-1.5 py-0 text-[10px] font-semibold text-warning-muted-foreground">
+                                <Badge variant="outline" className="h-4 border-warning/40 bg-warning-muted px-1.5 py-0 text-3xs font-semibold text-warning-muted-foreground">
                                   {t("ekasa.page.badgeReturn", "VRÁTENIE")}
                                 </Badge>
                               )}
@@ -576,7 +576,7 @@ function EkasaReceiptsContent() {
                                     "ekasa.page.receipts.syncHint",
                                     "Synchronizovať offline doklad s Finančnou správou",
                                   )}
-                                  className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning-muted-foreground hover:bg-warning/25 transition-all shadow-2xs"
+                                  className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-2xs font-semibold text-warning-muted-foreground hover:bg-warning/25 transition-all shadow-2xs"
                                 >
                                   <RefreshCw
                                     className={`h-2.5 w-2.5 ${

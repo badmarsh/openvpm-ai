@@ -80,7 +80,7 @@ export function ClinicalGuardianConfirmDialog({
                 </div>
                 <Badge
                   variant={alert.severity === "critical" ? "destructive" : "secondary"}
-                  className="text-[10px] uppercase font-bold"
+                  className="text-3xs uppercase font-bold"
                 >
                   {alert.severity === "critical"
                     ? t("clinicalGuardian.severity.critical", "Kritické")
@@ -104,7 +104,7 @@ export function ClinicalGuardianConfirmDialog({
           ))}
         </div>
 
-        <div className="rounded-md bg-muted p-2.5 text-[11px] text-muted-foreground">
+        <div className="rounded-md bg-muted p-2.5 text-2xs text-muted-foreground">
           {t(
             "clinicalGuardian.dialog.hitlNotice",
             "Human-in-the-loop (Zákon 39/2007 Z. z.): AI slúži výhradne ako asistent. Konečné klinické rozhodnutie je plne v kompetencii ošetrujúceho veterinárneho lekára.",

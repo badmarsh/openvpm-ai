@@ -66,7 +66,7 @@ export function ConfidenceScoreBadge({
       <Badge
         variant="outline"
         className={`${badgeConfig.style} ${
-          isSm ? "text-[10px] px-1.5 py-0 gap-1" : "text-xs px-2 py-0.5 gap-1.5 font-medium"
+          isSm ? "text-3xs px-1.5 py-0 gap-1" : "text-xs px-2 py-0.5 gap-1.5 font-medium"
         }`}
         title={`AI model: ${model ?? "Standardný model"} | Skóre istoty: ${percentage}%`}
       >
@@ -77,7 +77,7 @@ export function ConfidenceScoreBadge({
       </Badge>
 
       {model && !isSm && (
-        <span className="text-[10px] text-muted-foreground font-mono">
+        <span className="text-3xs text-muted-foreground font-mono">
           [{model}]
         </span>
       )}

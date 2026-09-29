@@ -1335,7 +1335,7 @@ function VoiceDictationContent() {
                       title={t("voice.recording.playerTitle", "Záznam diktátu ({seconds} sekúnd)", { seconds: audioDuration })}
                     />
 
-                    <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                    <p className="flex items-start gap-1.5 text-2xs text-muted-foreground">
                       <Info className="mt-0.5 h-3 w-3 shrink-0" />
                       {t(
                         "voice.recording.retentionNote",
@@ -1380,7 +1380,7 @@ function VoiceDictationContent() {
                     <p className="text-xs font-semibold text-foreground">
                       {t("voice.recording.processing", "AI analyzuje a štruktúruje veterinárne diktovanie…")}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-2xs text-muted-foreground">
                       {t("voice.recording.processingHint", "Prebieha prevod audia na text a kategorizácia do SOAP štruktúry.")}
                     </p>
                   </div>
@@ -1396,7 +1396,7 @@ function VoiceDictationContent() {
                     <CardTitle className="text-sm font-semibold">
                       {t("voice.transcript.title", "Surový prepis diktátu")}
                     </CardTitle>
-                    <span className="text-[11px] text-muted-foreground font-mono">
+                    <span className="text-2xs text-muted-foreground font-mono">
                       {t("voice.transcript.charCount", "{count} znakov", { count: rawTranscript.length })}
                     </span>
                   </div>
@@ -1443,7 +1443,7 @@ function VoiceDictationContent() {
                   {hasSoapContent && (
                     <Badge
                       variant={savedFinalized ? "default" : "outline"}
-                      className="text-[10px]"
+                      className="text-3xs"
                       data-testid="voice-soap-draft-badge"
                     >
                       {savedFinalized
@@ -1475,7 +1475,7 @@ function VoiceDictationContent() {
               <div className={cn("flex-1 flex flex-col p-4 space-y-4", !hasSoapContent && "justify-center")}>
                 {hasSoapContent ? (
                   <div className="flex-1 flex flex-col space-y-4">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-2xs text-muted-foreground">
                       {t(
                         "voice.soapCard.draftStatutoryNote",
                         "Podľa zákona č. 39/2007 Z. z. zostáva AI návrh konceptom, kým ho nepotvrdí a nepodpíše veterinár v kartotéke.",
@@ -1608,7 +1608,7 @@ function VoiceDictationContent() {
               <CardTitle className="text-sm font-semibold text-sky-800 dark:text-sky-200">
                 {t("voice.clientSummary.title", "Majiteľský súhrn")}
               </CardTitle>
-              <Badge variant="outline" className="text-[10px] border-sky-300 text-sky-700 dark:border-sky-700 dark:text-sky-300">
+              <Badge variant="outline" className="text-3xs border-sky-300 text-sky-700 dark:border-sky-700 dark:text-sky-300">
                 {t("voice.clientSummary.badge", "Pre majiteľa")}
               </Badge>
             </div>
@@ -1687,13 +1687,13 @@ function VoiceDictationContent() {
                             className="w-full bg-transparent text-xs font-medium focus:outline-none focus:underline"
                           />
                           {item.dosageOrRoute && (
-                            <span className="text-[10px] text-muted-foreground block">
+                            <span className="text-3xs text-muted-foreground block">
                               {t("voice.billing.dose", "Dávka")}: {item.dosageOrRoute}
                             </span>
                           )}
                         </td>
                         <td className="p-2.5">
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge variant="outline" className="text-3xs">
                             {item.category === "medication"
                               ? t("voice.billing.categoryMedication", "Liek")
                               : t("voice.billing.categoryService", "Úkon")}
@@ -1715,7 +1715,7 @@ function VoiceDictationContent() {
                               }}
                               className="w-14 rounded border border-input bg-background px-1.5 py-0.5 text-xs text-right"
                             />
-                            <span className="text-[10px] text-muted-foreground">{item.unit}</span>
+                            <span className="text-3xs text-muted-foreground">{item.unit}</span>
                           </div>
                         </td>
                         <td className="p-2.5">

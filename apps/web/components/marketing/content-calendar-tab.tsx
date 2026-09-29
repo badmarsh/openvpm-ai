@@ -207,7 +207,7 @@ export function ContentCalendarTab() {
             <Layers className="h-3.5 w-3.5 text-primary" />
             {t("marketing.calendar.pillarsTitle", "Strategické piliere kliniky")}
           </span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {t("marketing.calendar.postsCount", `${filteredBriefs.length} príspevkov`, {
               count: filteredBriefs.length,
             })}
@@ -249,7 +249,7 @@ export function ContentCalendarTab() {
                 )}
               >
                 <span>{pillar.title}</span>
-                <span className="text-[10px] opacity-75">({count})</span>
+                <span className="text-3xs opacity-75">({count})</span>
               </button>
             );
           })}
@@ -391,35 +391,35 @@ export function ContentCalendarTab() {
                           <div className="flex items-center justify-between gap-1">
                             <span
                               className={cn(
-                                "text-[10px] font-bold truncate",
+                                "text-3xs font-bold truncate",
                                 color.text
                               )}
                             >
                               {brief.pillarTitle || "Obsah"}
                             </span>
                             {brief.status === "review" && (
-                              <Badge className="bg-amber-500 text-white text-[9px] px-1 py-0 h-4">
+                              <Badge className="bg-amber-500 text-white text-4xs px-1 py-0 h-4">
                                 {t("marketing.calendar.statusReview", "Čaká na lekára")}
                               </Badge>
                             )}
                             {brief.status === "approved" && (
-                              <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 h-4">
+                              <Badge className="bg-emerald-600 text-white text-4xs px-1 py-0 h-4">
                                 {t("marketing.calendar.statusApproved", "Schválené")}
                               </Badge>
                             )}
                             {brief.status === "rejected" && (
-                              <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">
+                              <Badge variant="destructive" className="text-4xs px-1 py-0 h-4">
                                 {t("marketing.calendar.statusRejected", "Vrátené")}
                               </Badge>
                             )}
                             {brief.status === "pending" && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-background">
+                              <Badge variant="outline" className="text-4xs px-1 py-0 h-4 bg-background">
                                 {t("marketing.calendar.statusScheduled", "Plán")}
                               </Badge>
                             )}
                           </div>
 
-                          <p className="text-[11px] font-medium line-clamp-2 leading-snug">
+                          <p className="text-2xs font-medium line-clamp-2 leading-snug">
                             {brief.briefText}
                           </p>
 
@@ -427,7 +427,7 @@ export function ContentCalendarTab() {
                             <div className="flex items-center gap-1">
                               {hasClaims && (
                                 <span
-                                  className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300"
+                                  className="flex items-center gap-0.5 text-4xs font-semibold text-amber-700 dark:text-amber-300"
                                   title={t(
                                     "marketing.calendar.claimsBadge",
                                     "Klinické tvrdenia"
@@ -438,7 +438,7 @@ export function ContentCalendarTab() {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground uppercase">
+                            <div className="flex items-center gap-0.5 text-4xs text-muted-foreground uppercase">
                               {brief.targetChannels?.slice(0, 2).map((ch) => (
                                 <span key={ch} className="px-1 py-0.2 rounded bg-background border">
                                   {ch === "google_business"
@@ -457,7 +457,7 @@ export function ContentCalendarTab() {
                     })}
 
                     {dayBriefs.length === 0 && (
-                      <div className="h-full flex items-center justify-center py-6 text-[10px] text-muted-foreground/60 border border-dashed rounded-lg">
+                      <div className="h-full flex items-center justify-center py-6 text-3xs text-muted-foreground/60 border border-dashed rounded-lg">
                         —
                       </div>
                     )}

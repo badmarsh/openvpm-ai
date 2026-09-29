@@ -107,7 +107,7 @@ function DataCell({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <dt className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
       <dd
@@ -279,7 +279,7 @@ export function OverviewTab({
         </h3>
         <div className="mt-3 grid gap-4 lg:grid-cols-3">
           <div className="rounded-md border border-border bg-muted/20 p-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
               <Activity className="h-3.5 w-3.5" />
               {t("patients.profile.latestVitals", "Latest vitals")}
             </p>
@@ -293,7 +293,7 @@ export function OverviewTab({
             ) : null}
           </div>
           <div className="rounded-md border border-border bg-muted/20 p-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
               <HeartPulse className="h-3.5 w-3.5" />
               {t("patients.profile.activeProblems", "Active problems")}
             </p>
@@ -317,7 +317,7 @@ export function OverviewTab({
             )}
           </div>
           <div className="rounded-md border border-border bg-muted/20 p-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
               <TriangleAlert className="h-3.5 w-3.5" />
               {t("patients.profile.allergies", "Allergies")}
             </p>

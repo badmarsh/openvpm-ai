@@ -216,7 +216,7 @@ function AgentCard({ module: mod, isEnabled, onToggle, t }: AgentCardProps) {
                 {t(mod.titleKey, mod.titleFallback)}
               </CardTitle>
               <div className="mt-1 flex items-center gap-2">
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-3xs text-muted-foreground">
                   {mod.moduleKey}
                 </code>
                 <span
@@ -226,7 +226,7 @@ function AgentCard({ module: mod, isEnabled, onToggle, t }: AgentCardProps) {
                   )}
                 />
                 {mod.alwaysOn && (
-                  <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                  <Badge variant="secondary" className="h-4 px-1 text-3xs">
                     {t("automations.aiAgents.alwaysOn", "vzdy aktivne")}
                   </Badge>
                 )}
@@ -259,7 +259,7 @@ function AgentCard({ module: mod, isEnabled, onToggle, t }: AgentCardProps) {
                         ? "secondary"
                         : "outline"
                   }
-                  className="h-4 px-1.5 text-[10px]"
+                  className="h-4 px-1.5 text-3xs"
                 >
                   {sub.status === "active"
                     ? t("automations.aiAgents.parserActive", "aktivny")

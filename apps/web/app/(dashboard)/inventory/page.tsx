@@ -1245,7 +1245,7 @@ function ControlledAuditTrail() {
                       {entry.drugName}
                     </span>
                     {entry.lotNumber && (
-                      <span className="block text-[11px] text-muted-foreground">
+                      <span className="block text-2xs text-muted-foreground">
                         {t("inventory.table.lotPrefix", "Lot {number}", {
                           number: entry.lotNumber,
                         })}
@@ -1674,7 +1674,7 @@ export default function InventoryPage() {
                           {expiryWarning && (
                             <span
                               className={cn(
-                                "mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                "mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-2xs font-medium",
                                 expiryWarning.className
                               )}
                             >

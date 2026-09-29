@@ -4445,7 +4445,7 @@ function DataTab() {
                             key={section}
                             className="rounded-md bg-muted/60 px-2 py-1"
                           >
-                            <p className="truncate text-[11px] text-muted-foreground">
+                            <p className="truncate text-2xs text-muted-foreground">
                               {section}
                             </p>
                             <p className="text-sm font-semibold">
@@ -4988,7 +4988,7 @@ function DataTab() {
 function ImportStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md bg-muted/60 px-3 py-2">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="text-2xs text-muted-foreground">{label}</p>
       <p className="text-lg font-semibold">{value.toLocaleString()}</p>
     </div>
   );

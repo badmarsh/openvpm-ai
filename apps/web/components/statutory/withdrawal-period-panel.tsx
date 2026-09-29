@@ -527,25 +527,25 @@ export function WithdrawalPeriodPanel() {
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{item.patientName}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           {item.species} {item.breed ? `• ${item.breed}` : ""}
                           <span className="ml-1 text-primary/80">
                             ({TARGET_ANIMAL_LABELS[item.targetAnimalType] || item.targetAnimalType})
                           </span>
                         </div>
                       </td>
-                      <td className="p-3 font-mono text-[11px]">
+                      <td className="p-3 font-mono text-2xs">
                         {item.microchipNumber || "—"}
                       </td>
                       <td className="p-3">
                         <div className="font-medium text-foreground">
                           {item.clientFirstName} {item.clientLastName}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">{item.clientPhone || "—"}</div>
+                        <div className="text-2xs text-muted-foreground">{item.clientPhone || "—"}</div>
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{item.medicationName}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground">
+                        <div className="text-2xs font-mono text-muted-foreground">
                           {item.batchNumber || "—"}
                         </div>
                       </td>
@@ -561,7 +561,7 @@ export function WithdrawalPeriodPanel() {
                         {isRunning ? (
                           <Badge
                             variant="outline"
-                            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 text-[10px] font-semibold"
+                            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 text-3xs font-semibold"
                           >
                             <Clock className="h-3 w-3 mr-1" />
                             {t("statutory.withdrawal.statusActive", "In Withdrawal")} ({diffDays} d)
@@ -569,7 +569,7 @@ export function WithdrawalPeriodPanel() {
                         ) : (
                           <Badge
                             variant="outline"
-                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 text-[10px]"
+                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 text-3xs"
                           >
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             {t("statutory.withdrawal.statusCleared", "Cleared")}
@@ -655,7 +655,7 @@ export function WithdrawalPeriodPanel() {
                             <span className="font-semibold">{p.name}</span>
                             <span className="ml-1 text-muted-foreground">({p.species})</span>
                           </div>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             {p.clientLastName ? `${p.clientFirstName || ""} ${p.clientLastName}` : p.breed || "—"}
                           </span>
                         </button>
@@ -664,7 +664,7 @@ export function WithdrawalPeriodPanel() {
                   )}
                 </div>
                 {selectedPatientId && (
-                  <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                  <div className="mt-1 text-2xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
                     <CheckCircle2 className="h-3 w-3" /> {t("statutory.withdrawal.patientSelected", "Patient selected")}
                   </div>
                 )}
@@ -775,7 +775,7 @@ export function WithdrawalPeriodPanel() {
               {/* Real-time calculated box */}
               <div className="rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/20 p-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                  <div className="text-2xs font-semibold text-amber-900 dark:text-amber-200">
                     {t("statutory.withdrawal.calculatedEnd", "Calculated end of withdrawal period (Safe Until):")}
                   </div>
                   <div className="text-sm font-bold text-amber-800 dark:text-amber-300 font-mono mt-0.5">

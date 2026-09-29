@@ -208,7 +208,7 @@ export function CrszPanel() {
                   <span className="text-xs font-semibold text-teal-950 dark:text-teal-200">
                     {t("statutory.crsz.quickVerifyTitle", "Rýchle overenie transpondéra v CRSZ / Európskych registroch")}
                   </span>
-                  <p className="text-[11px] text-teal-800/80 dark:text-teal-400/80">
+                  <p className="text-2xs text-teal-800/80 dark:text-teal-400/80">
                     {t("statutory.crsz.quickVerifySubtitle", "Overenie 15-miestneho ISO kódu, národného kódu SR (703) alebo výrobcu")}
                   </p>
                 </div>
@@ -254,13 +254,13 @@ export function CrszPanel() {
                       {t("statutory.crsz.nationalCodeSr", "🇸🇰 Národný kód SR (703)")}
                     </Badge>
                   )}
-                  <span className="text-[11px] text-muted-foreground">{lookupResult.notes}</span>
+                  <span className="text-2xs text-muted-foreground">{lookupResult.notes}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setLookupResult(null)}
-                  className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
+                  className="h-6 text-3xs text-muted-foreground hover:text-foreground"
                 >
                   {t("common.close", "Zavrieť")}
                 </Button>
@@ -333,7 +333,7 @@ export function CrszPanel() {
                           <div className="flex items-center gap-1.5">
                             <span>{item.microchipNumber}</span>
                             {isSlovak && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 border-blue-500/40 text-blue-600">
+                              <Badge variant="outline" className="text-3xs px-1 py-0 border-blue-500/40 text-blue-600">
                                 SK (703)
                               </Badge>
                             )}

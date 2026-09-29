@@ -85,7 +85,7 @@ export function TeamSection({ content, contextData }: TeamSectionProps) {
                 <div className="pt-2">
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-semibold tracking-wide"
+                    className="text-3xs font-semibold tracking-wide"
                     style={{
                       borderColor: "var(--wb-primary, #0d9488)",
                       color: "var(--wb-primary, #0d9488)",

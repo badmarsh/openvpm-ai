@@ -124,7 +124,7 @@ export function AnalyzerImportPanel() {
                             ({report.patient.species} {report.patient.breed ? "• " + report.patient.breed : ""})
                           </span>
                         )}
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                        <Badge variant="outline" className="text-3xs px-1.5 py-0 border-primary/30 text-primary">
                           {report.analyzerType} {report.deviceModel ? "• " + report.deviceModel : ""}
                         </Badge>
                       </div>
@@ -226,19 +226,19 @@ export function AnalyzerImportPanel() {
                                 </td>
                                 <td className="px-3 py-2 text-center">
                                   {isCrit ? (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    <Badge variant="destructive" className="text-3xs px-1.5 py-0">
                                       {t("labImport.flagCritical", "KRITICKÁ")}
                                     </Badge>
                                   ) : isHigh ? (
-                                    <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 text-[10px] px-1.5 py-0">
+                                    <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 text-3xs px-1.5 py-0">
                                       {t("labImport.flagHigh", "ZVÝŠENÉ (▲)")}
                                     </Badge>
                                   ) : isLow ? (
-                                    <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50 text-[10px] px-1.5 py-0">
+                                    <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50 text-3xs px-1.5 py-0">
                                       {t("labImport.flagLow", "ZNÍŽENÉ (▼)")}
                                     </Badge>
                                   ) : (
-                                    <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50 text-[10px] px-1.5 py-0">
+                                    <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50 text-3xs px-1.5 py-0">
                                       {t("labImport.flagNormal", "Norma")}
                                     </Badge>
                                   )}
@@ -575,12 +575,12 @@ function AnalyzerUploadModal({
                 </div>
                 <div className="flex items-center gap-1.5">
                   {parsedPreview.criticalCount > 0 && (
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                    <Badge variant="destructive" className="text-3xs px-1.5 py-0">
                       {t("labImport.countCritical", "{count} kritické", { count: parsedPreview.criticalCount })}
                     </Badge>
                   )}
                   {parsedPreview.abnormalCount > 0 && (
-                    <Badge variant="outline" className="border-amber-500 text-amber-700 text-[10px] px-1.5 py-0">
+                    <Badge variant="outline" className="border-amber-500 text-amber-700 text-3xs px-1.5 py-0">
                       {t("labImport.countAbnormal", "{count} patologických", { count: parsedPreview.abnormalCount })}
                     </Badge>
                   )}
@@ -612,13 +612,13 @@ function AnalyzerUploadModal({
                           </td>
                           <td className="px-3 py-1 text-center">
                             {r.flag === "CRITICAL" ? (
-                              <Badge variant="destructive" className="text-[9px] px-1 py-0">{t("labImport.flagCritical", "Kritické")}</Badge>
+                              <Badge variant="destructive" className="text-4xs px-1 py-0">{t("labImport.flagCritical", "Kritické")}</Badge>
                             ) : r.flag === "HIGH" ? (
-                              <Badge variant="outline" className="border-amber-500 text-amber-700 text-[9px] px-1 py-0">{t("labImport.flagHigh", "Zvýšené")}</Badge>
+                              <Badge variant="outline" className="border-amber-500 text-amber-700 text-4xs px-1 py-0">{t("labImport.flagHigh", "Zvýšené")}</Badge>
                             ) : r.flag === "LOW" ? (
-                              <Badge variant="outline" className="border-blue-500 text-blue-700 text-[9px] px-1 py-0">{t("labImport.flagLow", "Znížené")}</Badge>
+                              <Badge variant="outline" className="border-blue-500 text-blue-700 text-4xs px-1 py-0">{t("labImport.flagLow", "Znížené")}</Badge>
                             ) : (
-                              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[9px] px-1 py-0">{t("labImport.flagNormal", "Norma")}</Badge>
+                              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-4xs px-1 py-0">{t("labImport.flagNormal", "Norma")}</Badge>
                             )}
                           </td>
                         </tr>
