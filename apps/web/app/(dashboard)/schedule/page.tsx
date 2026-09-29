@@ -52,6 +52,7 @@ import {
 } from "@/components/layout/page-kit";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDoctorName, formatSpecies } from "@/lib/locale/format";
 import { dateInputTimeUtcInstant } from "@/lib/date-input";
@@ -608,7 +609,7 @@ function AppointmentBlock({
         <span className="min-w-0 truncate font-semibold tracking-tight">{appointment.patientName || t("schedule.unknownPatient", "Unknown Patient")}</span>
       </div>
       {height >= 36 && (
-        <div className="min-w-0 text-muted-foreground overflow-hidden text-ellipsis truncate mt-0.5 font-mono tabular-nums text-[11px]">
+        <div className="min-w-0 text-muted-foreground overflow-hidden text-ellipsis truncate mt-0.5 font-mono tabular-nums text-2xs">
           <span className="font-sans font-medium text-foreground/80">{appointment.typeName || t("schedule.appointmentFallback", "Appointment")}</span> &middot;{" "}
           <span>{formatTime(start, timeZone)} - {formatTime(end, timeZone)}</span>
           {appointment.locationName ? ` · ${appointment.locationName}` : ""}
@@ -895,7 +896,7 @@ function PhoneAgenda({
                           {patientName}
                         </span>
                       </span>
-                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-2xs font-medium text-muted-foreground">
                         <StatusDot status={appointment.status} />
                         {appointmentStatusLabel(appointment, t)}
                       </span>
@@ -1070,7 +1071,7 @@ function AppointmentChip({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-6 w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 py-1 text-left text-[11px] leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+      className="flex min-h-6 w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-2 py-1 text-left text-2xs leading-tight transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
       style={{
         backgroundColor: `${color}18`,
         borderColor: `${color}55`,
@@ -1186,7 +1187,7 @@ function MonthCalendar({
                 {hiddenCount > 0 && (
                   <button
                     type="button"
-                    className="w-full rounded-md px-2 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md px-2 py-1 text-left text-2xs font-medium text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
                     onClick={() => onDayOpen(day.date)}
                   >
                     {t("schedule.moreAppointments", "+{count} more", { count: hiddenCount })}
@@ -1331,7 +1332,7 @@ function ScheduleListView({
                   <div className="font-semibold text-foreground">
                     {formatTime(start, timeZone)}
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-2xs text-muted-foreground">
                     – {formatTime(end, timeZone)}
                   </div>
                 </td>
@@ -1356,7 +1357,7 @@ function ScheduleListView({
                       </span>
                     )}
                     {appointment.patientSpecies && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         ({formatSpecies(appointment.patientSpecies, t)})
                       </span>
                     )}
@@ -1368,7 +1369,7 @@ function ScheduleListView({
                       t("schedule.clientNotListed", "Client not listed")}
                   </div>
                   {appointment.clientPhone && (
-                    <div className="truncate text-[11px] text-muted-foreground">
+                    <div className="truncate text-2xs text-muted-foreground">
                       {appointment.clientPhone}
                     </div>
                   )}
@@ -1822,33 +1823,35 @@ function AppointmentDetailPopover({
 
           <div className="flex items-center gap-1">
             {canManageSchedule && canMoveAppointment && (
-              <button
-                type="button"
-                title={t("schedule.btnEditAppointment", "Edit appointment")}
-                aria-label={t("schedule.btnEditAppointment", "Edit appointment")}
-                onClick={() => {
-                  setShowConfirmationForm(false);
-                  setShowRescheduleForm((show) => !show);
-                }}
-                className={cn(
-                  "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                  showRescheduleForm && "bg-muted text-foreground"
-                )}
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
+              <TooltipHint content={t("schedule.btnEditAppointment", "Edit appointment")}>
+                <button
+                  type="button"
+                  aria-label={t("schedule.btnEditAppointment", "Edit appointment")}
+                  onClick={() => {
+                    setShowConfirmationForm(false);
+                    setShowRescheduleForm((show) => !show);
+                  }}
+                  className={cn(
+                    "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                    showRescheduleForm && "bg-muted text-foreground"
+                  )}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </TooltipHint>
             )}
             {canManageSchedule && ["scheduled", "confirmed", "cancelled", "no_show"].includes(current) && (
-              <button
-                type="button"
-                title={t("schedule.deleteAppointment.button", "Delete appointment")}
-                aria-label={t("schedule.deleteAppointment.button", "Delete appointment")}
-                disabled={isDeleting}
-                onClick={() => setConfirmDelete(true)}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <TooltipHint content={t("schedule.deleteAppointment.button", "Delete appointment")}>
+                <button
+                  type="button"
+                  aria-label={t("schedule.deleteAppointment.button", "Delete appointment")}
+                  disabled={isDeleting}
+                  onClick={() => setConfirmDelete(true)}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </TooltipHint>
             )}
             <button
               type="button"
@@ -1926,7 +1929,7 @@ function AppointmentDetailPopover({
                 )}
                 {appointment.roomName && (
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[11px] text-muted-foreground">#</span>
+                    <span className="font-bold text-2xs text-muted-foreground">#</span>
                     <span>{appointment.roomName}</span>
                   </div>
                 )}
@@ -2344,19 +2347,20 @@ function AppointmentDetailPopover({
                             </option>
                           ))}
                         </select>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs shrink-0 h-8"
-                          disabled={isUpdating || !inlineDoctorId}
-                          title={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}
-                          onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
-                        >
-                          {isUpdating ? (
-                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                          ) : null}
-                          {action.label}
-                        </Button>
+                        <TooltipHint content={!inlineDoctorId ? t("schedule.selectDoctorPrompt", "Select a doctor to assign and check in") : undefined}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs shrink-0 h-8"
+                            disabled={isUpdating || !inlineDoctorId}
+                            onClick={() => onStatusChange(appointment.id, "checked_in", undefined, inlineDoctorId)}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            ) : null}
+                            {action.label}
+                          </Button>
+                        </TooltipHint>
                       </div>
                     );
                   }
@@ -2367,41 +2371,41 @@ function AppointmentDetailPopover({
                   const isNoShow = action.status === "no_show";
 
                   return (
-                    <Button
-                      key={action.status}
-                      size="sm"
-                      variant="outline"
-                      disabled={isUpdating || action.disabled}
-                      title={action.disabledReason}
-                      className={cn(
-                        "h-8 text-xs font-medium justify-center transition-colors shadow-2xs",
-                        isConfirm && "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
-                        isCheckIn && "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300",
-                        isNoShow && "border-border text-muted-foreground hover:text-foreground hover:bg-muted/80",
-                        isCancel && "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
-                      )}
-                      onClick={() => {
-                        if (action.status === "confirmed") {
-                          setShowRescheduleForm(false);
-                          setShowConfirmationForm(true);
-                          return;
-                        }
-                        onStatusChange(appointment.id, action.status);
-                      }}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                      ) : isConfirm ? (
-                        <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                      ) : isCheckIn ? (
-                        <UserCheck className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                      ) : isNoShow ? (
-                        <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                      ) : isCancel ? (
-                        <CalendarX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                      ) : null}
-                      {action.label}
-                    </Button>
+                    <TooltipHint key={action.status} content={action.disabledReason}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isUpdating || action.disabled}
+                        className={cn(
+                          "h-8 text-xs font-medium justify-center transition-colors shadow-2xs",
+                          isConfirm && "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
+                          isCheckIn && "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300",
+                          isNoShow && "border-border text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                          isCancel && "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300"
+                        )}
+                        onClick={() => {
+                          if (action.status === "confirmed") {
+                            setShowRescheduleForm(false);
+                            setShowConfirmationForm(true);
+                            return;
+                          }
+                          onStatusChange(appointment.id, action.status);
+                        }}
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : isConfirm ? (
+                          <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        ) : isCheckIn ? (
+                          <UserCheck className="mr-1.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        ) : isNoShow ? (
+                          <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                        ) : isCancel ? (
+                          <CalendarX className="mr-1.5 h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                        ) : null}
+                        {action.label}
+                      </Button>
+                    </TooltipHint>
                   );
                 })}
               </div>

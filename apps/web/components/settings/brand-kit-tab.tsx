@@ -379,13 +379,13 @@ Generated on ${new Date().toLocaleDateString()}`;
                             title={t(p.i18nKey)}
                           >
                             <span className={cn("h-6 w-6 rounded-md border transition-transform", active ? "scale-110" : "group-hover:scale-105")} style={{ backgroundColor: p.hex }} />
-                            <span className="text-[9px] text-muted-foreground">{t(p.i18nKey)}</span>
+                            <span className="text-4xs text-muted-foreground">{t(p.i18nKey)}</span>
                           </button>
                         );
                       })}
                       <label className="flex flex-col items-center gap-1 cursor-pointer rounded-lg border border-dashed border-border px-2 py-1.5 transition-all hover:border-foreground/30">
                         <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="h-6 w-6 cursor-pointer rounded-md border-0 p-0" />
-                        <span className="text-[9px] text-muted-foreground">{t("brandKit.custom", "Custom")}</span>
+                        <span className="text-4xs text-muted-foreground">{t("brandKit.custom", "Custom")}</span>
                       </label>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         {t("brandKit.themes", "Themes")}
                       </label>
-                      <Badge variant="outline" className="text-[9px]">{t("brandKit.oneClick", "One-click")}</Badge>
+                      <Badge variant="outline" className="text-4xs">{t("brandKit.oneClick", "One-click")}</Badge>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {THEME_PRESETS.map((theme) => {
@@ -415,8 +415,8 @@ Generated on ${new Date().toLocaleDateString()}`;
                               <div className="h-5 w-5 rounded-full border-2 border-card" style={{ backgroundColor: theme.secondary }} />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[10px] font-semibold truncate">{theme.name}</p>
-                              <p className="text-[9px] text-muted-foreground truncate">{theme.description}</p>
+                              <p className="text-3xs font-semibold truncate">{theme.name}</p>
+                              <p className="text-4xs text-muted-foreground truncate">{theme.description}</p>
                             </div>
                           </button>
                         );
@@ -434,7 +434,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-mono text-muted-foreground">{brandColor} · {secondaryColor}</span>
-                      <Badge variant="outline" className="text-[9px]">
+                      <Badge variant="outline" className="text-4xs">
                         <TrendingUp className="h-3 w-3 mr-1" />
                         {t("brandKit.contrast", "Contrast check")}
                       </Badge>
@@ -456,21 +456,21 @@ Generated on ${new Date().toLocaleDateString()}`;
                       <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5">
                         <div className="h-8 w-8 rounded-md shadow-sm" style={{ backgroundColor: brandColor }} />
                         <div className="min-w-0">
-                          <p className="text-[10px] font-medium">{t("brandKit.primary", "Primary")}</p>
-                          <p className="truncate font-mono text-[9px] text-muted-foreground">{brandColor}</p>
+                          <p className="text-3xs font-medium">{t("brandKit.primary", "Primary")}</p>
+                          <p className="truncate font-mono text-4xs text-muted-foreground">{brandColor}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5">
                         <div className="h-8 w-8 rounded-md border border-border shadow-sm" style={{ backgroundColor: secondaryColor }} />
                         <div className="min-w-0">
-                          <p className="text-[10px] font-medium">{t("brandKit.secondary", "Secondary")}</p>
-                          <p className="truncate font-mono text-[9px] text-muted-foreground">{secondaryColor}</p>
+                          <p className="text-3xs font-medium">{t("brandKit.secondary", "Secondary")}</p>
+                          <p className="truncate font-mono text-4xs text-muted-foreground">{secondaryColor}</p>
                         </div>
                       </div>
                     </div>
                     <div className="rounded-lg border border-border bg-muted/30 p-3">
                       <p className="text-xs font-medium mb-2">{t("brandKit.usageExamples", "Usage Examples")}</p>
-                      <div className="space-y-2 text-[10px] text-muted-foreground">
+                      <div className="space-y-2 text-3xs text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: brandColor }} />
                           <span>{t("brandKit.usagePrimary", "Buttons, links, icons")}</span>
@@ -535,7 +535,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">{t("brandKit.toneDescription", "Tone description")}</label>
-                      <span className="text-[10px] tabular-nums text-muted-foreground">{toneOfVoice.length}/500</span>
+                      <span className="text-3xs tabular-nums text-muted-foreground">{toneOfVoice.length}/500</span>
                     </div>
                     <textarea
                       value={toneOfVoice}
@@ -550,7 +550,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">{t("brandKit.aiInstructions", "AI Generator Instructions")}</label>
-                      <Badge variant="outline" className="text-[9px]">{t("brandKit.optional", "Optional")}</Badge>
+                      <Badge variant="outline" className="text-4xs">{t("brandKit.optional", "Optional")}</Badge>
                     </div>
                     <textarea
                       value={brandVoiceInstructions}
@@ -561,7 +561,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                       className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground placeholder:font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
                     />
                     <div className="flex justify-end">
-                      <span className="text-[10px] tabular-nums text-muted-foreground">{brandVoiceInstructions.length}/2000</span>
+                      <span className="text-3xs tabular-nums text-muted-foreground">{brandVoiceInstructions.length}/2000</span>
                     </div>
                   </div>
                 </CardContent>
@@ -606,27 +606,27 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <Sparkles className="h-3.5 w-3.5" style={{ color: brandColor }} />
                             <span className="text-xs font-semibold">{t("brandKit.samplePost", "Sample Post")}</span>
                           </div>
-                          <Badge variant="outline" className="text-[9px]">Instagram</Badge>
+                          <Badge variant="outline" className="text-4xs">Instagram</Badge>
                         </div>
                       </div>
                       <div className="p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: brandColor }}>
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full text-4xs font-bold text-white" style={{ backgroundColor: brandColor }}>
                             {clinicInitials}
                           </div>
-                          <span className="text-[10px] font-semibold">{socialInstagram || data.clinicName}</span>
+                          <span className="text-3xs font-semibold">{socialInstagram || data.clinicName}</span>
                         </div>
-                        <p className="text-[10px] leading-relaxed text-foreground/80">
+                        <p className="text-3xs leading-relaxed text-foreground/80">
                           {toneOfVoice || t("brandKit.previewText", "Your pet deserves the best care.")} {t("brandKit.previewCta", "Book an appointment today!")}
                         </p>
                         {defaultHashtags.length > 0 && (
-                          <p className="text-[9px] font-medium" style={{ color: brandColor }}>{defaultHashtags.slice(0, 3).join(" ")}</p>
+                          <p className="text-4xs font-medium" style={{ color: brandColor }}>{defaultHashtags.slice(0, 3).join(" ")}</p>
                         )}
                       </div>
                     </div>
                     {disclaimer && (
                       <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-2.5">
-                        <p className="text-[9px] leading-snug text-amber-800 dark:text-amber-200 italic">
+                        <p className="text-4xs leading-snug text-amber-800 dark:text-amber-200 italic">
                           <ShieldAlert className="h-2.5 w-2.5 inline mr-1" />
                           {disclaimer}
                         </p>
@@ -635,7 +635,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                     {toneOfVoice && (
                       <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2.5">
                         <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">{toneOfVoice}</span>
+                        <span className="text-3xs text-muted-foreground">{toneOfVoice}</span>
                       </div>
                     )}
                   </CardContent>
@@ -775,15 +775,15 @@ Generated on ${new Date().toLocaleDateString()}`;
                   <CardContent className="space-y-4">
                     <Tabs value={activePreviewTab} onValueChange={setActivePreviewTab} className="w-full">
                       <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="post" className="text-[10px]">
+                        <TabsTrigger value="post" className="text-3xs">
                           <ImageIcon className="h-3 w-3 mr-1" />
                           {t("brandKit.post", "Post")}
                         </TabsTrigger>
-                        <TabsTrigger value="profile" className="text-[10px]">
+                        <TabsTrigger value="profile" className="text-3xs">
                           <Share2 className="h-3 w-3 mr-1" />
                           {t("brandKit.profile", "Profile")}
                         </TabsTrigger>
-                        <TabsTrigger value="story" className="text-[10px]">
+                        <TabsTrigger value="story" className="text-3xs">
                           <Video className="h-3 w-3 mr-1" />
                           {t("brandKit.story", "Story")}
                         </TabsTrigger>
@@ -791,25 +791,25 @@ Generated on ${new Date().toLocaleDateString()}`;
                       <TabsContent value="post" className="space-y-3 mt-3">
                         <div className="overflow-hidden rounded-lg border border-border">
                           <div className="flex items-center gap-2 p-2.5">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: brandColor }}>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full text-4xs font-bold text-white" style={{ backgroundColor: brandColor }}>
                               {clinicInitials}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[10px] font-semibold">{socialInstagram || data.clinicName}</p>
+                              <p className="truncate text-3xs font-semibold">{socialInstagram || data.clinicName}</p>
                             </div>
                           </div>
                           <div className="flex h-28 items-center justify-center" style={{ background: `linear-gradient(160deg, ${brandColor}18, ${secondaryColor}60, ${brandColor}08)` }}>
                             <div className="text-center">
                               <p className="text-lg font-bold" style={{ color: brandColor }}>🐾</p>
-                              <p className="mt-0.5 text-[10px] font-semibold" style={{ color: brandColor }}>{data.clinicName}</p>
+                              <p className="mt-0.5 text-3xs font-semibold" style={{ color: brandColor }}>{data.clinicName}</p>
                             </div>
                           </div>
                           <div className="space-y-1.5 p-2.5">
-                            <p className="text-[10px] leading-relaxed text-foreground/80">
+                            <p className="text-3xs leading-relaxed text-foreground/80">
                               {t("brandKit.previewText", "Your pet deserves the best care.")} {t("brandKit.previewCta", "Book an appointment today!")}
                             </p>
                             {defaultHashtags.length > 0 && (
-                              <p className="text-[9px] font-medium" style={{ color: brandColor }}>{defaultHashtags.slice(0, 5).join(" ")}</p>
+                              <p className="text-4xs font-medium" style={{ color: brandColor }}>{defaultHashtags.slice(0, 5).join(" ")}</p>
                             )}
                           </div>
                         </div>
@@ -822,25 +822,25 @@ Generated on ${new Date().toLocaleDateString()}`;
                             </div>
                             <div className="flex-1">
                               <p className="text-sm font-bold">{data.clinicName}</p>
-                              <p className="text-[10px] text-muted-foreground">{socialInstagram || "@veterinarna_klinika"}</p>
+                              <p className="text-3xs text-muted-foreground">{socialInstagram || "@veterinarna_klinika"}</p>
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center">
                             <div>
                               <p className="text-sm font-bold">1.2K</p>
-                              <p className="text-[9px] text-muted-foreground">Posts</p>
+                              <p className="text-4xs text-muted-foreground">Posts</p>
                             </div>
                             <div>
                               <p className="text-sm font-bold">856</p>
-                              <p className="text-[9px] text-muted-foreground">Followers</p>
+                              <p className="text-4xs text-muted-foreground">Followers</p>
                             </div>
                             <div>
                               <p className="text-sm font-bold">124</p>
-                              <p className="text-[9px] text-muted-foreground">Following</p>
+                              <p className="text-4xs text-muted-foreground">Following</p>
                             </div>
                           </div>
                           <div className="rounded-md border border-border bg-muted/30 p-2">
-                            <p className="text-[10px]">{toneOfVoice || t("brandKit.tonePlaceholder", "Veterinary clinic dedicated to your pet's health.")}</p>
+                            <p className="text-3xs">{toneOfVoice || t("brandKit.tonePlaceholder", "Veterinary clinic dedicated to your pet's health.")}</p>
                           </div>
                         </div>
                       </TabsContent>
@@ -896,7 +896,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <p className="text-xs font-mono text-muted-foreground">{brandColor}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-[9px]">Buttons, Links, CTAs</Badge>
+                        <Badge variant="outline" className="text-4xs">Buttons, Links, CTAs</Badge>
                       </div>
                       <div className="flex items-center justify-between p-3 rounded-lg border">
                         <div className="flex items-center gap-3">
@@ -906,7 +906,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <p className="text-xs font-mono text-muted-foreground">{secondaryColor}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-[9px]">Backgrounds, Cards</Badge>
+                        <Badge variant="outline" className="text-4xs">Backgrounds, Cards</Badge>
                       </div>
                     </div>
                   </div>

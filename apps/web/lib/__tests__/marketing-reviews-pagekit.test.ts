@@ -173,9 +173,9 @@ describe("reviews page — page-kit harmonization", () => {
     expect(reviews).toContain('t("marketing.reviews.sentiment.neutral", "Neutrálna")');
     expect(reviews).toContain('t("marketing.reviews.sentiment.negative", "Negatívna")');
     // Sentiment badges use the semantic badge tokens, not raw palettes.
-    expect(reviews).toContain('<Badge variant="success" className="gap-1 text-[11px] font-medium">');
+    expect(reviews).toContain('<Badge variant="success" className="gap-1 text-2xs font-medium">');
     expect(reviews).toContain(
-      '<Badge variant="destructive" className="gap-1 text-[11px] font-medium">',
+      '<Badge variant="destructive" className="gap-1 text-2xs font-medium">',
     );
     expect(reviews).not.toContain("bg-emerald-50 text-emerald-700 border-emerald-200");
     expect(reviews).not.toContain("bg-rose-50 text-rose-700 border-rose-300");

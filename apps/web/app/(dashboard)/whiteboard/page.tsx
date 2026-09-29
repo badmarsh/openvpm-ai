@@ -38,6 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ModalityBadgeRow } from "@/components/imaging/modality-badge";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDoctorName } from "@/lib/locale/format";
 import { useI18n } from "@/lib/i18n";
@@ -326,26 +327,27 @@ function SyncStatusIndicator({
       ) : (
         <span className="flex h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
       )}
-      <span className="text-[11px] font-medium">
+      <span className="text-2xs font-medium">
         {isLive
           ? t("whiteboard.sync.live", "Live")
           : t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
       </span>
-      <button
-        type="button"
-        onClick={onRefresh}
-        disabled={isFetching}
-        aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
-        title={tooltipText}
-        className="rounded-full p-0.5 transition-colors hover:text-foreground cursor-pointer disabled:opacity-50"
-      >
-        <RotateCw
-          className={cn(
-            "h-3 w-3 transition-transform",
-            isFetching && "animate-spin text-primary"
-          )}
-        />
-      </button>
+      <TooltipHint content={tooltipText}>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isFetching}
+          aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
+          className="rounded-full p-0.5 transition-colors hover:text-foreground cursor-pointer disabled:opacity-50"
+        >
+          <RotateCw
+            className={cn(
+              "h-3 w-3 transition-transform",
+              isFetching && "animate-spin text-primary"
+            )}
+          />
+        </button>
+      </TooltipHint>
     </div>
   );
 }
@@ -363,7 +365,7 @@ function DepartmentChip({ department }: { department: WhiteboardDepartment }) {
   const { t } = useI18n();
   const Icon = DEPARTMENT_ICON[department];
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-3xs font-medium text-muted-foreground">
       <Icon className="h-3 w-3" aria-hidden="true" />
       {t(`whiteboard.departments.${department}`, department)}
     </span>
@@ -377,7 +379,7 @@ function ConditionTag({ tag }: { tag: ConditionTag }) {
     <span
       data-condition={tag}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide",
         CONDITION_TAG_CLASS[tag],
       )}
     >
@@ -399,7 +401,7 @@ function ClinicalTimeRow({
 }) {
   return (
     <span className={cn("flex items-center justify-between gap-2", className)}>
-      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <span className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       <span className={cn(CLINICAL_NUMERIC_CLASS, "text-foreground")}>
@@ -538,13 +540,13 @@ function WhiteboardCard({
 
       {/* Type + elapsed time */}
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate text-[10px] text-muted-foreground">
+        <span className="truncate text-3xs text-muted-foreground">
           {appointment.typeName ?? ""}
         </span>
         <span
           className={cn(
             CLINICAL_NUMERIC_CLASS,
-            "flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground",
+            "flex shrink-0 items-center gap-1 text-3xs text-muted-foreground",
           )}
         >
           <Clock className="h-2.5 w-2.5" aria-hidden="true" />
@@ -556,7 +558,7 @@ function WhiteboardCard({
       {appointment.status === "checked_out" && (
         <div className="mt-2 flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1">
           <ClipboardList className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-          <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
+          <span className="text-3xs font-medium text-amber-700 dark:text-amber-300">
             {t("whiteboard.invoicePending", "Invoice pending")}
           </span>
         </div>
@@ -768,7 +770,7 @@ function AppointmentDetailModal({
           {(signals?.imagingModalities.length ?? 0) > 0 ||
           (signals?.labReports ?? 0) > 0 ? (
             <div className="rounded-lg border border-border bg-muted/30 p-2">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
                 {t("whiteboard.times.imaging", "Imaging today")}
               </p>
               <ModalityBadgeRow
@@ -898,42 +900,43 @@ function AppointmentDetailModal({
                         </option>
                       ))}
                     </select>
-                    <Button
-                      size="sm"
-                      variant={action.variant}
-                      disabled={isUpdating || !inlineDoctorId}
-                      title={!inlineDoctorId ? t("whiteboard.selectDoctorPrompt", "Select doctor") : undefined}
-                      onClick={() => onStatusChange(appointment.id, action.status, inlineDoctorId)}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                      ) : null}
-                      {t("whiteboard.actions.assignAndCheckIn", "Assign & Check In")}
-                    </Button>
+                    <TooltipHint content={!inlineDoctorId ? t("whiteboard.selectDoctorPrompt", "Select doctor") : undefined}>
+                      <Button
+                        size="sm"
+                        variant={action.variant}
+                        disabled={isUpdating || !inlineDoctorId}
+                        onClick={() => onStatusChange(appointment.id, action.status, inlineDoctorId)}
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : null}
+                        {t("whiteboard.actions.assignAndCheckIn", "Assign & Check In")}
+                      </Button>
+                    </TooltipHint>
                   </div>
                 );
               }
               return (
-                <Button
+                <TooltipHint
                   key={action.status}
-                  size="sm"
-                  variant={action.variant}
-                  disabled={
-                    isUpdating ||
-                    (action.status === "in_exam" && missingClinicalTarget)
-                  }
-                  title={
-                    action.status === "in_exam" && missingClinicalTarget
+                  content={action.status === "in_exam" && missingClinicalTarget
                       ? t("whiteboard.attachPatientWarning", "Open the visit and attach an active patient before starting the exam.")
-                      : undefined
-                  }
-                  onClick={() => onStatusChange(appointment.id, action.status)}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                  ) : null}
-                  {action.label}
-                </Button>
+                      : undefined}>
+                  <Button
+                    size="sm"
+                    variant={action.variant}
+                    disabled={
+                      isUpdating ||
+                      (action.status === "in_exam" && missingClinicalTarget)
+                    }
+                    onClick={() => onStatusChange(appointment.id, action.status)}
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : null}
+                    {action.label}
+                  </Button>
+                </TooltipHint>
               );
             })}
           </div>

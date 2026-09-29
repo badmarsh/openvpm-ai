@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
 
@@ -177,7 +179,7 @@ function EvidenceId({
 }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <dt className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         {idLabel}
       </dt>
       <dd className="mt-0.5 break-all font-mono text-xs">{value ?? "—"}</dd>
@@ -253,6 +255,7 @@ function deliveryReasons(
 export function SmsRecoveryConsole() {
   const { t } = useI18n();
   const utils = trpc.useUtils();
+  const { confirm, dialogProps } = useConfirmDialog();
   const attemptQueue = trpc.admin.smsSendAttemptQueue.useQuery(
     { staleMinutes: 15, limit: QUEUE_LIMIT },
     { retry: false },
@@ -898,14 +901,14 @@ export function SmsRecoveryConsole() {
               clear the incident.
             </span>
           </label>
-          <p className="mt-3 break-all font-mono text-[11px] text-amber-900">
+          <p className="mt-3 break-all font-mono text-2xs text-amber-900">
             Resolution UUID: {providerEventOperationId}
           </p>
           <Button
             type="button"
             className="mt-3"
             disabled={!canResolveProviderEvent}
-            onClick={() => {
+            onClick={async () => {
               if (
                 !providerEventOperationId ||
                 !providerEventResolution ||
@@ -914,9 +917,11 @@ export function SmsRecoveryConsole() {
                 return;
               }
               if (
-                !window.confirm(
-                  `Apply ${label(providerEventResolution)} to exact provider event ${providerEventSelection.eventId}${providerEventSelection.conflictId ? ` and conflict ${providerEventSelection.conflictId}` : ""}? This appends immutable audited evidence.`,
-                )
+                !(await confirm({
+                  title: "Apply provider-event reconciliation?",
+                  description: `Apply ${label(providerEventResolution)} to exact provider event ${providerEventSelection.eventId}${providerEventSelection.conflictId ? ` and conflict ${providerEventSelection.conflictId}` : ""}? This appends immutable audited evidence.`,
+                  confirmLabel: label(providerEventResolution),
+                }))
               ) {
                 return;
               }
@@ -1468,14 +1473,14 @@ export function SmsRecoveryConsole() {
                       body, client name, or PHI.
                     </span>
                   </label>
-                  <p className="mt-3 break-all font-mono text-[11px] text-amber-900">
+                  <p className="mt-3 break-all font-mono text-2xs text-amber-900">
                     Reconciliation UUID: {attemptReconciliationId}
                   </p>
                   <Button
                     type="button"
                     className="mt-3"
                     disabled={!canReconcileAttempt}
-                    onClick={() => {
+                    onClick={async () => {
                       if (
                         !attemptSelection ||
                         !attemptReconciliationId ||
@@ -1489,9 +1494,11 @@ export function SmsRecoveryConsole() {
                           ? reviewedProviderMessageId
                           : undefined;
                       if (
-                        !window.confirm(
-                          `Record ${label(reviewedAttemptOutcome)} for exact attempt ${attemptSelection.attemptId}? This writes immutable reconciliation evidence.`,
-                        )
+                        !(await confirm({
+                          title: "Record attempt reconciliation?",
+                          description: `Record ${label(reviewedAttemptOutcome)} for exact attempt ${attemptSelection.attemptId}? This writes immutable reconciliation evidence.`,
+                          confirmLabel: label(reviewedAttemptOutcome),
+                        }))
                       ) {
                         return;
                       }
@@ -1542,7 +1549,7 @@ export function SmsRecoveryConsole() {
                       possible if external evidence was reviewed incorrectly.
                     </span>
                   </label>
-                  <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground">
+                  <p className="mt-3 break-all font-mono text-2xs text-muted-foreground">
                     Resend UUID: {resendId}
                   </p>
                   <Button
@@ -1555,12 +1562,14 @@ export function SmsRecoveryConsole() {
                       resendCompleted ||
                       resendAttempt.isPending
                     }
-                    onClick={() => {
+                    onClick={async () => {
                       if (!resendId) return;
                       if (
-                        !window.confirm(
-                          `Send one new SMS for definitively failed attempt ${attemptSelection.attemptId}? This is an external side effect.`,
-                        )
+                        !(await confirm({
+                          title: "Send one replacement SMS?",
+                          description: `Send one new SMS for definitively failed attempt ${attemptSelection.attemptId}? This is an external side effect.`,
+                          confirmLabel: "Send SMS",
+                        }))
                       ) {
                         return;
                       }
@@ -1771,7 +1780,7 @@ export function SmsRecoveryConsole() {
                   </label>
                 </div>
                 {quarantineReason ? (
-                  <p className="mt-3 break-all font-mono text-[11px] text-amber-900">
+                  <p className="mt-3 break-all font-mono text-2xs text-amber-900">
                     Exact reviewed incident:{" "}
                     {deliverySelection.pendingHistoryId ?? "missing"}
                   </p>
@@ -1795,7 +1804,7 @@ export function SmsRecoveryConsole() {
                     a phone number, message body, client name, or PHI.
                   </span>
                 </label>
-                <p className="mt-3 break-all font-mono text-[11px] text-amber-900">
+                <p className="mt-3 break-all font-mono text-2xs text-amber-900">
                   Reconciliation UUID: {deliveryReconciliationId}
                 </p>
                 <Button
@@ -1805,7 +1814,7 @@ export function SmsRecoveryConsole() {
                     !canReconcileDelivery ||
                     deliveryDetail.data.candidateAttemptsTruncated
                   }
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       !deliveryReason ||
                       !deliveryReconciliationId ||
@@ -1814,9 +1823,11 @@ export function SmsRecoveryConsole() {
                       return;
                     }
                     if (
-                      !window.confirm(
-                        `Apply ${label(deliveryReason)} to exact delivery event ${deliverySelection.eventId}? This appends immutable operator evidence.`,
-                      )
+                      !(await confirm({
+                        title: "Apply delivery-event reconciliation?",
+                        description: `Apply ${label(deliveryReason)} to exact delivery event ${deliverySelection.eventId}? This appends immutable operator evidence.`,
+                        confirmLabel: label(deliveryReason),
+                      }))
                     ) {
                       return;
                     }
@@ -1857,6 +1868,8 @@ export function SmsRecoveryConsole() {
           before concluding the queue is clear.
         </div>
       ) : null}
+
+      <ConfirmDialog {...dialogProps} />
     </section>
   );
 }

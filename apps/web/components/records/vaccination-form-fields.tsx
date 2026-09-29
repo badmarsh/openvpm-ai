@@ -133,6 +133,7 @@ export function VaccinationFormFields({
         <Input
           id={fieldId("vaccineName")}
           name="vaccineName"
+          autoComplete="off"
           required
           value={form.vaccineName}
           maxLength={VACCINATION_NAME_MAX_LENGTH}
@@ -151,7 +152,7 @@ export function VaccinationFormFields({
                   : ""),
             }));
           }}
-          placeholder={t("records.vaccinations.form.vaccinePlaceholder", "e.g. Rabies")}
+          placeholder={t("records.vaccinations.form.vaccinePlaceholder", "e.g. Rabies…")}
         />
       </div>
       <div>
@@ -164,11 +165,12 @@ export function VaccinationFormFields({
         <Input
           id={fieldId("productName")}
           name="productName"
+          autoComplete="off"
           required={rabies}
           value={form.productName}
           maxLength={VACCINATION_PRODUCT_NAME_MAX_LENGTH}
           onChange={(event) => update("productName", event.target.value)}
-          placeholder={t("records.vaccinations.form.productNamePlaceholder", "e.g. Defensor 3")}
+          placeholder={t("records.vaccinations.form.productNamePlaceholder", "e.g. Defensor 3…")}
         />
       </div>
       <div>
@@ -198,11 +200,12 @@ export function VaccinationFormFields({
         <Input
           id={fieldId("lotNumber")}
           name="lotNumber"
+          autoComplete="off"
           required={rabies}
           value={form.lotNumber}
           maxLength={VACCINATION_LOT_NUMBER_MAX_LENGTH}
           onChange={(event) => update("lotNumber", event.target.value)}
-          placeholder={t("records.vaccinations.form.lotNumberPlaceholder", "e.g. RAB-2026-04")}
+          placeholder={t("records.vaccinations.form.lotNumberPlaceholder", "e.g. RAB-2026-04…")}
         />
       </div>
       <div>
@@ -215,11 +218,12 @@ export function VaccinationFormFields({
         <Input
           id={fieldId("manufacturer")}
           name="manufacturer"
+          autoComplete="off"
           required={rabies}
           value={form.manufacturer}
           maxLength={VACCINATION_MANUFACTURER_MAX_LENGTH}
           onChange={(event) => update("manufacturer", event.target.value)}
-          placeholder={t("records.vaccinations.form.manufacturerPlaceholder", "e.g. Zoetis")}
+          placeholder={t("records.vaccinations.form.manufacturerPlaceholder", "e.g. Zoetis…")}
         />
       </div>
       {rabies ? (
@@ -300,6 +304,7 @@ export function VaccinationFormFields({
             <Input
               id={fieldId("rabiesTagNumber")}
               name="rabiesTagNumber"
+          autoComplete="off"
               value={form.rabiesTagNumber}
               maxLength={VACCINATION_RABIES_TAG_MAX_LENGTH}
               onChange={(event) => update("rabiesTagNumber", event.target.value)}

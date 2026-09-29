@@ -11,7 +11,6 @@ import {
   Clock,
   Plane,
   Loader2,
-  X,
   Download,
   Globe,
   Flag,
@@ -21,6 +20,12 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { toast } from "sonner";
 import { validateMicrochipNumber } from "@/lib/crsz/microchip";
@@ -208,7 +213,7 @@ export function CrszPanel() {
                   <span className="text-xs font-semibold text-teal-950 dark:text-teal-200">
                     {t("statutory.crsz.quickVerifyTitle", "Rýchle overenie transpondéra v CRSZ / Európskych registroch")}
                   </span>
-                  <p className="text-[11px] text-teal-800/80 dark:text-teal-400/80">
+                  <p className="text-2xs text-teal-800/80 dark:text-teal-400/80">
                     {t("statutory.crsz.quickVerifySubtitle", "Overenie 15-miestneho ISO kódu, národného kódu SR (703) alebo výrobcu")}
                   </p>
                 </div>
@@ -254,13 +259,13 @@ export function CrszPanel() {
                       {t("statutory.crsz.nationalCodeSr", "🇸🇰 Národný kód SR (703)")}
                     </Badge>
                   )}
-                  <span className="text-[11px] text-muted-foreground">{lookupResult.notes}</span>
+                  <span className="text-2xs text-muted-foreground">{lookupResult.notes}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setLookupResult(null)}
-                  className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
+                  className="h-6 text-3xs text-muted-foreground hover:text-foreground"
                 >
                   {t("common.close", "Zavrieť")}
                 </Button>
@@ -333,7 +338,7 @@ export function CrszPanel() {
                           <div className="flex items-center gap-1.5">
                             <span>{item.microchipNumber}</span>
                             {isSlovak && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 border-blue-500/40 text-blue-600">
+                              <Badge variant="outline" className="text-3xs px-1 py-0 border-blue-500/40 text-blue-600">
                                 SK (703)
                               </Badge>
                             )}
@@ -683,17 +688,14 @@ function RegisterMicrochipModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.registerTitle")}</h3>
+            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.registerTitle")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -785,8 +787,8 @@ function RegisterMicrochipModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -836,17 +838,14 @@ function IssuePassportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <Plane className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.passportTitle")}</h3>
+            <Plane className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.passportTitle")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -929,8 +928,8 @@ function IssuePassportModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 function IssueKvlCrPassportModal({
@@ -989,17 +988,14 @@ function IssueKvlCrPassportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl overflow-hidden p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-3">
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="w-full max-w-md gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+        <DialogHeader className="text-left border-b border-border pb-3 pr-8">
           <div className="flex items-center gap-2">
-            <Flag className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-base">{t("crsz.kvlCrTitle", "Vystaviť pas KVL ČR")}</h3>
+            <Flag className="h-5 w-5 text-primary" aria-hidden="true" />
+            <DialogTitle className="font-semibold text-base">{t("crsz.kvlCrTitle", "Vystaviť pas KVL ČR")}</DialogTitle>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -1127,7 +1123,7 @@ function IssueKvlCrPassportModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

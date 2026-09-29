@@ -51,7 +51,7 @@ export function LogoChip({ brand, light }: { brand: FrameBrand; light?: boolean 
         <PawPrint size={10} />
       </span>
       <span
-        className="text-[10px] font-bold tracking-wide"
+        className="text-3xs font-bold tracking-wide"
         style={{ color: light ? brand.primaryColor : "#fff" }}
       >
         {brand.logoInitials}
@@ -62,7 +62,7 @@ export function LogoChip({ brand, light }: { brand: FrameBrand; light?: boolean 
 
 export function IllustrationBadge() {
   return (
-    <span className="absolute top-2 right-2 rounded-full bg-black/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 tracking-wide shadow-md border border-white/20">
+    <span className="absolute top-2 right-2 rounded-full bg-black/80 backdrop-blur-md text-white text-3xs font-bold px-2.5 py-1 tracking-wide shadow-md border border-white/20">
       Ilustrácia
     </span>
   );
@@ -119,7 +119,7 @@ export function MediaFrame({
           </p>
         ) : null}
         <figcaption className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2 z-10">
-          <span className="text-white text-[11px] font-semibold leading-tight drop-shadow truncate">
+          <span className="text-white text-2xs font-semibold leading-tight drop-shadow truncate">
             {asset.patientName ?? brand.name}
           </span>
           <span
@@ -147,7 +147,7 @@ export function MediaFrame({
         />
         <div className="absolute left-2 top-2 flex items-center gap-2 z-10">
           <LogoChip brand={brand} />
-          <span className="rounded-full bg-amber-500/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-stone-950 tracking-wide shadow-sm">
+          <span className="rounded-full bg-amber-500/90 backdrop-blur-sm px-2 py-0.5 text-3xs font-bold text-stone-950 tracking-wide shadow-sm">
             REEL 9:16
           </span>
         </div>
@@ -155,7 +155,7 @@ export function MediaFrame({
           className="absolute inset-x-0 bottom-0 p-3 z-10"
           style={{ background: "linear-gradient(transparent, rgba(0, 0, 0, 0.75))" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/85">
+          <p className="text-3xs font-bold uppercase tracking-wider text-white/85">
             intro 2 s → klip personálu → outro s rezerváciou
           </p>
           {asset.altText ? (
@@ -225,7 +225,7 @@ export function MediaFrame({
             </p>
           ) : null}
           <p
-            className={`font-bold ${tv ? "text-lg" : "text-[10px]"} tracking-[0.18em] uppercase`}
+            className={`font-bold ${tv ? "text-lg" : "text-3xs"} tracking-[0.18em] uppercase`}
             style={{ color: brand.secondaryColor }}
           >
             {brand.name}

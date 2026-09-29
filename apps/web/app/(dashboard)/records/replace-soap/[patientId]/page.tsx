@@ -26,6 +26,8 @@ import {
 import { hasUnresolvedSoapTemplatePrompts } from "@/lib/records/soap-templates";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { PageHeader } from "@/components/layout/page-header";
 
 const SoapNoteEditor = dynamic(
@@ -83,6 +85,11 @@ export default function ReplaceSoapNotePage() {
   const [initialized, setInitialized] = useState(false);
   const initialFingerprint = useRef("");
   const operationId = useRef<string | null>(null);
+  const { confirm, dialogProps } = useConfirmDialog();
+  const leaveBypassRef = useRef(false);
+
+  const isDirty =
+    initialized && fingerprint(reason, sections) !== initialFingerprint.current;
 
   useEffect(() => {
     if (!source || initialized) return;
@@ -101,10 +108,7 @@ export default function ReplaceSoapNotePage() {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (
-        !initialized ||
-        fingerprint(reason, sections) === initialFingerprint.current
-      ) {
+      if (!isDirty || leaveBypassRef.current) {
         return;
       }
       event.preventDefault();
@@ -112,26 +116,52 @@ export default function ReplaceSoapNotePage() {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [initialized, reason, sections]);
+  }, [isDirty]);
 
+  // Anchor capture with the themed ConfirmDialog (was native window.confirm):
+  // a capture-phase click must be decided before the navigation commits, so
+  // we cancel it, ask asynchronously and re-issue the navigation on confirm.
   useEffect(() => {
+    if (!isDirty) return;
     const guardLinkNavigation = (event: MouseEvent) => {
       if (
-        !initialized ||
-        fingerprint(reason, sections) === initialFingerprint.current ||
         !(event.target instanceof Element) ||
-        !event.target.closest("a[href]")
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
       ) {
         return;
       }
-      if (!window.confirm(t("records.replaceSoap.discardConfirm", "Discard the replacement SOAP changes on this page?"))) {
-        event.preventDefault();
-        event.stopPropagation();
+      const anchor = event.target.closest<HTMLAnchorElement>("a[href]");
+      if (
+        !anchor ||
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download") ||
+        !anchor.href.startsWith(window.location.origin)
+      ) {
+        return;
       }
+      event.preventDefault();
+      event.stopPropagation();
+      const href = anchor.href;
+      void confirm({
+        title: t("records.replaceSoap.discardTitle", "Discard replacement changes?"),
+        description: t(
+          "records.replaceSoap.discardConfirm",
+          "Discard the replacement SOAP changes on this page?",
+        ),
+        confirmLabel: t("records.replaceSoap.discardAction", "Discard changes"),
+        confirmVariant: "destructive",
+      }).then((confirmed) => {
+        if (!confirmed) return;
+        leaveBypassRef.current = true;
+        window.location.assign(href);
+      });
     };
     document.addEventListener("click", guardLinkNavigation, true);
     return () => document.removeEventListener("click", guardLinkNavigation, true);
-  }, [initialized, reason, sections, t]);
+  }, [isDirty, confirm, t]);
 
   const replace = trpc.records.replaceSoapNote.useMutation({
     onSuccess: async (replacement) => {
@@ -154,11 +184,18 @@ export default function ReplaceSoapNotePage() {
     Object.values(sections).every(
       (value) => value.length <= SOAP_SECTION_MAX_LENGTH,
     );
-  const leaveEditor = () => {
+  const leaveEditor = async () => {
     if (
-      initialized &&
-      fingerprint(reason, sections) !== initialFingerprint.current &&
-      !window.confirm(t("records.replaceSoap.discardConfirm", "Discard the replacement SOAP changes on this page?"))
+      isDirty &&
+      !(await confirm({
+        title: t("records.replaceSoap.discardTitle", "Discard replacement changes?"),
+        description: t(
+          "records.replaceSoap.discardConfirm",
+          "Discard the replacement SOAP changes on this page?",
+        ),
+        confirmLabel: t("records.replaceSoap.discardAction", "Discard changes"),
+        confirmVariant: "destructive",
+      }))
     ) {
       return;
     }
@@ -314,14 +351,16 @@ export default function ReplaceSoapNotePage() {
         </Button>
         <Button
           disabled={!valid || replace.isPending}
-          onClick={() => {
+          onClick={async () => {
             if (
-              !window.confirm(
-                t(
+              !(await confirm({
+                title: t("records.replaceSoap.finalizeTitle", "Finalize replacement SOAP"),
+                description: t(
                   "records.replaceSoap.confirmFinalize",
                   "Finalize this replacement SOAP now? It cannot be edited after signing; later clarification requires an attributed addendum."
                 ),
-              )
+                confirmLabel: t("records.replaceSoap.finalizeButton", "Finalize replacement"),
+              }))
             ) {
               return;
             }
@@ -345,6 +384,8 @@ export default function ReplaceSoapNotePage() {
             : t("records.replaceSoap.finalizeButton", "Finalize replacement")}
         </Button>
       </div>
+
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

@@ -69,6 +69,7 @@ import {
 } from "@/components/records/prescription-inventory-product-picker";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   PATIENT_SEARCH_MAX_LENGTH,
@@ -1697,7 +1698,7 @@ function RecordsPageContent() {
                       </span>
                     </div>
                     {patient.clientFirstName && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         {t("records.ownerLabel", "Owner: {firstName} {lastName}", {
                           firstName: patient.clientFirstName,
                           lastName: patient.clientLastName ?? "",
@@ -1723,7 +1724,7 @@ function RecordsPageContent() {
                 aria-pressed={speciesFilter === ""}
                 onClick={() => setSpeciesFilter("")}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                  "inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 text-2xs font-medium transition-colors",
                   speciesFilter === ""
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -1742,7 +1743,7 @@ function RecordsPageContent() {
                     )
                   }
                   className={cn(
-                    "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-medium transition-colors",
+                    "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 text-2xs font-medium transition-colors",
                     speciesFilter === option.value
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -2029,7 +2030,7 @@ function RecordsPageContent() {
                                           : t("records.soap.noDate", "No date")}
                                       </p>
                                       {note.imported ? (
-                                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                                           {t("records.soap.importedBadge", "Imported")}
                                         </span>
                                       ) : null}
@@ -2048,7 +2049,7 @@ function RecordsPageContent() {
                                         size="sm"
                                       />
                                       {note.correctionId ? (
-                                        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
                                           {t("records.enteredInError", "Entered in error")}
                                         </span>
                                       ) : null}
@@ -2087,17 +2088,17 @@ function RecordsPageContent() {
                                       <div className="flex items-center gap-2.5">
                                         <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                         <div>
-                                          <p className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                                          <p className="font-bold uppercase tracking-wider text-2xs flex items-center gap-1.5">
                                             <span>{t("records.soap.clinicianApproved", "Clinician Approved")}</span>
-                                            <span className="text-[10px] opacity-75">· {t("records.soap.legalTamperProof", "Zákonný klinický záznam")}</span>
+                                            <span className="text-3xs opacity-75">· {t("records.soap.legalTamperProof", "Zákonný klinický záznam")}</span>
                                           </p>
-                                          <p className="text-[11px] font-mono tabular-nums opacity-90">
+                                          <p className="text-2xs font-mono tabular-nums opacity-90">
                                             {note.finalizerName ?? t("records.soap.unknownClinician", "Unknown clinician")}
                                             {note.finalizedAt ? ` · ${formatClinicalDateTime(note.finalizedAt, recordsTimeZone)}` : ""}
                                           </p>
                                         </div>
                                       </div>
-                                      <span className="rounded-full bg-emerald-600/20 border border-emerald-500/30 px-2.5 py-1 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                                      <span className="rounded-full bg-emerald-600/20 border border-emerald-500/30 px-2.5 py-1 font-mono text-3xs font-bold text-emerald-800 dark:text-emerald-200">
                                         {t("records.soap.sealedAndVerified", "SEALED & VERIFIED")}
                                       </span>
                                     </div>
@@ -2134,11 +2135,11 @@ function RecordsPageContent() {
                                   {noteVitals && (
                                     <div className="rounded-xl border border-border/70 bg-muted/20 p-3 shadow-2xs">
                                       <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                        <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                                           <Activity className="h-3.5 w-3.5 text-primary" />
                                           {t("records.soap.vitalsSnapshot", "Visit Vitals Quick-Stats")}
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                                        <span className="text-3xs text-muted-foreground font-mono tabular-nums">
                                           {formatClinicalDateTime(noteVitals.recordedAt, recordsTimeZone)}
                                         </span>
                                       </div>
@@ -2146,35 +2147,35 @@ function RecordsPageContent() {
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Thermometer className="h-4 w-4 text-amber-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.temperature", "Temp")}</p>
+                                            <p className="text-3xs text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.temperature", "Temp")}</p>
                                             <p className="font-semibold">{noteVitals.temperatureC ? `${noteVitals.temperatureC} °C` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Heart className="h-4 w-4 text-rose-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.heartRate", "Heart Rate")}</p>
+                                            <p className="text-3xs text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.heartRate", "Heart Rate")}</p>
                                             <p className="font-semibold">{noteVitals.heartRateBpm ? `${noteVitals.heartRateBpm} bpm` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Wind className="h-4 w-4 text-sky-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.respiratoryRate", "Resp. Rate")}</p>
+                                            <p className="text-3xs text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.respiratoryRate", "Resp. Rate")}</p>
                                             <p className="font-semibold">{noteVitals.respiratoryRateBpm ? `${noteVitals.respiratoryRateBpm} /min` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Scale className="h-4 w-4 text-emerald-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.weight", "Weight")}</p>
+                                            <p className="text-3xs text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.weight", "Weight")}</p>
                                             <p className="font-semibold">{noteVitals.weightKg ? `${noteVitals.weightKg} kg` : "—"}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 bg-background/80 rounded-lg p-2 border border-border/50">
                                           <Activity className="h-4 w-4 text-violet-500 shrink-0" />
                                           <div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.bodyCondition", "BCS Score")}</p>
+                                            <p className="text-3xs text-muted-foreground uppercase font-sans font-medium">{t("soap.vitals.bodyCondition", "BCS Score")}</p>
                                             <p className="font-semibold">{noteVitals.bodyConditionScore ? `${noteVitals.bodyConditionScore}/${noteVitals.bodyConditionScale ?? 9}` : "—"}</p>
                                           </div>
                                         </div>
@@ -3098,58 +3099,57 @@ function RecordsPageContent() {
                             </td>
                             <td className={cn(tableCellClass, "space-y-2 text-right align-top")}>
                               <div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title={
-                                    rx.effectiveStatus === "active"
+                                <TooltipHint content={rx.effectiveStatus === "active"
                                       ? t("records.prescriptions.printLabel", "Print Label")
-                                      : t("records.prescriptions.printLabelDisabledTooltip", "Only active prescriptions can print a dispensing label")
-                                  }
-                                  disabled={rx.effectiveStatus !== "active"}
-                                  onClick={async () => {
-                                  const clientName = [
-                                    selectedPatient?.clientFirstName,
-                                    selectedPatient?.clientLastName,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ");
-                                  const { generatePrescriptionLabelPdf } =
-                                    await import("@/lib/pdf");
-                                  generatePrescriptionLabelPdf({
-                                    practiceName: recordsPracticeName,
-                                    practicePhone:
-                                      recordsPracticePhone ?? undefined,
-                                    patientName: selectedPatient?.name ?? "",
-                                    clientName,
-                                    species: selectedPatient?.species ?? "",
-                                    medicationName: rx.medicationName,
-                                    dosage: rx.dosage ?? "",
-                                    frequency: rx.frequency ?? "",
-                                    instructions: rx.instructions ?? undefined,
-                                    prescribedBy: rx.prescriberName ?? "",
-                                    startDate: rx.startDate
-                                      ? formatClinicalDate(
-                                          rx.startDate,
-                                          recordsTimeZone
-                                        )
-                                      : formatClinicalDate(
-                                          dateInputValue(
-                                            new Date(),
+                                      : t("records.prescriptions.printLabelDisabledTooltip", "Only active prescriptions can print a dispensing label")}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={rx.effectiveStatus !== "active"}
+                                    onClick={async () => {
+                                    const clientName = [
+                                      selectedPatient?.clientFirstName,
+                                      selectedPatient?.clientLastName,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ");
+                                    const { generatePrescriptionLabelPdf } =
+                                      await import("@/lib/pdf");
+                                    generatePrescriptionLabelPdf({
+                                      practiceName: recordsPracticeName,
+                                      practicePhone:
+                                        recordsPracticePhone ?? undefined,
+                                      patientName: selectedPatient?.name ?? "",
+                                      clientName,
+                                      species: selectedPatient?.species ?? "",
+                                      medicationName: rx.medicationName,
+                                      dosage: rx.dosage ?? "",
+                                      frequency: rx.frequency ?? "",
+                                      instructions: rx.instructions ?? undefined,
+                                      prescribedBy: rx.prescriberName ?? "",
+                                      startDate: rx.startDate
+                                        ? formatClinicalDate(
+                                            rx.startDate,
+                                            recordsTimeZone
+                                          )
+                                        : formatClinicalDate(
+                                            dateInputValue(
+                                              new Date(),
+                                              recordsTimeZone
+                                            ),
                                             recordsTimeZone
                                           ),
-                                          recordsTimeZone
-                                        ),
-                                    quantity: rx.quantity != null ? String(rx.quantity) : undefined,
-                                    refillsRemaining: rx.refillsRemaining ?? undefined,
-                                  }).save(
-                                    `label-${rx.medicationName.replace(/\s+/g, "-").toLowerCase()}.pdf`
-                                  );
-                                  }}
-                                >
-                                  <Tag className="mr-1 h-3.5 w-3.5" />
-                                  {t("records.prescriptions.printLabel", "Print Label")}
-                                </Button>
+                                      quantity: rx.quantity != null ? String(rx.quantity) : undefined,
+                                      refillsRemaining: rx.refillsRemaining ?? undefined,
+                                    }).save(
+                                      `label-${rx.medicationName.replace(/\s+/g, "-").toLowerCase()}.pdf`
+                                    );
+                                    }}
+                                  >
+                                    <Tag className="mr-1 h-3.5 w-3.5" />
+                                    {t("records.prescriptions.printLabel", "Print Label")}
+                                  </Button>
+                                </TooltipHint>
                               </div>
                               <PrescriptionLifecycleControl
                                 prescription={{
@@ -4429,7 +4429,7 @@ function RecordsPageContent() {
                               <td className={cn(tableCellClass, "max-w-md")}>
                                 <p className="truncate font-medium text-foreground">{entry.title}</p>
                                 {entry.detail ? (
-                                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
                                     {entry.detail}
                                   </p>
                                 ) : null}
@@ -4439,11 +4439,11 @@ function RecordsPageContent() {
                               </td>
                               <td className={tableCellClass}>
                                 {entry.enteredInError ? (
-                                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
                                     {t("records.enteredInError", "Entered in error")}
                                   </span>
                                 ) : (
-                                  <span className="text-[11px] text-muted-foreground">
+                                  <span className="text-2xs text-muted-foreground">
                                     {t("records.history.current", "Current")}
                                   </span>
                                 )}
@@ -4542,7 +4542,7 @@ function RecordsPageContent() {
                       <td className={cn(tableCellClass, "font-medium")}>
                         {patient.name}
                         {patient.breed ? (
-                          <p className="mt-0.5 text-[11px] font-normal text-muted-foreground">
+                          <p className="mt-0.5 text-2xs font-normal text-muted-foreground">
                             {patient.breed}
                           </p>
                         ) : null}

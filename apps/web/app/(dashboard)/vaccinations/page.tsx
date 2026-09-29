@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
 import {
@@ -47,7 +48,7 @@ const MAX_BATCH_SIZE = 100;
 const TAB_PANEL = "mt-0 space-y-4";
 
 /** Microchips, batch (lot) numbers and dates: monospaced tabular numerals. */
-const NUMERIC = "font-mono text-[11px] tabular-nums";
+const NUMERIC = "font-mono text-2xs tabular-nums";
 
 function canOperateRecalls(role?: string | null): boolean {
   return role === "admin" || role === "veterinarian" || role === "front_desk";
@@ -200,7 +201,7 @@ export default function VaccinationsPage() {
             {eligibleRecipients.length > 0 && (
               <Badge
                 variant="secondary"
-                className="ml-1 px-1.5 py-0 text-[10px] tabular-nums"
+                className="ml-1 px-1.5 py-0 text-3xs tabular-nums"
               >
                 {eligibleRecipients.length}
               </Badge>
@@ -327,7 +328,7 @@ export default function VaccinationsPage() {
                             {firstVaccine?.vaccineName ??
                               t("vaccinations.vaccineFallback", "Vakcína")}
                           </span>
-                          <span className="block text-[10px] text-muted-foreground">
+                          <span className="block text-3xs text-muted-foreground">
                             {t("vaccinations.expiryPrefix", "Expirácia:")}{" "}
                             <span className={NUMERIC}>
                               {formatDateToDisplay(firstVaccine?.nextDueDate)}
@@ -336,13 +337,13 @@ export default function VaccinationsPage() {
                         </td>
                         <td className={tableCellClass}>
                           {r.channel ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
                               {r.channel === "sms" ? (
                                 <MessageSquare className="h-3 w-3 text-success" />
                               ) : (
                                 <Mail className="h-3 w-3 text-info" />
                               )}
-                              <span className="text-[10px] font-semibold uppercase">
+                              <span className="text-3xs font-semibold uppercase">
                                 {r.channel === "sms"
                                   ? t("recalls.channelSms", "SMS")
                                   : t("recalls.channelEmail", "E-mail")}
@@ -361,7 +362,7 @@ export default function VaccinationsPage() {
                                   ? "outline"
                                   : "warning"
                             }
-                            className="px-1.5 py-0 text-[10px]"
+                            className="px-1.5 py-0 text-3xs"
                           >
                             {r.status === "eligible"
                               ? t("recalls.badgeReady", "Pripravené")
@@ -447,7 +448,7 @@ export default function VaccinationsPage() {
                         <Link href={`/patients/${r.patientId}`} className="hover:underline">
                           {r.patientName}
                         </Link>
-                        <span className="block text-[10px] capitalize text-muted-foreground">
+                        <span className="block text-3xs capitalize text-muted-foreground">
                           {r.species} {r.breed ? `· ${r.breed}` : ""}
                         </span>
                       </td>
@@ -461,7 +462,7 @@ export default function VaccinationsPage() {
                       <td className={tableCellClass}>
                         <span className="font-medium text-foreground">{r.vaccineName}</span>
                         {r.lotNumber && (
-                          <span className="block text-[10px] text-muted-foreground">
+                          <span className="block text-3xs text-muted-foreground">
                             {t("vaccinations.lotPrefix", "Šarža:")}{" "}
                             <span className={NUMERIC}>{r.lotNumber}</span>
                           </span>
@@ -475,13 +476,14 @@ export default function VaccinationsPage() {
                       </td>
                       <td className={cn(tableCellClass, "text-right")}>
                         <Button asChild variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <Link
-                            href={`/records?patientId=${r.patientId}&tab=vaccinations`}
-                            aria-label={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
-                            title={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Link>
+                          <TooltipHint content={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}>
+                            <Link
+                              href={`/records?patientId=${r.patientId}&tab=vaccinations`}
+                              aria-label={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </TooltipHint>
                         </Button>
                       </td>
                     </tr>

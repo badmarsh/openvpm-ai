@@ -144,7 +144,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
         <div className="space-y-3 py-1">
           {/* Modern & Tech */}
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            <span className="text-3xs font-bold uppercase tracking-wider text-muted-foreground px-1">
               Modern & Tech
             </span>
             <div className="grid grid-cols-2 gap-1.5 mt-1">
@@ -190,7 +190,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
 
           {/* Elegant & Deep */}
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            <span className="text-3xs font-bold uppercase tracking-wider text-muted-foreground px-1">
               Elegant & Deep
             </span>
             <div className="grid grid-cols-2 gap-1.5 mt-1">
@@ -235,7 +235,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
 
           {/* Warm & Nature */}
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            <span className="text-3xs font-bold uppercase tracking-wider text-muted-foreground px-1">
               Warm & Nature
             </span>
             <div className="grid grid-cols-2 gap-1.5 mt-1">
@@ -295,7 +295,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
 
           {showImporter && (
             <div className="mt-2.5 space-y-2 rounded-lg border border-border bg-muted/20 p-2.5">
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
+              <p className="text-3xs text-muted-foreground leading-relaxed">
                 Vložte CSS kód (:root a .dark premenné) a kliknite na aplikovať:
               </p>
               <textarea
@@ -303,14 +303,14 @@ export function ThemeSwitcher({ className }: { className?: string }) {
                 onChange={(e) => setCustomCssInput(e.target.value)}
                 rows={4}
                 placeholder={`:root {\n  --background: oklch(...);\n  --primary: ...;\n}`}
-                className="w-full rounded-md border border-input bg-background p-2 font-mono text-[10px] leading-tight focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-md border border-input bg-background p-2 font-mono text-3xs leading-tight focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <div className="flex justify-end gap-1.5">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-[11px]"
+                  className="h-7 text-2xs"
                   onClick={() => setShowImporter(false)}
                 >
                   Zrušiť
@@ -318,7 +318,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
                 <Button
                   type="button"
                   size="sm"
-                  className="h-7 text-[11px] gap-1"
+                  className="h-7 text-2xs gap-1"
                   onClick={handleImport}
                 >
                   <Sparkles className="h-3 w-3" />

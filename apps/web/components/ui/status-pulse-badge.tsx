@@ -86,7 +86,7 @@ const variantStyles: Record<
     defaultLabel: "Besnota",
   },
   urgent: {
-    badge: "border-destructive/40 bg-destructive/15 text-destructive animate-pulse",
+    badge: "border-destructive/40 bg-destructive/15 text-destructive motion-safe:animate-pulse",
     dot: "bg-destructive",
     ping: "bg-destructive",
     defaultIcon: AlertTriangle,
@@ -146,7 +146,7 @@ export function HeartbeatDot({
     >
       <span
         className={cn(
-          "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+          "absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full opacity-75",
           tone === "down" ? "bg-red-400" : "bg-emerald-400",
         )}
       />
@@ -192,7 +192,7 @@ export function StatusPulseBadge({
         {shouldPulse && (
           <span
             className={cn(
-              "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+              "absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full opacity-75",
               config.ping
             )}
           />

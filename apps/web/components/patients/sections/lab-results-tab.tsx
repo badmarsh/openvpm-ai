@@ -117,11 +117,11 @@ export function LabResultsTab({
                         ? `${lab.resultValue}${lab.unit ? ` ${lab.unit}` : ""}`
                         : t("patients.labResultsTab.pending", "Pending")}
                       {isHigh ? (
-                        <span className="ml-1 inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        <span className="ml-1 inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-2xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">
                           {t("patients.labResultsTab.flagHigh", "High")} <TriangleAlert className="ml-1 h-3 w-3" />
                         </span>
                       ) : isLow ? (
-                        <span className="ml-1 inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                        <span className="ml-1 inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-2xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                           {t("patients.labResultsTab.flagLow", "Low")}
                         </span>
                       ) : null}

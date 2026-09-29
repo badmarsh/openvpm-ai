@@ -51,7 +51,7 @@ export function HoursLocationSection({ content, contextData }: HoursLocationSect
                   <div className="text-right">
                     <span className="font-medium text-muted-foreground">{h.hours}</span>
                     {h.note && (
-                      <span className="block text-[11px] text-primary">{h.note}</span>
+                      <span className="block text-2xs text-primary">{h.note}</span>
                     )}
                   </div>
                 </div>
@@ -99,7 +99,7 @@ export function HoursLocationSection({ content, contextData }: HoursLocationSect
               className="w-full h-full border-0"
               loading="lazy"
             />
-            <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-xs px-2 py-1 rounded text-[10px] text-muted-foreground border border-border">
+            <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-xs px-2 py-1 rounded text-3xs text-muted-foreground border border-border">
               {address}
             </div>
           </div>

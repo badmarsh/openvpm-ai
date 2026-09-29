@@ -52,7 +52,7 @@ export function TrustBadgesSection({ content }: TrustBadgesSectionProps) {
                 </div>
                 <div className="font-bold text-xs text-foreground">{item.label}</div>
                 {item.description && (
-                  <p className="text-[11px] text-muted-foreground leading-snug">
+                  <p className="text-2xs text-muted-foreground leading-snug">
                     {item.description}
                   </p>
                 )}

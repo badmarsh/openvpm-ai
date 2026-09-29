@@ -13,6 +13,7 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
@@ -102,86 +103,92 @@ export function SoapNoteEditor({
         className="flex items-center gap-1 p-2 border-b border-border bg-muted/50 flex-wrap"
       >
         <div className="flex gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={editor.isActive("bold") ? "default" : "outline"}
-            onClick={toggleBold}
-            title={labels.bold}
-            aria-label={labels.bold}
-            aria-pressed={editor.isActive("bold")}
-            className="h-8 w-8 p-0"
-          >
-            <Bold className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={editor.isActive("italic") ? "default" : "outline"}
-            onClick={toggleItalic}
-            title={labels.italic}
-            aria-label={labels.italic}
-            aria-pressed={editor.isActive("italic")}
-            className="h-8 w-8 p-0"
-          >
-            <Italic className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={editor.isActive("underline") ? "default" : "outline"}
-            onClick={toggleUnderline}
-            title={labels.underline}
-            aria-label={labels.underline}
-            aria-pressed={editor.isActive("underline")}
-            className="h-8 w-8 p-0"
-          >
-            <UnderlineIcon className="h-4 w-4" aria-hidden="true" />
-          </Button>
+          <TooltipHint content={labels.bold}>
+            <Button
+              type="button"
+              size="sm"
+              variant={editor.isActive("bold") ? "default" : "outline"}
+              onClick={toggleBold}
+              aria-label={labels.bold}
+              aria-pressed={editor.isActive("bold")}
+              className="h-8 w-8 p-0"
+            >
+              <Bold className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content={labels.italic}>
+            <Button
+              type="button"
+              size="sm"
+              variant={editor.isActive("italic") ? "default" : "outline"}
+              onClick={toggleItalic}
+              aria-label={labels.italic}
+              aria-pressed={editor.isActive("italic")}
+              className="h-8 w-8 p-0"
+            >
+              <Italic className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content={labels.underline}>
+            <Button
+              type="button"
+              size="sm"
+              variant={editor.isActive("underline") ? "default" : "outline"}
+              onClick={toggleUnderline}
+              aria-label={labels.underline}
+              aria-pressed={editor.isActive("underline")}
+              className="h-8 w-8 p-0"
+            >
+              <UnderlineIcon className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </TooltipHint>
         </div>
 
         <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
 
         <div className="flex gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={editor.isActive("bulletList") ? "default" : "outline"}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            title={labels.bulletList}
-            aria-label={labels.bulletList}
-            aria-pressed={editor.isActive("bulletList")}
-            className="h-8 w-8 p-0"
-          >
-            <List className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={editor.isActive("orderedList") ? "default" : "outline"}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            title={labels.orderedList}
-            aria-label={labels.orderedList}
-            aria-pressed={editor.isActive("orderedList")}
-            className="h-8 w-8 p-0"
-          >
-            <ListOrdered className="h-4 w-4" aria-hidden="true" />
-          </Button>
+          <TooltipHint content={labels.bulletList}>
+            <Button
+              type="button"
+              size="sm"
+              variant={editor.isActive("bulletList") ? "default" : "outline"}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              aria-label={labels.bulletList}
+              aria-pressed={editor.isActive("bulletList")}
+              className="h-8 w-8 p-0"
+            >
+              <List className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content={labels.orderedList}>
+            <Button
+              type="button"
+              size="sm"
+              variant={editor.isActive("orderedList") ? "default" : "outline"}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              aria-label={labels.orderedList}
+              aria-pressed={editor.isActive("orderedList")}
+              className="h-8 w-8 p-0"
+            >
+              <ListOrdered className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </TooltipHint>
         </div>
 
         <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
 
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={clearFormatting}
-          title={labels.clearFormatting}
-          aria-label={labels.clearFormatting}
-          className="h-8 w-8 p-0"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden="true" />
-        </Button>
+        <TooltipHint content={labels.clearFormatting}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={clearFormatting}
+            aria-label={labels.clearFormatting}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </TooltipHint>
       </div>
 
       {/* Editor */}

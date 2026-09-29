@@ -12,12 +12,19 @@ import {
   Plus,
   Loader2,
   Search,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 function formatDate(val: Date | string | null | undefined): string {
@@ -383,27 +390,27 @@ export function RabiesObservationPanel() {
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{obs.patientName}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           {obs.species} • {obs.breed || t("statutory.rabies.mixedBreed", "Mixed breed")}
                         </div>
-                        <div className="text-[10px] font-mono text-muted-foreground/80">
+                        <div className="text-3xs font-mono text-muted-foreground/80">
                           {obs.microchipNumber || t("statutory.rabies.noChip", "Unchipped")}
                         </div>
                       </td>
                       <td className="p-3">
                         <div className="font-medium text-foreground">{obs.injuredPersonName}</div>
-                        <div className="text-[11px] text-muted-foreground">{obs.injuredPersonContact || "—"}</div>
+                        <div className="text-2xs text-muted-foreground">{obs.injuredPersonContact || "—"}</div>
                       </td>
 
                       {/* Checkpoint Day 1 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day1ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day1ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-3xs gap-1">
                             <Clock className="h-3 w-3" />
                             {t("statutory.rabies.badgeWaiting", "Pending")}
                           </Badge>
@@ -413,12 +420,12 @@ export function RabiesObservationPanel() {
                       {/* Checkpoint Day 5 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day5ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day5ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px]">
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-3xs">
                             —
                           </Badge>
                         )}
@@ -427,12 +434,12 @@ export function RabiesObservationPanel() {
                       {/* Checkpoint Day 14 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day14ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day14ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px]">
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-3xs">
                             —
                           </Badge>
                         )}
@@ -441,16 +448,16 @@ export function RabiesObservationPanel() {
                       {/* Overall Status */}
                       <td className="p-3 whitespace-nowrap">
                         {isCompleted ? (
-                          <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
+                          <Badge className="bg-emerald-600 text-white text-3xs font-semibold">
                             {t("statutory.rabies.statusRuledOut", "Rabies Ruled Out")}
                           </Badge>
                         ) : isSuspicious ? (
-                          <Badge variant="destructive" className="text-[10px] font-semibold gap-1">
+                          <Badge variant="destructive" className="text-3xs font-semibold gap-1">
                             <AlertTriangle className="h-3 w-3" />
                             {t("statutory.rabies.statusSuspiciousRvps", "Suspicious (RVPS)")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-[10px] font-semibold">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-3xs font-semibold">
                             {t("statutory.rabies.statusInObservation", "In Observation")}
                           </Badge>
                         )}
@@ -475,16 +482,17 @@ export function RabiesObservationPanel() {
                             </Button>
                           )}
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs px-2 gap-1"
-                            onClick={() => handlePrintCertificate(obs)}
-                            title={t("statutory.rabies.btnPrintTitle", "Print veterinary certificate")}
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                            {t("statutory.rabies.btnCertificate", "Certificate")}
-                          </Button>
+                          <TooltipHint content={t("statutory.rabies.btnPrintTitle", "Print veterinary certificate")}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs px-2 gap-1"
+                              onClick={() => handlePrintCertificate(obs)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              {t("statutory.rabies.btnCertificate", "Certificate")}
+                            </Button>
+                          </TooltipHint>
                         </div>
                       </td>
                     </tr>
@@ -497,21 +505,16 @@ export function RabiesObservationPanel() {
       </div>
 
       {/* MODAL 1: Nový prípad pohryznutia */}
-      {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="fixed inset-0" onClick={() => setIsNewModalOpen(false)} />
-          <div className="relative z-10 w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-rose-600" />
-                <h3 className="font-semibold text-base text-foreground">
-                  {t("statutory.rabies.modalNewTitle", "New Animal Bite Injury Case")}
-                </h3>
-              </div>
-              <button onClick={() => setIsNewModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
+      <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
+        <DialogContent className="w-full max-w-lg gap-4 bg-background p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+          <DialogHeader className="text-left border-b pb-3 pr-8">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-rose-600" aria-hidden="true" />
+              <DialogTitle className="font-semibold text-base text-foreground">
+                {t("statutory.rabies.modalNewTitle", "New Animal Bite Injury Case")}
+              </DialogTitle>
             </div>
+          </DialogHeader>
 
             <div className="space-y-3 text-xs">
               <div>
@@ -620,29 +623,27 @@ export function RabiesObservationPanel() {
                 {t("statutory.rabies.btnStartObservation", "Record & Start 14-Day Observation")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL 2: Zápis kontrolného vyšetrenia (1., 5. alebo 14. deň) */}
-      {checkpointModalObs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="fixed inset-0" onClick={() => setCheckpointModalObs(null)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="font-semibold text-base text-foreground">
-                  {t("statutory.rabies.modalCheckpointTitle", "Record Rabies Clinical Examination")}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Pacient: <strong>{checkpointModalObs.patientName}</strong>
-                </p>
-              </div>
-              <button onClick={() => setCheckpointModalObs(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <Dialog
+        open={checkpointModalObs !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setCheckpointModalObs(null);
+        }}
+      >
+        <DialogContent className="w-full max-w-md gap-4 bg-background p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+          <DialogHeader className="text-left border-b pb-3 pr-8">
+            <DialogTitle className="font-semibold text-base text-foreground">
+              {t("statutory.rabies.modalCheckpointTitle", "Record Rabies Clinical Examination")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Pacient: <strong>{checkpointModalObs?.patientName}</strong>
+            </DialogDescription>
+          </DialogHeader>
 
+          {checkpointModalObs && (<>
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-medium text-foreground">
@@ -740,9 +741,9 @@ export function RabiesObservationPanel() {
                 {t("statutory.rabies.btnRecordCheckpoint", "Record Examination")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>)}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

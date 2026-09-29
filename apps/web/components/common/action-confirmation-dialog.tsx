@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useId, useRef, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
 
@@ -16,6 +21,17 @@ type ReasonInput = {
   maxLength?: number;
 };
 
+/**
+ * ActionConfirmationDialog — the single confirmation dialog implementation.
+ *
+ * Both <ConfirmDialog> (options-driven, pairs with useConfirmDialog) and direct
+ * callers render through this component, which is built on the shared Radix
+ * <Dialog>: focus is trapped inside, focus is restored to the trigger on close,
+ * Escape and the backdrop dismiss (suppressed while an action is pending),
+ * and body scroll is locked. Hand-rolled portals, keydown traps and overflow
+ * juggling were removed in favour of the primitive so every confirmation in the
+ * app behaves identically — the replacement for native window.confirm().
+ */
 export function ActionConfirmationDialog({
   open,
   title,
@@ -42,58 +58,10 @@ export function ActionConfirmationDialog({
   onConfirm: () => void;
 }) {
   const { t } = useI18n();
-  const titleId = useId();
-  const descriptionId = useId();
   const reasonId = useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const cancelRef = useRef(onCancel);
-  const pendingRef = useRef(isPending);
   const hasReason = reason !== undefined;
-  cancelRef.current = onCancel;
-  pendingRef.current = isPending;
-
-  useEffect(() => {
-    if (!open) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const focusFrame = window.requestAnimationFrame(() => {
-      (hasReason ? reasonRef.current : confirmRef.current)?.focus();
-    });
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pendingRef.current) {
-        cancelRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = Array.from(
-        dialogRef.current?.querySelectorAll<HTMLElement>(
-          "button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href]",
-        ) ?? [],
-      ).filter((element) => element.tabIndex !== -1);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, [hasReason, open]);
-
-  if (!open) return null;
 
   const trimmedReason = reason?.value.trim() ?? "";
   const reasonIsValid = reason
@@ -101,30 +69,37 @@ export function ActionConfirmationDialog({
       trimmedReason.length <= (reason.maxLength ?? Number.POSITIVE_INFINITY)
     : true;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isPending) onCancel();
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isPending) onCancel();
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl"
+      <DialogContent
+        className="w-full max-w-lg gap-4 bg-card p-5"
+        onEscapeKeyDown={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+        onOpenAutoFocus={(event) => {
+          // Keep the historical focus target instead of Radix's first-focusable
+          // default: the reason textarea, otherwise the confirm button.
+          event.preventDefault();
+          (hasReason ? reasonRef.current : confirmRef.current)?.focus();
+        }}
       >
-        <h2 id={titleId} className="font-heading text-lg font-semibold">
+        <DialogTitle className="font-heading text-lg font-semibold">
           {title}
-        </h2>
-        <p id={descriptionId} className="mt-2 text-sm text-muted-foreground">
+        </DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground">
           {description}
-        </p>
+        </DialogDescription>
 
         {reason ? (
-          <div className="mt-4">
+          <div>
             <label htmlFor={reasonId} className="text-sm font-medium">
               {reason.label}
             </label>
@@ -150,9 +125,9 @@ export function ActionConfirmationDialog({
           </div>
         ) : null}
 
-        {children ? <div className="mt-4">{children}</div> : null}
+        {children ? <div>{children}</div> : null}
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={isPending} onClick={onCancel}>
             {cancelLabel ?? t("common.cancel", "Cancel")}
           </Button>
@@ -168,8 +143,7 @@ export function ActionConfirmationDialog({
             {confirmLabel}
           </Button>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }

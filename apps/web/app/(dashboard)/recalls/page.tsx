@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -132,9 +133,9 @@ function overdueDays(value: string, today: Date): number | null {
  */
 const TH = cn(tableHeadClass, "px-4");
 const TD = cn(tableCellClass, "px-4 py-2.5");
-const BADGE = "px-2 py-0.5 text-[11px]";
+const BADGE = "px-2 py-0.5 text-2xs";
 /** Dates and day counts: monospaced tabular numerals. */
-const NUMERIC_META = "font-mono text-[11px] tabular-nums";
+const NUMERIC_META = "font-mono text-2xs tabular-nums";
 
 export default function VaccinationRecallsPage() {
   const { t } = useI18n();
@@ -437,15 +438,16 @@ export default function VaccinationRecallsPage() {
                     </td>
                     <td className={cn(TD, "max-w-[220px]")}>
                       <div className="min-w-0">
-                        <Link
-                          href={`/patients/${recipient.patientId}`}
-                          className="block truncate font-medium text-foreground hover:underline"
-                          title={recipient.patientName}
-                        >
-                          {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
-                        </Link>
+                        <TooltipHint content={recipient.patientName}>
+                          <Link
+                            href={`/patients/${recipient.patientId}`}
+                            className="block truncate font-medium text-foreground hover:underline"
+                          >
+                            {recipient.patientSpecies ? `${PATIENT_SPECIES_EMOJI[recipient.patientSpecies.toLowerCase() as keyof typeof PATIENT_SPECIES_EMOJI] ?? "🐾"} ` : ""}{recipient.patientName}
+                          </Link>
+                        </TooltipHint>
                         <p
-                          className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                          className="mt-0.5 truncate text-2xs text-muted-foreground"
                           title={recipient.clientName}
                         >
                           {recipient.clientName}
@@ -506,7 +508,7 @@ export default function VaccinationRecallsPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                       {eligible && recipient.blockMessage ? (
-                        <p className="mt-1 max-w-xs text-[11px] leading-snug text-muted-foreground">
+                        <p className="mt-1 max-w-xs text-2xs leading-snug text-muted-foreground">
                           {getRecallBlockMessage(recipient, t)}
                         </p>
                       ) : null}
@@ -532,7 +534,7 @@ export default function VaccinationRecallsPage() {
                           <Badge variant="warning" className={BADGE}>
                             {t("recalls.badgeBlocked", "Blocked")}
                           </Badge>
-                          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                          <p className="mt-1 text-2xs leading-snug text-muted-foreground">
                             {getRecallBlockMessage(recipient, t)}
                           </p>
                         </div>

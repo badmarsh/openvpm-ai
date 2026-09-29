@@ -74,7 +74,7 @@ export function PolaroidCard({
           children
         )}
         {done ? (
-          <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-primary shadow-sm">
+          <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-3xs font-semibold text-primary shadow-sm">
             <Check className="h-3 w-3" aria-hidden="true" />
             {t("welcome.doneBadge", "Done")}
           </span>
@@ -86,7 +86,7 @@ export function PolaroidCard({
       <span className="mt-0.5 block text-xs leading-5 text-slate-500">
         {sub}
       </span>
-      <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+      <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-3xs font-semibold text-primary">
         {chip}
       </span>
     </button>

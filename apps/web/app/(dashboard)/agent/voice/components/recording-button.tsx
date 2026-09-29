@@ -12,6 +12,7 @@ import { Mic, Square, Volume2, VolumeX, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -612,22 +613,21 @@ export const RecordingButton = forwardRef<
 
           {/* Speaker monitor mute toggle during simulation */}
           {isActivelySimulating && (
-            <button
-              type="button"
-              onClick={toggleSpeakerMute}
-              title={
-                isSpeakerMuted
+            <TooltipHint content={isSpeakerMuted
                   ? t("voice.demo.unmuteSpeaker", "Zapnúť odposluch")
-                  : t("voice.demo.muteSpeaker", "Stlmiť odposluch")
-              }
-              className="ml-1 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              {isSpeakerMuted ? (
-                <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
-              ) : (
-                <Volume2 className="h-3.5 w-3.5 text-primary" />
-              )}
-            </button>
+                  : t("voice.demo.muteSpeaker", "Stlmiť odposluch")}>
+              <button
+                type="button"
+                onClick={toggleSpeakerMute}
+                className="ml-1 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                {isSpeakerMuted ? (
+                  <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Volume2 className="h-3.5 w-3.5 text-primary" />
+                )}
+              </button>
+            </TooltipHint>
           )}
         </div>
       )}
@@ -707,7 +707,7 @@ export const RecordingButton = forwardRef<
         {isActivelySimulating && (
           <Badge
             variant="outline"
-            className="gap-1 border-violet-300 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-[11px]"
+            className="gap-1 border-violet-300 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-2xs"
           >
             <Sparkles className="h-3 w-3 text-violet-500" />
             {t("voice.demo.simulationBadge", "Simulovaný mikrofón (Demo)")}

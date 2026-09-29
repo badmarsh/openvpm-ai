@@ -20,7 +20,7 @@ import {
  * Rules of the style:
  *  - row height stays ~52px; long values are truncated, never wrapped
  *  - the first column always carries the patient identity (species icon + name)
- *  - secondary facts go into a `text-[11px] text-muted-foreground` line
+ *  - secondary facts go into a `text-2xs text-muted-foreground` line
  *  - status is the last text column, actions the last column (right aligned)
  */
 
@@ -255,7 +255,7 @@ export function IdentityCell({
           {primary}
         </div>
         {secondary ? (
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          <div className="mt-0.5 truncate text-2xs text-muted-foreground">
             {secondary}
           </div>
         ) : null}
@@ -307,7 +307,7 @@ export function CountPill({
   return (
     <span
       className={cn(
-        "ml-1 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums",
+        "ml-1 rounded-full px-1.5 py-px text-3xs font-bold tabular-nums",
         tones[tone],
         className,
       )}

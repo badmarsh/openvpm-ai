@@ -330,7 +330,7 @@ export default function WellnessPage() {
                   </h3>
                   <Badge
                     variant={plan.active ? "success" : "secondary"}
-                    className="shrink-0 text-[10px]"
+                    className="shrink-0 text-3xs"
                   >
                     {plan.active
                       ? t("marketing.wellness.plans.active", "Aktívny")
@@ -544,7 +544,7 @@ export default function WellnessPage() {
                         <td className={tableCellClass}>
                           <Badge
                             variant={isCancelled ? "secondary" : "success"}
-                            className="whitespace-nowrap text-[10px]"
+                            className="whitespace-nowrap text-3xs"
                           >
                             {isCancelled
                               ? t("marketing.wellness.enrollments.statusCancelled", "Ukončené")
@@ -725,7 +725,7 @@ export default function WellnessPage() {
                                 {redemption.benefitKey}
                               </div>
                               {redemption.notes ? (
-                                <div className="break-words text-[11px] text-muted-foreground">
+                                <div className="break-words text-2xs text-muted-foreground">
                                   {redemption.notes}
                                 </div>
                               ) : null}

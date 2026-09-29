@@ -87,7 +87,7 @@ export function AnalyteTrendVisualization({
                     setPatientSearch("");
                     setSelectedPatientName("");
                   }}
-                  className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  className="h-6 px-2 text-2xs text-muted-foreground hover:text-foreground"
                 >
                   Zmeniť
                 </Button>
@@ -114,7 +114,7 @@ export function AnalyteTrendVisualization({
                         className="cursor-pointer rounded-md p-2 text-xs hover:bg-primary/10 transition-colors flex items-center justify-between"
                       >
                         <span className="font-medium text-foreground">{p.name}</span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-2xs text-muted-foreground">
                           {p.species} {p.breed ? `• ${p.breed}` : ""}
                         </span>
                       </div>
@@ -183,7 +183,7 @@ export function AnalyteTrendVisualization({
                         <span className="font-bold text-sm font-mono text-foreground">
                           {tItem.code}
                         </span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-border text-muted-foreground">
+                        <Badge variant="outline" className="text-3xs px-1.5 py-0 border-border text-muted-foreground">
                           {tItem.category}
                         </Badge>
                       </div>
@@ -194,7 +194,7 @@ export function AnalyteTrendVisualization({
                     {hasData && (
                       <Badge
                         variant={isCritical ? "destructive" : "outline"}
-                        className={`text-[10px] px-2 py-0.5 font-medium ${
+                        className={`text-3xs px-2 py-0.5 font-medium ${
                           isCritical
                             ? ""
                             : isAbnormal
@@ -260,13 +260,13 @@ export function AnalyteTrendVisualization({
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-muted-foreground">{t("lab.trends.firstMeasurement", "Prvé meranie")}</span>
+                          <span className="text-2xs text-muted-foreground">{t("lab.trends.firstMeasurement", "Prvé meranie")}</span>
                         )}
                       </div>
 
                       {/* Reference range info */}
                       {tItem.refLow !== null && tItem.refHigh !== null && (
-                        <div className="text-[11px] text-muted-foreground flex items-center justify-between border-t pt-1.5 border-border/50">
+                        <div className="text-2xs text-muted-foreground flex items-center justify-between border-t pt-1.5 border-border/50">
                           <span>{t("lab.trends.refRange", "Referenčný rozsah:")}</span>
                           <span className="font-mono font-medium">
                             {tItem.refLow} – {tItem.refHigh} {tItem.unit}
@@ -287,7 +287,7 @@ export function AnalyteTrendVisualization({
                     <button
                       type="button"
                       onClick={() => setExpandedAnalyte(isExpanded ? null : tItem.code)}
-                      className="text-[11px] text-primary hover:underline flex items-center justify-between w-full font-medium cursor-pointer"
+                      className="text-2xs text-primary hover:underline flex items-center justify-between w-full font-medium cursor-pointer"
                     >
                       <span className="flex items-center gap-1">
                         <History className="w-3 h-3" />
@@ -305,7 +305,7 @@ export function AnalyteTrendVisualization({
                         {tItem.datapoints.map((pt, pIdx) => (
                           <div
                             key={pIdx}
-                            className="flex items-center justify-between p-1.5 rounded-md bg-muted/30 text-[11px] border border-border/30"
+                            className="flex items-center justify-between p-1.5 rounded-md bg-muted/30 text-2xs border border-border/30"
                           >
                             <div className="flex items-center gap-1.5">
                               <Calendar className="w-3 h-3 text-muted-foreground" />
@@ -313,7 +313,7 @@ export function AnalyteTrendVisualization({
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold">{pt.value}</span>
-                              <span className="text-[10px] text-muted-foreground">{pt.unit}</span>
+                              <span className="text-3xs text-muted-foreground">{pt.unit}</span>
                             </div>
                           </div>
                         ))}

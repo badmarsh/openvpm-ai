@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { PhoneOff, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,13 +43,14 @@ export function SupportSessionControls({
           <span className="text-xs font-mono font-bold tracking-widest text-stone-700">
             {sessionCode}
           </span>
-          <button
-            onClick={copyCode}
-            className="text-stone-400 hover:text-stone-600 transition-colors"
-            title={t("support.copyCode", "Kopírovať kód")}
-          >
-            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
+          <TooltipHint content={t("support.copyCode", "Kopírovať kód")}>
+            <button
+              onClick={copyCode}
+              className="text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </TooltipHint>
         </div>
       )}
 

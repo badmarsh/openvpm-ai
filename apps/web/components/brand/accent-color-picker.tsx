@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const COLOR_GROUPS: { label: string; labelKey: string; colors: string[] }[] = [
   {
@@ -86,25 +87,25 @@ export function AccentColorPicker({
             {group.colors.map((c) => {
               const active = current === c;
               return (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`Use accent color ${c}`}
-                  title={c}
-                  disabled={disabled}
-                  onClick={() => onChange(c)}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-transform disabled:opacity-50",
-                    active
-                      ? "scale-110 border-foreground"
-                      : "border-transparent hover:scale-105"
-                  )}
-                  style={{ backgroundColor: c }}
-                >
-                  {active ? (
-                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-                  ) : null}
-                </button>
+                <TooltipHint key={c} content={c}>
+                  <button
+                    type="button"
+                    aria-label={`Use accent color ${c}`}
+                    disabled={disabled}
+                    onClick={() => onChange(c)}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-transform disabled:opacity-50",
+                      active
+                        ? "scale-110 border-foreground"
+                        : "border-transparent hover:scale-105"
+                    )}
+                    style={{ backgroundColor: c }}
+                  >
+                    {active ? (
+                      <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                    ) : null}
+                  </button>
+                </TooltipHint>
               );
             })}
           </div>
@@ -181,7 +182,7 @@ export function AccentColorPicker({
         </div>
       </div>
 
-      <div className="flex gap-4 text-[10px] text-muted-foreground">
+      <div className="flex gap-4 text-3xs text-muted-foreground">
         {COLOR_GROUPS.map((g) => (
           <span key={g.label}>{t(g.labelKey, g.label)}</span>
         ))}

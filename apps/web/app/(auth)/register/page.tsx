@@ -997,7 +997,7 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
         {/* Side nav */}
         <aside className="flex w-[150px] shrink-0 flex-col border-r border-slate-100 bg-slate-50/70 p-3">
           <div className="flex items-center gap-2 px-1 pb-4">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-primary-foreground">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-3xs font-semibold text-primary-foreground">
               {initials(clinic)}
             </span>
             <span className="truncate font-heading text-sm font-semibold text-slate-900">
@@ -1019,10 +1019,10 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
             ))}
           </nav>
           <div className="mt-auto flex items-center gap-2 px-1 pt-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-3xs font-semibold text-primary">
               DV
             </span>
-            <span className="truncate text-[11px] text-slate-500">Dr. Vet</span>
+            <span className="truncate text-2xs text-slate-500">Dr. Vet</span>
           </div>
         </aside>
 
@@ -1032,7 +1032,7 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
             <p className="font-heading text-sm font-semibold text-slate-900">
               {t("nav.dashboard", "Dashboard")}
             </p>
-            <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground">
+            <span className="rounded-md bg-primary px-2.5 py-1 text-2xs font-medium text-primary-foreground">
               {t("nav.badgeNew", "New")}
             </span>
           </div>
@@ -1048,7 +1048,7 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
                     <Icon className="h-3.5 w-3.5" />
                   </span>
-                  <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                  <p className="mt-2 text-3xs font-medium uppercase tracking-wide text-slate-500">
                     {label}
                   </p>
                   <p className="text-base font-semibold text-slate-950">
@@ -1070,7 +1070,7 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
                     className="flex items-center gap-3 rounded-md px-2.5 py-1.5"
                     style={{ backgroundColor: `${a.color}14` }}
                   >
-                    <span className="w-10 text-[11px] font-medium text-slate-500">
+                    <span className="w-10 text-2xs font-medium text-slate-500">
                       {a.time}
                     </span>
                     <span
@@ -1080,7 +1080,7 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
                     <span className="text-xs font-medium text-slate-900">
                       {a.title}
                     </span>
-                    <span className="ml-auto text-[11px] text-slate-500">
+                    <span className="ml-auto text-2xs text-slate-500">
                       {a.pet}
                     </span>
                   </div>
@@ -1099,13 +1099,13 @@ function PlatformPreview({ practiceName }: { practiceName: string }) {
                 </p>
               </div>
               <div className="mt-2 flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
-                <span className="truncate text-[11px] text-slate-500">
+                <span className="truncate text-2xs text-slate-500">
                   {t(
                     "auth.register.preview.ai.placeholder",
                     "Which pets are due for vaccines?",
                   )}
                 </span>
-                <span className="ml-auto rounded bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                <span className="ml-auto rounded bg-primary px-2 py-0.5 text-3xs font-medium text-primary-foreground">
                   {t("auth.register.preview.ai.button", "Ask")}
                 </span>
               </div>

@@ -188,7 +188,7 @@ export default function ClientsPage() {
                     <td className={tableCellClass}>
                       <div className="font-medium text-foreground">{client.firstName} {client.lastName}</div>
                       {(client.patientCount > 0 || client.city) && (
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                        <div className="text-2xs text-muted-foreground mt-0.5">
                           {[
                             client.patientCount > 0
                               ? t(
@@ -230,7 +230,7 @@ export default function ClientsPage() {
                             <span className="font-mono tabular-nums text-xs group-hover:underline">{client.phone}</span>
                           </a>
                           {client.smsConsent && (
-                            <Badge variant="success" className="text-[10px] px-1 py-0">SMS</Badge>
+                            <Badge variant="success" className="text-3xs px-1 py-0">SMS</Badge>
                           )}
                         </span>
                       ) : "\u2014"}

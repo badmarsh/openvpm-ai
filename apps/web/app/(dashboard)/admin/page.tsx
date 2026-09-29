@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -509,7 +510,7 @@ export default function AdminPage() {
                           <div className="max-w-sm">
                             <div className="truncate">{session.module}</div>
                             {session.promptSummary ? (
-                              <div className="truncate text-[11px] text-muted-foreground">
+                              <div className="truncate text-2xs text-muted-foreground">
                                 {session.promptSummary}
                               </div>
                             ) : null}
@@ -517,37 +518,37 @@ export default function AdminPage() {
                         </td>
                         <td className={tableCellClass}>
                           {session.status === "COMPLETED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-success-muted px-2 py-0.5 text-[11px] font-medium text-success-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-success-muted px-2 py-0.5 text-2xs font-medium text-success-muted-foreground">
                               <CheckCircle className="h-3 w-3" />
                               {t("admin.systemHealth.merged", "Merged")}
                             </span>
                           ) : session.status === "RUNNING" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-[11px] font-medium text-info-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-info-muted px-2 py-0.5 text-2xs font-medium text-info-muted-foreground">
                               <Radio className="h-3 w-3 animate-pulse" />
                               {t("admin.systemHealth.running", "Running")}
                             </span>
                           ) : session.status === "FAILED" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
                               <AlertTriangle className="h-3 w-3" />
                               {t("admin.systemHealth.failed", "Failed")}
                             </span>
                           ) : session.status === "PENDING" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-[11px] font-medium text-warning-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning-muted px-2 py-0.5 text-2xs font-medium text-warning-muted-foreground">
                               <Clock className="h-3 w-3" />
                               {t("admin.systemHealth.pending", "Pending")}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                               {t("admin.systemHealth.unknown", "Unknown")}
                             </span>
                           )}
                         </td>
                         <td className={tableCellClass}>
-                          <div className="max-w-xs truncate text-[11px] text-muted-foreground">
+                          <div className="max-w-xs truncate text-2xs text-muted-foreground">
                             {session.progress || "—"}
                           </div>
                         </td>
-                        <td className={cn(tableCellClass, "font-mono text-[11px] text-muted-foreground")}>
+                        <td className={cn(tableCellClass, "font-mono text-2xs text-muted-foreground")}>
                           {session.createdAt || "—"}
                         </td>
                       </tr>
@@ -1288,19 +1289,20 @@ export default function AdminPage() {
                             ) : null,
                           )}
                           {registration.providerBrandId ? (
-                            <button
-                              type="button"
-                              title={t("admin.messaging.readCarrierStatus", "Read current carrier status")}
-                              disabled={anyMutationPending}
-                              className="inline-flex items-center rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-                              onClick={() =>
-                                reconcileMessagingRegistration.mutate({
-                                  practiceId: registration.practiceId,
-                                })
-                              }
-                            >
-                              <RefreshCw className="mr-1 h-3 w-3" /> {t("admin.messaging.refresh", "Refresh")}
-                            </button>
+                            <TooltipHint content={t("admin.messaging.readCarrierStatus", "Read current carrier status")}>
+                              <button
+                                type="button"
+                                disabled={anyMutationPending}
+                                className="inline-flex items-center rounded border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                                onClick={() =>
+                                  reconcileMessagingRegistration.mutate({
+                                    practiceId: registration.practiceId,
+                                  })
+                                }
+                              >
+                                <RefreshCw className="mr-1 h-3 w-3" /> {t("admin.messaging.refresh", "Refresh")}
+                              </button>
+                            </TooltipHint>
                           ) : null}
                           {busy ? (
                             <>
@@ -1327,39 +1329,38 @@ export default function AdminPage() {
                               >
                                 {t("admin.messaging.recoverProviderIds", "Recover provider IDs")}
                               </button>
-                              <button
-                                type="button"
-                                disabled={!lockIsStale || anyMutationPending}
-                                title={
-                                  lockIsStale
+                              <TooltipHint content={lockIsStale
                                     ? "Use only after confirming no matching object exists in Telnyx"
-                                    : "Available after the 15-minute safety window"
-                                }
-                                className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
-                                onClick={async () => {
-                                  const providerObject =
-                                    registration.providerBrandId
-                                      ? "campaign"
-                                      : "brand";
-                                  const confirmed = await confirm({
-                                    title: "Clear stale submission lock",
-                                    description: `I reviewed the Telnyx portal and confirmed NO matching ${providerObject} exists. Clear the stale lock and keep all sending disabled?`,
-                                    confirmVariant: "destructive",
-                                    confirmLabel: "Clear stale lock",
-                                  });
-                                  if (confirmed) {
-                                    clearStaleMessagingSubmissionLock.mutate({
-                                      practiceId: registration.practiceId,
-                                      providerObject,
-                                      confirmProviderPortalReviewed: true,
-                                      confirmNoProviderObjectExists:
-                                        "NO_PROVIDER_OBJECT",
+                                    : "Available after the 15-minute safety window"}>
+                                <button
+                                  type="button"
+                                  disabled={!lockIsStale || anyMutationPending}
+                                  className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
+                                  onClick={async () => {
+                                    const providerObject =
+                                      registration.providerBrandId
+                                        ? "campaign"
+                                        : "brand";
+                                    const confirmed = await confirm({
+                                      title: "Clear stale submission lock",
+                                      description: `I reviewed the Telnyx portal and confirmed NO matching ${providerObject} exists. Clear the stale lock and keep all sending disabled?`,
+                                      confirmVariant: "destructive",
+                                      confirmLabel: "Clear stale lock",
                                     });
-                                  }
-                                }}
-                              >
-                                {t("admin.messaging.clearStaleLock", "No object — clear stale lock")}
-                              </button>
+                                    if (confirmed) {
+                                      clearStaleMessagingSubmissionLock.mutate({
+                                        practiceId: registration.practiceId,
+                                        providerObject,
+                                        confirmProviderPortalReviewed: true,
+                                        confirmNoProviderObjectExists:
+                                          "NO_PROVIDER_OBJECT",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {t("admin.messaging.clearStaleLock", "No object — clear stale lock")}
+                                </button>
+                              </TooltipHint>
                             </>
                           ) : null}
                         </div>
@@ -1458,7 +1459,7 @@ export default function AdminPage() {
                             {event.providerCampaignStatus ?? "—"}
                           </p>
                         </td>
-                        <td className={cn(tableCellClass, "font-mono text-[11px]")}>
+                        <td className={cn(tableCellClass, "font-mono text-2xs")}>
                           <p className="break-all">event {event.id}</p>
                           <p className="mt-1 break-all text-muted-foreground">
                             operation {event.operationId}
@@ -1962,47 +1963,47 @@ export default function AdminPage() {
                   ) : null}
                 </td>
                 <td className={tableCellClass}>
-                  <button
-                    type="button"
-                    title={
-                      p.analyticsExcluded
+                  <TooltipHint content={p.analyticsExcluded
                         ? t("admin.practices.includeInReporting", "Include this practice in conversion reporting")
-                        : t("admin.practices.excludeFromReporting", "Exclude this internal or test practice from conversion reporting")
-                    }
-                    aria-pressed={p.analyticsExcluded}
-                    disabled={setAnalyticsExcluded.isPending}
-                    onClick={() =>
-                      setAnalyticsExcluded.mutate({
-                        practiceId: p.id,
-                        excluded: !p.analyticsExcluded,
-                      })
-                    }
-                    className={`rounded border px-1.5 py-0.5 text-xs font-medium disabled:opacity-50 ${
-                      p.analyticsExcluded
-                        ? "border-warning/30 bg-warning/5 text-warning-muted-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {p.analyticsExcluded
-                      ? t("admin.practices.excluded", "Excluded")
-                      : t("admin.practices.exclude", "Exclude")}
-                  </button>
+                        : t("admin.practices.excludeFromReporting", "Exclude this internal or test practice from conversion reporting")}>
+                    <button
+                      type="button"
+                      aria-pressed={p.analyticsExcluded}
+                      disabled={setAnalyticsExcluded.isPending}
+                      onClick={() =>
+                        setAnalyticsExcluded.mutate({
+                          practiceId: p.id,
+                          excluded: !p.analyticsExcluded,
+                        })
+                      }
+                      className={`rounded border px-1.5 py-0.5 text-xs font-medium disabled:opacity-50 ${
+                        p.analyticsExcluded
+                          ? "border-warning/30 bg-warning/5 text-warning-muted-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {p.analyticsExcluded
+                        ? t("admin.practices.excluded", "Excluded")
+                        : t("admin.practices.exclude", "Exclude")}
+                    </button>
+                  </TooltipHint>
                 </td>
                 <td className={cn(tableCellClass, "text-muted-foreground")}>
                   <span className="inline-flex items-center gap-2">
                     {formatDate(p.trialEndsAt, p.timezone)}
                     {p.billingStatus === "trialing" && (
-                      <button
-                        type="button"
-                        title={t("admin.practices.extendTrialTitle", "Give this trial 14 more days")}
-                        disabled={extendTrial.isPending}
-                        onClick={() =>
-                          extendTrial.mutate({ practiceId: p.id, days: 14 })
-                        }
-                        className="rounded border border-border px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
-                      >
-                        +14d
-                      </button>
+                      <TooltipHint content={t("admin.practices.extendTrialTitle", "Give this trial 14 more days")}>
+                        <button
+                          type="button"
+                          disabled={extendTrial.isPending}
+                          onClick={() =>
+                            extendTrial.mutate({ practiceId: p.id, days: 14 })
+                          }
+                          className="rounded border border-border px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          +14d
+                        </button>
+                      </TooltipHint>
                     )}
                   </span>
                 </td>

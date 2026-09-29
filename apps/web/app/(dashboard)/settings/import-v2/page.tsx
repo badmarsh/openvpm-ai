@@ -289,7 +289,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.clientsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Adresy, mestá, PSČ, mobily, pevné linky
             </p>
           </div>
@@ -303,7 +303,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.activePatientsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Psy, mačky, hlodavce, druhy, plemená, čipy
             </p>
           </div>
@@ -319,7 +319,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-emerald-800">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.deceasedPatientsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-emerald-700/80">
+            <p className="text-2xs text-emerald-700/80">
               Uhynutí pacienti zablokovaní pred SMS
             </p>
           </div>
@@ -333,7 +333,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.vaccinationsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Dátumy podania, šarže a platnosť do
             </p>
           </div>
@@ -347,7 +347,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.soapNotesCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Anamnézy, nálezy, diagnózy a liečivá (SOAP)
             </p>
           </div>
@@ -361,7 +361,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.attachmentsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Binárne snímky z databázy v plnej kvalite
             </p>
           </div>
@@ -375,7 +375,7 @@ export default function V2ImportPage() {
             <div className="text-2xl font-bold text-foreground">
               {isStatsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats?.financialDocsCount.toLocaleString() ?? "–"}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Historické účty s DPH v EUR (uložené v archíve, oddelené od novej e-Kasy)
             </p>
           </div>
@@ -488,11 +488,11 @@ export default function V2ImportPage() {
                         <td className="px-3 py-2 font-mono">{p.microchip}</td>
                         <td className="px-3 py-2">
                           {p.status === "deceased" ? (
-                            <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                            <Badge variant="destructive" className="text-3xs py-0 px-1.5">
                               {t("settings.importV2.preview.statusDeceased")}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-500 text-emerald-600 bg-emerald-50">
+                            <Badge variant="outline" className="text-3xs py-0 px-1.5 border-emerald-500 text-emerald-600 bg-emerald-50">
                               {t("settings.importV2.preview.statusActive")}
                             </Badge>
                           )}
@@ -768,7 +768,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.clients.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 preskočené: {migrationReport.clients.skipped}
               </div>
             </div>
@@ -778,7 +778,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.patients.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 uhynutí: {migrationReport.patients.deceased}
               </div>
             </div>
@@ -788,7 +788,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.vaccinations.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 preskočené: {migrationReport.vaccinations.skipped}
               </div>
             </div>
@@ -798,7 +798,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.soapNotes.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 preskočené: {migrationReport.soapNotes.skipped}
               </div>
             </div>
@@ -808,7 +808,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.financials.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 preskočené: {migrationReport.financials.skipped}
               </div>
             </div>
@@ -818,7 +818,7 @@ export default function V2ImportPage() {
               <div className="text-lg font-bold text-foreground mt-1">
                 {migrationReport.attachments.inserted}
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-3xs text-muted-foreground">
                 preskočené: {migrationReport.attachments.skipped}
               </div>
             </div>

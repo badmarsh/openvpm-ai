@@ -101,6 +101,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import type { AppRouter } from "@/server/routers/_app";
 
@@ -708,34 +709,33 @@ export default function EncounterWorkspacePage() {
             </Button>
           ) : null}
           {nextAction && canManageVisit(role) ? (
-            <Button
-              disabled={
-                updateStatus.isPending ||
-                (nextAction.status === "in_exam" && missingClinicalTarget)
-              }
-              title={
-                nextAction.status === "in_exam" && missingClinicalTarget
+            <TooltipHint content={nextAction.status === "in_exam" && missingClinicalTarget
                   ? t("encounters.workspace.attachBeforeExamTooltip", "Attach a patient before starting the exam.")
-                  : undefined
-              }
-              onClick={() =>
-                updateStatus.mutate({
-                  id: appointmentId,
-                  status: nextAction.status,
-                })
-              }
-            >
-              {updateStatus.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              {nextAction.status === "checked_in"
-                ? t("encounters.workspace.actionCheckIn", "Check in")
-                : nextAction.status === "in_exam"
-                  ? t("encounters.workspace.actionStartExam", "Start exam")
-                  : nextAction.label}
-            </Button>
+                  : undefined}>
+              <Button
+                disabled={
+                  updateStatus.isPending ||
+                  (nextAction.status === "in_exam" && missingClinicalTarget)
+                }
+                onClick={() =>
+                  updateStatus.mutate({
+                    id: appointmentId,
+                    status: nextAction.status,
+                  })
+                }
+              >
+                {updateStatus.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                {nextAction.status === "checked_in"
+                  ? t("encounters.workspace.actionCheckIn", "Check in")
+                  : nextAction.status === "in_exam"
+                    ? t("encounters.workspace.actionStartExam", "Start exam")
+                    : nextAction.label}
+              </Button>
+            </TooltipHint>
           ) : appointment.status === "in_exam" && canManageVisit(role) ? (
             <Button
               onClick={() => {
@@ -806,7 +806,7 @@ export default function EncounterWorkspacePage() {
                 {patient?.microchipNumber ? (
                   <span
                     data-testid="patient-banner-chip"
-                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-2xs"
                   >
                     <span>{t("encounters.banner.chipLabel", "Chip:")}</span>
                     <span className="font-semibold">{patient.microchipNumber}</span>
@@ -814,7 +814,7 @@ export default function EncounterWorkspacePage() {
                 ) : (
                   <span
                     data-testid="patient-banner-chip"
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground italic"
+                    className="inline-flex items-center gap-1 text-2xs text-muted-foreground italic"
                   >
                     {t("encounters.banner.noChip", "No microchip")}
                   </span>

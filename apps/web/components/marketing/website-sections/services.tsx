@@ -88,7 +88,7 @@ export function ServicesSection({ content, brandKit }: ServicesSectionProps) {
                       {service.title}
                     </h3>
                     {service.badge && (
-                      <Badge variant="outline" className="text-[10px] shrink-0 font-medium">
+                      <Badge variant="outline" className="text-3xs shrink-0 font-medium">
                         {service.badge}
                       </Badge>
                     )}

@@ -50,6 +50,7 @@ import {
   underlineTabsTriggerClass,
 } from "@/components/layout/page-kit";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ActionConfirmationDialog } from "@/components/common/action-confirmation-dialog";
 import {
@@ -1357,7 +1358,7 @@ function InvoiceRow({
         <td className={cn(tableCellClass, "text-right tabular-nums font-mono")}>
           <span>{formatCurrency(invoice.paidAmount)}</span>
           {adjustedAmount > 0 && (
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-2xs text-muted-foreground">
               {t("billing.row.adjPrefix", `Adj ${formatCurrency(adjustedAmount)}`, {
                 amount: formatCurrency(adjustedAmount),
               })}
@@ -1377,62 +1378,70 @@ function InvoiceRow({
         <td className={cn(tableCellClass, "text-right")}>
           <div className="flex items-center justify-end gap-1">
             {canManageBilling && invoice.isEstimate && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
-                disabled={isMutating}
-                onClick={(e) => onConvertEstimate(e, invoice)}
-                title={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}
-              >
-                <ArrowRightLeft className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {canManageBilling &&
-              !invoice.isEstimate &&
-              invoice.status === "draft" && (
+              <TooltipHint content={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}>
                 <Button
+                  aria-label={t("billing.row.tooltipConvertToInvoice", "Convert to Invoice")}
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0"
                   disabled={isMutating}
-                  onClick={(e) => onStatusChange(e, invoice.id, "sent")}
-                  title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
+                  onClick={(e) => onConvertEstimate(e, invoice)}
                 >
-                  <Send className="h-3.5 w-3.5" />
+                  <ArrowRightLeft aria-hidden="true" className="h-3.5 w-3.5" />
                 </Button>
+              </TooltipHint>
+            )}
+            {canManageBilling &&
+              !invoice.isEstimate &&
+              invoice.status === "draft" && (
+                <TooltipHint content={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}>
+                  <Button
+                    aria-label={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    disabled={isMutating}
+                    onClick={(e) => onStatusChange(e, invoice.id, "sent")}
+                  >
+                    <Send aria-hidden="true" className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipHint>
               )}
             {canManageBilling &&
               !invoice.isEstimate &&
               (invoice.status === "sent" || invoice.status === "overdue") && (
                 <>
                   {invoice.status === "sent" ? null : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={isMutating}
-                      onClick={(e) => onStatusChange(e, invoice.id, "sent")}
-                      title={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </Button>
+                    <TooltipHint content={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}>
+                      <Button
+                        aria-label={t("billing.row.tooltipMarkAsSent", "Mark as Sent")}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={isMutating}
+                        onClick={(e) => onStatusChange(e, invoice.id, "sent")}
+                      >
+                        <Send aria-hidden="true" className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipHint>
                   )}
                 </>
               )}
             {canManageBilling &&
               invoice.status !== "paid" &&
               invoice.status !== "void" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
-                  disabled={isMutating}
-                  onClick={(e) => onVoidInvoice(e, invoice.id)}
-                  title={t("billing.row.tooltipVoidInvoice", "Void Invoice")}
-                >
-                  <Ban className="h-3.5 w-3.5" />
-                </Button>
+                <TooltipHint content={t("billing.row.tooltipVoidInvoice", "Void Invoice")}>
+                  <Button
+                    aria-label={t("billing.row.tooltipVoidInvoice", "Void Invoice")}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    disabled={isMutating}
+                    onClick={(e) => onVoidInvoice(e, invoice.id)}
+                  >
+                    <Ban aria-hidden="true" className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipHint>
               )}
           </div>
         </td>
@@ -1791,17 +1800,18 @@ function PaymentEkasaBadge({
 
   return (
     <>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        className="inline-flex items-center gap-1 rounded bg-success-muted/60 px-2 py-0.5 text-xs font-medium text-success-muted-foreground hover:bg-success-muted/80 border border-success-muted/40 transition-colors"
-        title="Zobraziť a vytlačiť e-Kasa doklad"
-      >
-        <ReceiptText className="h-3 w-3 text-brand" />
-        e-Kasa #{receipt.receiptNumber.split("-")[1] ?? receipt.receiptNumber}
-      </button>
+      <TooltipHint content="Zobraziť a vytlačiť e-Kasa doklad">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+          className="inline-flex items-center gap-1 rounded bg-success-muted/60 px-2 py-0.5 text-xs font-medium text-success-muted-foreground hover:bg-success-muted/80 border border-success-muted/40 transition-colors"
+        >
+          <ReceiptText className="h-3 w-3 text-brand" />
+          e-Kasa #{receipt.receiptNumber.split("-")[1] ?? receipt.receiptNumber}
+        </button>
+      </TooltipHint>
 
       <EkasaReceiptDialog
         open={open}
@@ -2082,29 +2092,28 @@ function PaymentSection({
               <Euro className="mr-1 h-3.5 w-3.5" />
               {t("billing.payments.recordPayment", "Record Payment")}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              disabled={
-                cardCheckout.isPending ||
-                cardPaymentStatus.isLoading ||
-                !cardPaymentsEnabled
-              }
-              onClick={() => cardCheckout.mutate({ invoiceId })}
-              title={
-                cardPaymentsUnavailable
+            <TooltipHint content={cardPaymentsUnavailable
                   ? t("billing.payments.tooltipNotConfigured", "Card payments are not configured")
-                  : t("billing.payments.tooltipTakeCard", "Take card payment")
-              }
-            >
-              {cardCheckout.isPending ? (
-                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CreditCard className="mr-1 h-3.5 w-3.5" />
-              )}
-              {t("billing.payments.takeCard", "Take Card")}
-            </Button>
+                  : t("billing.payments.tooltipTakeCard", "Take card payment")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={
+                  cardCheckout.isPending ||
+                  cardPaymentStatus.isLoading ||
+                  !cardPaymentsEnabled
+                }
+                onClick={() => cardCheckout.mutate({ invoiceId })}
+              >
+                {cardCheckout.isPending ? (
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CreditCard className="mr-1 h-3.5 w-3.5" />
+                )}
+                {t("billing.payments.takeCard", "Take Card")}
+              </Button>
+            </TooltipHint>
             <Button
               variant="outline"
               size="sm"

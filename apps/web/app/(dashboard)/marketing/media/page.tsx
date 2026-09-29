@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { MediaFrame, type FrameBrand } from "@/components/marketing/media-frame";
 import { AiCanvas } from "@/components/marketing/ai-canvas";
@@ -242,27 +243,27 @@ export default function MediaPage() {
                         {/* Status chips */}
                         <div className="flex flex-wrap gap-1">
                           {h === "ok" && consentUntilDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-muted text-success-muted-foreground">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-semibold bg-success-muted text-success-muted-foreground">
                               <ShieldCheck size={11} /> súhlas do {consentUntilDate.toLocaleDateString("sk-SK")}
                             </span>
                           )}
                           {h === "expiring" && consentUntilDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-warning-muted text-warning-muted-foreground">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-semibold bg-warning-muted text-warning-muted-foreground">
                               <ShieldAlert size={11} /> vyprší {consentUntilDate.toLocaleDateString("sk-SK")}
                             </span>
                           )}
                           {h === "bad" && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-destructive/10 text-destructive">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-semibold bg-destructive/10 text-destructive">
                               <ShieldAlert size={11} /> súhlas chýba/odvolaný
                             </span>
                           )}
                           {asset.kind === "illustration" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-semibold bg-muted text-muted-foreground">
                               generované
                             </span>
                           )}
                           {(asset.meta as any)?.edit?.preset && (asset.meta as any).edit.preset !== "none" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/15 text-brand">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-semibold bg-brand/15 text-brand">
                               {t("marketing.media.editPrefix", "úprava")}: {(asset.meta as any).edit.preset}
                             </span>
                           )}
@@ -274,7 +275,7 @@ export default function MediaPage() {
                             {asset.tags.slice(0, 3).map((t: string) => (
                               <span
                                 key={t}
-                                className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                                className="rounded bg-muted px-1.5 py-0.5 text-4xs text-muted-foreground"
                               >
                                 #{t}
                               </span>
@@ -292,7 +293,7 @@ export default function MediaPage() {
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground border-t pt-3">
+          <p className="text-2xs text-muted-foreground border-t pt-3">
             Pravidlo: bez platného súhlasu (scope photo_social) sa fotka s pacientom uloží len do klinickej karty v PMS,
             do media_asset sa fyzicky nedostane (CHECK constraint v DB).
           </p>
@@ -366,27 +367,29 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
         <div className="flex gap-1.5">
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 rounded-lg bg-brand/10 px-2 py-1.5 text-[11px] font-bold text-brand hover:bg-brand/20 transition cursor-pointer inline-flex items-center justify-center gap-1 border border-brand/20"
+            className="flex-1 rounded-lg bg-brand/10 px-2 py-1.5 text-2xs font-bold text-brand hover:bg-brand/20 transition cursor-pointer inline-flex items-center justify-center gap-1 border border-brand/20"
           >
             <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
           </button>
-          <button
-            disabled={deleteMutation.isPending}
-            onClick={() => {
-              if (confirm("Naozaj chcete zmazať toto médium z knižnice?")) {
-                deleteMutation.mutate({ id: asset.id });
-              }
-            }}
-            className="rounded-lg border border-border px-2 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:border-destructive/30 transition cursor-pointer"
-            title={t("marketing.media.deleteMedia", "Zmazať médium")}
-          >
-            <Trash2 size={11} />
-          </button>
+          <TooltipHint content={t("marketing.media.deleteMedia", "Zmazať médium")}>
+            <button
+              aria-label={t("marketing.media.deleteMedia", "Zmazať médium")}
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (confirm("Naozaj chcete zmazať toto médium z knižnice?")) {
+                  deleteMutation.mutate({ id: asset.id });
+                }
+              }}
+              className="rounded-lg border border-border px-2 py-1.5 text-2xs font-bold text-muted-foreground hover:text-destructive hover:border-destructive/30 transition cursor-pointer"
+            >
+              <Trash2 aria-hidden="true" size={11} />
+            </button>
+          </TooltipHint>
         </div>
 
         <Link
           href={`/marketing/plan?mediaId=${asset.id}`}
-          className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-primary py-0.5"
+          className="w-full inline-flex items-center justify-center gap-1 text-3xs font-semibold text-muted-foreground hover:text-primary py-0.5"
         >
           <span>{t("marketing.media.useInPost", "Použiť v príspevku")}</span>
           <ExternalLink size={10} />
@@ -398,7 +401,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
   return (
     <div className="rounded-xl border border-border bg-card p-2.5 space-y-2 pt-2 text-left">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-brand font-bold text-[10px] uppercase tracking-wide">
+        <div className="flex items-center gap-1 text-brand font-bold text-3xs uppercase tracking-wide">
           <Wand2 size={11} /> {t("marketing.media.aiEdit", "AI úprava")}
         </div>
         <button
@@ -416,7 +419,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
             key={p.key}
             disabled={editMutation.isPending}
             onClick={() => apply({ preset: p.key })}
-            className={`rounded-md px-1.5 py-1 text-[10px] font-semibold cursor-pointer transition-colors ${
+            className={`rounded-md px-1.5 py-1 text-3xs font-semibold cursor-pointer transition-colors ${
               (edit.preset ?? "none") === p.key
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -434,7 +437,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
             key={c}
             disabled={editMutation.isPending}
             onClick={() => apply({ crop: c })}
-            className={`rounded-md px-1.5 py-1 text-[10px] font-bold cursor-pointer transition-colors ${
+            className={`rounded-md px-1.5 py-1 text-3xs font-bold cursor-pointer transition-colors ${
               edit.crop === c
                 ? "bg-foreground text-background"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -452,12 +455,12 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
           onChange={(e) => setOverlay(e.target.value)}
           placeholder={t("marketing.media.overlayPlaceholder", "Text do grafiky…")}
           maxLength={60}
-          className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-[11px] outline-none focus:border-primary"
+          className="h-7 flex-1 rounded-md border border-input bg-background px-2 text-2xs outline-none focus:border-primary"
         />
         <button
           disabled={editMutation.isPending}
           onClick={() => apply({ overlay })}
-          className="rounded-md bg-primary px-2.5 text-[10px] font-bold text-primary-foreground cursor-pointer disabled:opacity-50"
+          className="rounded-md bg-primary px-2.5 text-3xs font-bold text-primary-foreground cursor-pointer disabled:opacity-50"
         >
           {editMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : "OK"}
         </button>
@@ -474,7 +477,7 @@ function MediaEditor({ asset, onDone }: { asset: any; onDone: (m: string) => voi
             tags: asset.tags ?? [],
           })
         }
-        className="w-full rounded-md border border-border bg-background py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+        className="w-full rounded-md border border-border bg-background py-1 text-3xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
       >
         {suggestAltMutation.isPending ? "Generujem…" : "Navrhnúť alt text (prístupnosť)"}
       </button>
@@ -708,7 +711,7 @@ function UploadPanel({
         </Button>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-2xs text-muted-foreground">
         Bez súhlasu sa fotka uloží len do klinickej karty v PMS (tá ju používa výhradne klinicky, nie marketingovo).
       </p>
     </div>

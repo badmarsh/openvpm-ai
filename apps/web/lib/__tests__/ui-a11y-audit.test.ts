@@ -78,7 +78,10 @@ describe("Icon-only buttons expose an accessible name", () => {
   it("MicButton mirrors its tooltip into aria-label and respects reduced motion", () => {
     const src = source("components/field-visits/mic-button.tsx");
     expect(src).toContain("aria-label={label}");
-    expect(src).toContain("title={label}");
+    // The tooltip is delivered via the shared TooltipHint (Radix, focusable)
+    // instead of an unreliable native title attribute.
+    expect(src).toContain("TooltipHint");
+    expect(src).toContain("content={label}");
     expect(src).toContain('aria-pressed={state === "listening"}');
     expect(src).toContain("motion-safe:animate-pulse");
     expect(src).not.toMatch(/(?<!motion-safe:)animate-pulse/);

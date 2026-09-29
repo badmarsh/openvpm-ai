@@ -841,7 +841,7 @@ function ControlledSubstancesLogPage() {
                     const balance = balanceByDrug.get(entry.drugName);
                     return (
                       <TableRow key={entry.id}>
-                        <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
+                        <TableCell className="px-3 py-2.5 whitespace-nowrap font-mono text-2xs tabular-nums text-muted-foreground">
                           {entry.performedAt
                             ? formatControlledSubstanceDateTime(
                                 entry.performedAt,
@@ -860,14 +860,14 @@ function ControlledSubstancesLogPage() {
                           <div className="flex flex-col items-start gap-1">
                             <Badge
                               variant="outline"
-                              className={`h-5 px-2 text-[11px] font-medium ${
+                              className={`h-5 px-2 text-2xs font-medium ${
                                 MOVEMENT_BADGE_STYLES[entry.action] ??
                                 "border-border bg-muted/50 text-muted-foreground"
                               }`}
                             >
                               {t(`controlledSubstances.actions.${entry.action}`, entry.action)}
                             </Badge>
-                            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                            <span className="text-3xs font-medium uppercase tracking-wide text-muted-foreground/80">
                               {t(
                                 `controlledSubstances.movementKinds.${movementKind}`,
                                 movementKind,
@@ -903,7 +903,7 @@ function ControlledSubstancesLogPage() {
                         <TableCell className="px-3 py-2.5 text-muted-foreground">
                           {entry.witnessName || "\u2014"}
                         </TableCell>
-                        <TableCell className="px-3 py-2.5 font-mono text-[11px] tabular-nums text-muted-foreground">
+                        <TableCell className="px-3 py-2.5 font-mono text-2xs tabular-nums text-muted-foreground">
                           {entry.lotNumber || "\u2014"}
                         </TableCell>
                         <TableCell className="px-3 py-2.5 max-w-[220px] truncate text-muted-foreground">

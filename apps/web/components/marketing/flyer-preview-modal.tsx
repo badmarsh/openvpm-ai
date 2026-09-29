@@ -124,13 +124,13 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
                     <h2 className="font-serif font-extrabold text-xl text-stone-900 tracking-tight leading-tight uppercase">
                       {clinicName}
                     </h2>
-                    <p className="text-[11px] font-semibold text-teal-850 tracking-wider uppercase text-teal-800">
+                    <p className="text-2xs font-semibold text-teal-850 tracking-wider uppercase text-teal-800">
                       Veterinárna starostlivosť a chirurgia malých zvierat
                     </p>
                   </div>
                 </div>
 
-                <div className="text-right text-[10px] text-stone-600 font-medium space-y-0.5 hidden sm:block">
+                <div className="text-right text-3xs text-stone-600 font-medium space-y-0.5 hidden sm:block">
                   <p className="flex items-center justify-end gap-1 font-bold text-stone-800">
                     <Phone className="w-3 h-3 text-teal-700" /> {clinicPhone}
                   </p>
@@ -144,8 +144,8 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
               </div>
 
               {/* Leaflet Subheader Ribbon */}
-              <div className="mt-3.5 pt-2 border-t border-dashed border-stone-250 flex items-center justify-between text-[11px]">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 font-bold tracking-wide uppercase text-[10px]">
+              <div className="mt-3.5 pt-2 border-t border-dashed border-stone-250 flex items-center justify-between text-2xs">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 font-bold tracking-wide uppercase text-3xs">
                   {theme.category}
                 </span>
                 <span className="text-stone-500 font-medium">
@@ -167,11 +167,11 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
               <div className="absolute bottom-3 left-4 right-4 text-white">
                 <div className="flex items-center gap-1.5 mb-1">
                   {handout.species?.map((s) => (
-                    <span key={s} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 backdrop-blur-md">
+                    <span key={s} className="px-2 py-0.5 rounded-full text-3xs font-bold bg-white/20 backdrop-blur-md">
                       {s.toLowerCase().includes("pes") || s.toLowerCase().includes("canine") ? "🐶 Pes" : s.toLowerCase().includes("macka") || s.toLowerCase().includes("feline") ? "🐱 Mačka" : s}
                     </span>
                   ))}
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/80 backdrop-blur-md">
+                  <span className="px-2 py-0.5 rounded-full text-3xs font-bold bg-teal-500/80 backdrop-blur-md">
                     Klinický protokol
                   </span>
                 </div>
@@ -193,7 +193,7 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
               <div className="space-y-2">
                 {displayChecklist.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-2 text-xs leading-relaxed text-stone-800">
-                    <span className="w-4 h-4 rounded-md bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
+                    <span className="w-4 h-4 rounded-md bg-teal-100 text-teal-800 flex items-center justify-center shrink-0 mt-0.5 font-bold text-3xs">
                       ✓
                     </span>
                     <span>{item}</span>
@@ -207,7 +207,7 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
                   <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
                   KEDY BEZODKLADNE KONTAKTOVAŤ VETERINÁRA:
                 </div>
-                <p className="text-[11px] leading-relaxed text-amber-900/90 pl-5">
+                <p className="text-2xs leading-relaxed text-amber-900/90 pl-5">
                   Ak spozorujete pretrvávajúcu apatiu, odmietanie vody viac ako 12 hodín, opakované zvracanie,
                   krvácanie z rany, opuch alebo teplotu nad 39.3 °C, ihneď volajte pohotovosť: <strong>{clinicPhone}</strong>.
                 </p>
@@ -221,17 +221,17 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
                   {/* Visual QR Code Box */}
                   <div className="w-16 h-16 rounded-xl border border-stone-300 bg-white p-1.5 flex flex-col items-center justify-center shadow-xs shrink-0">
                     <QrCode className="w-9 h-9 text-stone-900" />
-                    <span className="text-[8px] font-bold text-stone-600 uppercase tracking-tighter mt-0.5">SCAN ME</span>
+                    <span className="text-5xs font-bold text-stone-600 uppercase tracking-tighter mt-0.5">SCAN ME</span>
                   </div>
 
                   <div className="space-y-0.5">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wide text-stone-900">
+                    <p className="text-2xs font-extrabold uppercase tracking-wide text-stone-900">
                       Vezmite si leták do smartfónu
                     </p>
-                    <p className="text-[10px] text-stone-600 leading-tight">
+                    <p className="text-3xs text-stone-600 leading-tight">
                       Namierte fotoaparát telefónu na QR kód pre interaktívny návod a dávkovanie.
                     </p>
-                    <p className="text-[10px] font-mono text-teal-800 font-semibold truncate max-w-[280px]">
+                    <p className="text-3xs font-mono text-teal-800 font-semibold truncate max-w-[280px]">
                       {publicUrl}
                     </p>
                   </div>
@@ -239,14 +239,14 @@ export function FlyerPreviewModal({ handout, practice, onClose }: FlyerModalProp
 
                 {/* Doctor's Signature Block */}
                 <div className="text-right border-l border-stone-200 pl-4 shrink-0 hidden sm:block">
-                  <p className="text-[9px] text-stone-500 uppercase font-semibold">Ošetrujúci veterinárny lekár:</p>
+                  <p className="text-4xs text-stone-500 uppercase font-semibold">Ošetrujúci veterinárny lekár:</p>
                   <p className="text-xs font-serif italic text-stone-800 mt-2">MVDr. .................................</p>
-                  <p className="text-[9px] text-stone-400 mt-1">Dátum vydania: {handout.createdAt ? new Date(handout.createdAt).toLocaleDateString("sk-SK") : "—"}</p>
+                  <p className="text-4xs text-stone-400 mt-1">Dátum vydania: {handout.createdAt ? new Date(handout.createdAt).toLocaleDateString("sk-SK") : "—"}</p>
                 </div>
               </div>
 
               {/* Bottom Copyright */}
-              <div className="mt-3 text-center text-[9px] text-stone-400 border-t border-stone-100 pt-2">
+              <div className="mt-3 text-center text-4xs text-stone-400 border-t border-stone-100 pt-2">
                 © {new Date().getFullYear()} {clinicName} · Vytlačené z OpenVPM AI · Tento leták je duševným vlastníctvom kliniky
               </div>
             </div>

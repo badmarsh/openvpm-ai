@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   Plus,
   Trash2,
@@ -220,7 +221,7 @@ export function NewBriefModal({
                     <div className="flex flex-col">
                       <span className="font-medium">{p.title}</span>
                       {p.description && (
-                        <span className="text-[10px] text-muted-foreground line-clamp-1">
+                        <span className="text-3xs text-muted-foreground line-clamp-1">
                           {p.description}
                         </span>
                       )}
@@ -240,7 +241,7 @@ export function NewBriefModal({
                   "Text príspevku / inštrukcia"
                 )}
               </Label>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-3xs text-muted-foreground">
                 {briefText.length}/2000
               </span>
             </div>
@@ -342,7 +343,7 @@ export function NewBriefModal({
                 variant="outline"
                 size="sm"
                 onClick={handleAddClaim}
-                className="h-7 text-[11px] gap-1"
+                className="h-7 text-2xs gap-1"
               >
                 <Plus className="h-3 w-3" />
                 {t(
@@ -351,7 +352,7 @@ export function NewBriefModal({
                 )}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {t(
                 "marketing.briefModal.clinicalClaimsDesc",
                 "Označte konkrétne tvrdenia o liečivách, dávkovaní alebo prevencii, ktoré musí lekár autorizovať."
@@ -367,7 +368,7 @@ export function NewBriefModal({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">
+                        <Label className="text-3xs text-muted-foreground">
                           {t(
                             "marketing.briefModal.claimTextLabel",
                             "Presné znenie tvrdenia"
@@ -386,24 +387,29 @@ export function NewBriefModal({
                           required
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveClaim(idx)}
-                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
-                        title={t(
+                      <TooltipHint content={t(
+                          "marketing.briefModal.removeClaimButton",
+                          "Odstrániť tvrdenie"
+                        )}>
+                        <Button
+                          aria-label={t(
                           "marketing.briefModal.removeClaimButton",
                           "Odstrániť tvrdenie"
                         )}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveClaim(idx)}
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                        >
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipHint>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">
+                        <Label className="text-3xs text-muted-foreground">
                           {t(
                             "marketing.briefModal.claimKindLabel",
                             "Kategória tvrdenia"
@@ -463,7 +469,7 @@ export function NewBriefModal({
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">
+                        <Label className="text-3xs text-muted-foreground">
                           {t(
                             "marketing.briefModal.sourceRefLabel",
                             "Odborný zdroj / referencia (nepovinné)"
@@ -490,7 +496,7 @@ export function NewBriefModal({
             {hasClaims && (
               <Alert className="border-amber-400 bg-amber-50/70 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 py-2">
                 <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
-                <AlertDescription className="text-[11px] leading-relaxed">
+                <AlertDescription className="text-2xs leading-relaxed">
                   {t(
                     "marketing.briefModal.statutoryWarning",
                     "Príspevok obsahuje klinické tvrdenia. V súlade so Zákonom 39/2007 Z. z. a Etickým kódexom KVL SR bude zaradený do schvaľovacieho procesu pre veterinárneho lekára."

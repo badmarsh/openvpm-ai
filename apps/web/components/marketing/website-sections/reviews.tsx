@@ -65,7 +65,7 @@ export function ReviewsSection({ content, contextData }: ReviewsSectionProps) {
               <span className="font-bold text-foreground text-sm">
                 {filteredReviews[carouselIndex]?.reviewerName || "Overený chovateľ"}
               </span>
-              <span className="uppercase tracking-wider text-[10px]">
+              <span className="uppercase tracking-wider text-3xs">
                 {filteredReviews[carouselIndex]?.platform || "Google Recenzia"}
               </span>
             </div>
@@ -97,7 +97,7 @@ export function ReviewsSection({ content, contextData }: ReviewsSectionProps) {
                   ))}
                 </div>
                 {content.showPlatformBadge && (
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-2xs font-bold text-muted-foreground uppercase tracking-wider">
                     {r.platform || "Google"}
                   </span>
                 )}

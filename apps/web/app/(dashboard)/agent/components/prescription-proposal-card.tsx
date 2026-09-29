@@ -113,7 +113,7 @@ export function PrescriptionProposalCard({
 
   if (saved) {
     return (
-      <div className="mt-2 rounded-md border border-success/30 bg-success/10 p-2.5 text-[11px] text-success">
+      <div className="mt-2 rounded-md border border-success/30 bg-success/10 p-2.5 text-2xs text-success">
         <div className="flex items-center gap-1.5 font-medium">
           <Check className="h-3.5 w-3.5" />
           {t("agent.prescription.savedShort", "Recept vystavený po potvrdení lekárom")}
@@ -123,7 +123,7 @@ export function PrescriptionProposalCard({
   }
 
   return (
-    <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px]">
+    <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-2xs">
       <div className="flex items-center gap-1.5 font-semibold text-warning-muted-foreground">
         <Pill className="h-3.5 w-3.5" />
         {t(
@@ -165,7 +165,7 @@ export function PrescriptionProposalCard({
           </div>
         ) : null}
       </dl>
-      <div className="mt-2 flex items-start gap-1.5 text-[10px] text-muted-foreground">
+      <div className="mt-2 flex items-start gap-1.5 text-3xs text-muted-foreground">
         <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
         <span>
           {t(
@@ -177,7 +177,7 @@ export function PrescriptionProposalCard({
       <Button
         type="button"
         size="sm"
-        className="mt-2 h-8 text-[11px]"
+        className="mt-2 h-8 text-2xs"
         disabled={save.isPending}
         onClick={() =>
           save.mutate({

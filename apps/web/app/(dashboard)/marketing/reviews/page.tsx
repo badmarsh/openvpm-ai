@@ -22,12 +22,15 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/lib/i18n";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { formatDate, localeTagForLanguage } from "@/lib/locale/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   DataTableFrame,
   EmptyState,
@@ -189,7 +192,7 @@ function StarRating({ rating, className }: { rating: number; className?: string 
 function PlatformBadge({ platform, t }: { platform: string; t: Translate }) {
   if (platform === "facebook") {
     return (
-      <Badge variant="info" className="gap-1 text-[11px] font-medium">
+      <Badge variant="info" className="gap-1 text-2xs font-medium">
         <FacebookIcon className="h-3 w-3" />
         {t("marketing.reviews.platformFacebook", "Facebook")}
       </Badge>
@@ -197,13 +200,13 @@ function PlatformBadge({ platform, t }: { platform: string; t: Translate }) {
   }
   if (platform === "internal") {
     return (
-      <Badge variant="secondary" className="text-[11px] font-medium">
+      <Badge variant="secondary" className="text-2xs font-medium">
         {t("marketing.reviews.platformInternal", "Interné")}
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="gap-1 text-[11px] font-medium">
+    <Badge variant="outline" className="gap-1 text-2xs font-medium">
       <GoogleIcon className="h-3 w-3" />
       {t("marketing.reviews.platformGoogle", "Google")}
     </Badge>
@@ -220,7 +223,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
 
   if (sentiment === "positive") {
     return (
-      <Badge variant="success" className="gap-1 text-[11px] font-medium">
+      <Badge variant="success" className="gap-1 text-2xs font-medium">
         <ThumbsUp className="h-3 w-3" aria-hidden="true" />
         {t("marketing.reviews.sentiment.positive", "Pozitívna")}
         {score}
@@ -229,7 +232,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
   }
   if (sentiment === "negative") {
     return (
-      <Badge variant="destructive" className="gap-1 text-[11px] font-medium">
+      <Badge variant="destructive" className="gap-1 text-2xs font-medium">
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
         {t("marketing.reviews.sentiment.negative", "Negatívna")}
         {score}
@@ -237,7 +240,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
     );
   }
   return (
-    <Badge variant="secondary" className="text-[11px] font-medium">
+    <Badge variant="secondary" className="text-2xs font-medium">
       {t("marketing.reviews.sentiment.neutral", "Neutrálna")}
       {score}
     </Badge>
@@ -324,6 +327,7 @@ function QueryErrorState({ title, onRetry }: { title: string; onRetry: () => voi
 export default function ReviewsPage() {
   const { t, locale } = useI18n();
   const utils = trpc.useUtils();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -566,12 +570,17 @@ export default function ReviewsPage() {
     }
   };
 
-  const askDelete = (review: ReviewRow) => {
-    if (
-      window.confirm(
-        t("marketing.reviews.deleteConfirm", "Naozaj chcete zmazať túto recenziu?"),
-      )
-    ) {
+  const askDelete = async (review: ReviewRow) => {
+    const confirmed = await confirm({
+      title: t("marketing.reviews.deleteTitle", "Zmazať recenziu"),
+      description: t(
+        "marketing.reviews.deleteConfirm",
+        "Naozaj chcete zmazať túto recenziu?",
+      ),
+      confirmLabel: t("marketing.reviews.deleteAction", "Zmazať"),
+      confirmVariant: "destructive",
+    });
+    if (confirmed) {
       deleteReviewMutation.mutate({ id: review.id });
     }
   };
@@ -763,21 +772,22 @@ export default function ReviewsPage() {
           </option>
         </select>
 
-        <Button
-          type="button"
-          size="sm"
-          variant={sympathyOnly ? "default" : "outline"}
-          className="h-9 gap-1.5 text-xs"
-          aria-pressed={sympathyOnly}
-          onClick={() => setSympathyOnly((current) => !current)}
-          title={t(
+        <TooltipHint content={t(
             "marketing.reviews.toolbar.sympathyOnlyHint",
             "Zobraziť iba recenzie klientov, ktorým sú po úmrtí pacienta blokované výzvy na recenziu.",
-          )}
-        >
-          <Heart className="h-3.5 w-3.5" aria-hidden="true" />
-          {t("marketing.reviews.toolbar.sympathyOnly", "Iba Sympathy Gate")}
-        </Button>
+          )}>
+          <Button
+            type="button"
+            size="sm"
+            variant={sympathyOnly ? "default" : "outline"}
+            className="h-9 gap-1.5 text-xs"
+            aria-pressed={sympathyOnly}
+            onClick={() => setSympathyOnly((current) => !current)}
+          >
+            <Heart className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("marketing.reviews.toolbar.sympathyOnly", "Iba Sympathy Gate")}
+          </Button>
+        </TooltipHint>
 
         {filtersActive ? (
           <Button
@@ -936,7 +946,7 @@ export default function ReviewsPage() {
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <PlatformBadge platform={review.platform} t={t} />
                             {review.platform === "facebook" && (review.rating ?? 5) >= 4 ? (
-                              <Badge variant="success" className="gap-1 text-[11px] font-medium">
+                              <Badge variant="success" className="gap-1 text-2xs font-medium">
                                 <ThumbsUp className="h-3 w-3" aria-hidden="true" />
                                 {t("marketing.reviews.facebookRecommends", "Odporúča kliniku")}
                               </Badge>
@@ -955,7 +965,7 @@ export default function ReviewsPage() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <SentimentBadge review={review} t={t} />
                             {severity ? (
-                              <Badge variant="warning" className="gap-1 text-[11px] font-medium">
+                              <Badge variant="warning" className="gap-1 text-2xs font-medium">
                                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                                 {severity}
                               </Badge>
@@ -963,7 +973,7 @@ export default function ReviewsPage() {
                             {review.escalationStatus === "escalated" ? (
                               <Badge
                                 variant="outline"
-                                className="gap-1 text-[11px] font-medium"
+                                className="gap-1 text-2xs font-medium"
                                 title={
                                   review.escalationReason
                                     ? t("marketing.reviews.queue.escalationReason", "Dôvod: {reason}", {
@@ -985,7 +995,7 @@ export default function ReviewsPage() {
                           {sla ? (
                             <Badge
                               variant={sla.variant}
-                              className="gap-1 text-[11px] font-medium"
+                              className="gap-1 text-2xs font-medium"
                             >
                               {sla.status === "replied" ? (
                                 <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
@@ -1002,7 +1012,7 @@ export default function ReviewsPage() {
                           {sympathyBlocked ? (
                             <Badge
                               variant="secondary"
-                              className="gap-1 text-[11px] font-medium"
+                              className="gap-1 text-2xs font-medium"
                               title={t(
                                 "marketing.reviews.queue.sympathyTitle",
                                 "Klientovi po úmrtí zvieratka neodchádzajú marketingové výzvy na recenziu.",
@@ -1034,20 +1044,21 @@ export default function ReviewsPage() {
                             >
                               <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
                             </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                              aria-label={t("marketing.reviews.deleteReview", "Zmazať recenziu")}
-                              title={t("marketing.reviews.deleteReview", "Zmazať recenziu")}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                askDelete(review);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            </Button>
+                            <TooltipHint content={t("marketing.reviews.deleteReview", "Zmazať recenziu")}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                aria-label={t("marketing.reviews.deleteReview", "Zmazať recenziu")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  askDelete(review);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipHint>
                           </div>
                         </td>
                       </tr>
@@ -1084,12 +1095,12 @@ export default function ReviewsPage() {
                                       {t("marketing.reviews.yourReply", "Odpoveď kliniky")}
                                     </span>
                                     {review.repliedAt ? (
-                                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                                      <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                                         {formatDate(review.repliedAt, undefined, locale)}
                                       </span>
                                     ) : null}
                                   </div>
-                                  <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-foreground/80">
+                                  <p className="whitespace-pre-wrap text-2xs leading-relaxed text-foreground/80">
                                     {review.replyText}
                                   </p>
                                   <div className="flex items-center gap-3 pt-1">
@@ -1097,7 +1108,7 @@ export default function ReviewsPage() {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 gap-1 px-2 text-[11px] text-muted-foreground"
+                                      className="h-7 gap-1 px-2 text-2xs text-muted-foreground"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         void copyReply(review.replyText || "");
@@ -1110,7 +1121,7 @@ export default function ReviewsPage() {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 gap-1 px-2 text-[11px] text-muted-foreground"
+                                      className="h-7 gap-1 px-2 text-2xs text-muted-foreground"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         startReply(review, review.replyText || "");
@@ -1126,14 +1137,14 @@ export default function ReviewsPage() {
                               {isReplying ? (
                                 <div className="space-y-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <span className="text-[11px] font-semibold text-muted-foreground">
+                                    <span className="text-2xs font-semibold text-muted-foreground">
                                       {t("marketing.reviews.quickReplies", "Rýchle predpripravené odpovede:")}
                                     </span>
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 gap-1 px-2 text-[11px]"
+                                      className="h-7 gap-1 px-2 text-2xs"
                                       disabled={generateReplyMutation.isPending}
                                       onClick={(event) => {
                                         event.stopPropagation();
@@ -1151,20 +1162,20 @@ export default function ReviewsPage() {
 
                                   <div className="grid gap-1.5 sm:grid-cols-2">
                                     {cannedResponses.map((canned) => (
-                                      <Button
-                                        key={canned.label}
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-auto justify-start truncate p-2 text-left text-[11px] font-normal"
-                                        title={canned.text}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          setReplyText(canned.text);
-                                        }}
-                                      >
-                                        {canned.label}
-                                      </Button>
+                                      <TooltipHint key={canned.label} content={canned.text}>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-auto justify-start truncate p-2 text-left text-2xs font-normal"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setReplyText(canned.text);
+                                          }}
+                                        >
+                                          {canned.label}
+                                        </Button>
+                                      </TooltipHint>
                                     ))}
                                   </div>
 
@@ -1281,25 +1292,26 @@ export default function ReviewsPage() {
                                   </div>
 
                                   {review.escalationStatus !== "escalated" ? (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 gap-1 text-xs"
-                                      title={t(
+                                    <TooltipHint content={t(
                                         "marketing.reviews.queue.escalateTitle",
                                         "Eskalovať recenziu na personál (vytvoriť úlohu)",
-                                      )}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setEscalatingReview(review);
-                                        setEscalateReason("");
-                                        setIsEscalateModalOpen(true);
-                                      }}
-                                    >
-                                      <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                                      {t("marketing.reviews.queue.escalate", "Eskalovať")}
-                                    </Button>
+                                      )}>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 gap-1 text-xs"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          setEscalatingReview(review);
+                                          setEscalateReason("");
+                                          setIsEscalateModalOpen(true);
+                                        }}
+                                      >
+                                        <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                                        {t("marketing.reviews.queue.escalate", "Eskalovať")}
+                                      </Button>
+                                    </TooltipHint>
                                   ) : null}
                                 </div>
                               )}
@@ -1605,6 +1617,8 @@ export default function ReviewsPage() {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

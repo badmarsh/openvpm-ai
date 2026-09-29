@@ -35,6 +35,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -346,13 +347,13 @@ export function MarketingStudioContent() {
                 {aliStatusQuery.data?.text && !aliStatusQuery.data.text.isConfigured ? (
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-mono gap-1 border-red-300 dark:border-red-900 text-red-700 dark:text-red-300"
+                    className="text-3xs font-mono gap-1 border-red-300 dark:border-red-900 text-red-700 dark:text-red-300"
                   >
                     <TriangleAlert className="h-2.5 w-2.5" />{" "}
                     {t("marketing.studio.aiNotConfiguredTitle", "AI nie je nastavené")}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] font-mono gap-1 border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300">
+                  <Badge variant="outline" className="text-3xs font-mono gap-1 border-rose-300 dark:border-rose-900 text-rose-700 dark:text-rose-300">
                     <Sparkles className="h-2.5 w-2.5" />{" "}
                     {t("marketing.studio.modelBadge", "Copywriter: {model}", {
                       model: aliStatusQuery.data?.text?.modelId ?? "AI",
@@ -363,7 +364,7 @@ export function MarketingStudioContent() {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-[10px] font-mono gap-1",
+                      "text-3xs font-mono gap-1",
                       aliStatusQuery.data.online
                         ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20"
                         : "border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400"
@@ -383,7 +384,7 @@ export function MarketingStudioContent() {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-[10px] font-mono gap-1",
+                      "text-3xs font-mono gap-1",
                       aliStatusQuery.data.gemini.online
                         ? "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
                         : "border-slate-300 text-slate-500 dark:border-slate-700"
@@ -539,7 +540,7 @@ export function MarketingStudioContent() {
                 <Calendar className="h-4 w-4 text-rose-500" />
                 <span>{t("marketing.studio.recommendedCampaigns", "Odporúčané klinické kampane")}</span>
               </h3>
-              <span className="text-[11px] text-muted-foreground">{t("marketing.studio.clickToSelect", "Kliknite pre výber")}</span>
+              <span className="text-2xs text-muted-foreground">{t("marketing.studio.clickToSelect", "Kliknite pre výber")}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -561,12 +562,12 @@ export function MarketingStudioContent() {
                       <span className="font-semibold text-xs line-clamp-1 block">
                         {tpl.title}
                       </span>
-                      <span className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                      <span className="text-3xs text-muted-foreground line-clamp-1 mt-0.5">
                         {tpl.category} • {tpl.season}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                      <Badge variant="secondary" className="text-4xs px-1.5 py-0">
                         {tpl.targetAudience}
                       </Badge>
                       <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -584,7 +585,7 @@ export function MarketingStudioContent() {
                 <Sliders className="h-4 w-4 text-violet-500" />
                 <span>{t("marketing.studio.generatorSettings", "Nastavenia generátora")}</span>
               </h3>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-3xs">
                 {t("marketing.studio.languageSk", "Slovenčina (SK)")}
               </Badge>
             </div>
@@ -720,7 +721,7 @@ export function MarketingStudioContent() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 p-[2px]">
-                    <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[10px] font-bold">
+                    <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-3xs font-bold">
                       {clinicInitials}
                     </div>
                   </div>
@@ -728,17 +729,17 @@ export function MarketingStudioContent() {
                     <span className="font-semibold text-xs text-foreground block">
                       {igHandle}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">{clinicName}</span>
+                    <span className="text-3xs text-muted-foreground">{clinicName}</span>
                   </div>
                 </div>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-3xs">
                   {t("marketing.studio.instagramFeed", "Instagram Feed")}
                 </Badge>
               </div>
 
               {/* Media Controls Bar */}
               <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-muted/40 border text-xs">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <span className="text-2xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-rose-500" />
                   {t("marketing.studio.visualLabel", "AI vizuál:")}
                 </span>
@@ -747,7 +748,7 @@ export function MarketingStudioContent() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] gap-1 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    className="h-7 text-2xs gap-1 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                     onClick={handleGenerateImage}
                     disabled={isGeneratingImage || isVideoLoading}
                   >
@@ -763,7 +764,7 @@ export function MarketingStudioContent() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] gap-1 border-purple-200 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                    className="h-7 text-2xs gap-1 border-purple-200 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-950/30"
                     onClick={handleGenerateVideo}
                     disabled={isGeneratingImage || isVideoLoading}
                   >
@@ -775,37 +776,40 @@ export function MarketingStudioContent() {
                     <span>{t("marketing.studio.generateVideo", "Video")}</span>
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[11px] gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
-                    onClick={handleSendToTv}
-                    disabled={createTvSlideMutation.isPending}
-                    title={t("marketing.studio.tvSlideTitle", "Pridať túto kampaň ako slajd na TV do čakárne")}
-                  >
-                    {createTvSlideMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
-                    ) : (
-                      <Tv className="h-3 w-3 text-sky-500" />
-                    )}
-                    <span>{t("marketing.studio.sendToTv", "Na TV")}</span>
-                  </Button>
-
-                  {(generatedImageUrl || generatedVideoUrl) && (
+                  <TooltipHint content={t("marketing.studio.tvSlideTitle", "Pridať túto kampaň ako slajd na TV do čakárne")}>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => {
-                        setGeneratedImageUrl(null);
-                        setGeneratedVideoUrl(null);
-                      }}
-                      title={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}
+                      className="h-7 text-2xs gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
+                      onClick={handleSendToTv}
+                      disabled={createTvSlideMutation.isPending}
                     >
-                      <RefreshCw className="h-3 w-3" />
+                      {createTvSlideMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
+                      ) : (
+                        <Tv className="h-3 w-3 text-sky-500" />
+                      )}
+                      <span>{t("marketing.studio.sendToTv", "Na TV")}</span>
                     </Button>
+                  </TooltipHint>
+
+                  {(generatedImageUrl || generatedVideoUrl) && (
+                    <TooltipHint content={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}>
+                      <Button
+                        aria-label={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setGeneratedImageUrl(null);
+                          setGeneratedVideoUrl(null);
+                        }}
+                      >
+                        <RefreshCw aria-hidden="true" className="h-3 w-3" />
+                      </Button>
+                    </TooltipHint>
                   )}
                 </div>
               </div>
@@ -820,7 +824,7 @@ export function MarketingStudioContent() {
                     <h5 className="font-semibold text-xs text-foreground">
                       {videoStatusText || "Spracovávam Wan 2.1 video…"}
                     </h5>
-                    <p className="text-[11px] text-muted-foreground max-w-xs">
+                    <p className="text-2xs text-muted-foreground max-w-xs">
                       Alibaba Wan 2.1 generuje plynulé video pre tému „{selectedTopic}“.
                     </p>
                   </div>
@@ -834,7 +838,7 @@ export function MarketingStudioContent() {
                     <h5 className="font-semibold text-xs text-foreground">
                       {t("marketing.studio.generatingVisual", "Generujem vizuál…")}
                     </h5>
-                    <p className="text-[11px] text-muted-foreground max-w-xs">
+                    <p className="text-2xs text-muted-foreground max-w-xs">
                       Alibaba Wanx 2.1 (Qwen 3 Pro) vykresľuje fotorealistický obrázok pre sociálne siete.
                     </p>
                   </div>
@@ -850,7 +854,7 @@ export function MarketingStudioContent() {
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 left-2 pointer-events-none">
-                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-[10px] gap-1 border-white/20">
+                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-3xs gap-1 border-white/20">
                       <Video className="h-3 w-3 text-purple-400" /> Wan 2.1 AI Video
                     </Badge>
                   </div>
@@ -875,7 +879,7 @@ export function MarketingStudioContent() {
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 left-2 pointer-events-none">
-                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-[10px] gap-1 border-white/20">
+                    <Badge className="bg-black/70 backdrop-blur-sm text-white text-3xs gap-1 border-white/20">
                       <ImageIcon className="h-3 w-3 text-emerald-400" /> Wanx 2.1 / Qwen 3 Pro
                     </Badge>
                   </div>
@@ -901,7 +905,7 @@ export function MarketingStudioContent() {
                   <h4 className="font-bold text-sm text-foreground max-w-xs leading-snug">
                     {selectedTopic}
                   </h4>
-                  <p className="text-[11px] text-muted-foreground mt-1">
+                  <p className="text-2xs text-muted-foreground mt-1">
                     Veterinárna starostlivosť a prevencia
                   </p>
                   <div className="mt-4 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
@@ -957,7 +961,7 @@ export function MarketingStudioContent() {
                   <span className="font-semibold text-xs text-foreground block">
                     {clinicName}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">{t("marketing.studio.fbJustNow", "Práve teraz • 🌍 Verejné")}</span>
+                  <span className="text-3xs text-muted-foreground">{t("marketing.studio.fbJustNow", "Práve teraz • 🌍 Verejné")}</span>
                 </div>
               </div>
 
@@ -992,7 +996,7 @@ export function MarketingStudioContent() {
                 /* Mock Banner */
                 <div className="rounded-xl border bg-muted/40 p-4 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-muted-foreground uppercase font-mono">
+                    <span className="text-3xs text-muted-foreground uppercase font-mono">
                       {t("marketing.studio.bookOnline", "Objednanie termínu online")}
                     </span>
                     <h5 className="font-semibold text-xs text-foreground">
@@ -1034,7 +1038,7 @@ export function MarketingStudioContent() {
               {/* Mobile Phone Message Bubble */}
               <div className="rounded-2xl bg-muted/40 p-6 flex flex-col items-center justify-center">
                 <div className="w-full max-w-xs space-y-2">
-                  <div className="text-center text-[10px] text-muted-foreground">
+                  <div className="text-center text-3xs text-muted-foreground">
                     Dnes 14:30
                   </div>
                   <div className="bg-emerald-600 text-white rounded-2xl rounded-tr-xs p-3.5 text-xs leading-relaxed shadow-sm">

@@ -139,7 +139,7 @@ export default function AiSwarmAdminPage() {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
+          "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-2xs font-medium",
           chip,
         )}
       >
@@ -156,35 +156,35 @@ export default function AiSwarmAdminPage() {
     switch (status) {
       case "COMPLETED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-2xs font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" />
             {t("admin.aiSwarm.toolbar.completed", "Dokončené")}
           </span>
         );
       case "RUNNING":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:text-blue-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-2xs font-medium text-blue-600 dark:text-blue-400">
             <Radio className="h-3 w-3 animate-pulse" />
             {t("admin.aiSwarm.toolbar.running", "Bežiace")}
           </span>
         );
       case "FAILED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
             <AlertCircle className="h-3 w-3" />
             {t("admin.aiSwarm.toolbar.failed", "Zlyhané")}
           </span>
         );
       case "PENDING":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-2xs font-medium text-amber-600 dark:text-amber-400">
             <Clock className="h-3 w-3" />
             {t("admin.aiSwarm.toolbar.pending", "Čakajúce")}
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
             {status}
           </span>
         );
@@ -268,7 +268,7 @@ export default function AiSwarmAdminPage() {
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {t("admin.aiSwarm.runtime.endpoint", "Backend endpoint")}
                   </span>
-                  <Badge variant="outline" className="font-mono text-[10px]">
+                  <Badge variant="outline" className="font-mono text-3xs">
                     {agentOsUrl}
                   </Badge>
                 </div>
@@ -291,7 +291,7 @@ export default function AiSwarmAdminPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("admin.aiSwarm.runtime.agentUi", "Rozhranie Agent UI")}:
               </span>
-              <Badge variant="secondary" className="font-mono text-[10px]">
+              <Badge variant="secondary" className="font-mono text-3xs">
                 {agentUiUrl}
               </Badge>
             </div>
@@ -379,7 +379,7 @@ export default function AiSwarmAdminPage() {
             <Activity className="mr-1.5 h-4 w-4" />
             {t("admin.aiSwarm.tabs.sessions", "Relácie a úlohy")}
             {Boolean(data?.sessions?.length) && (
-              <Badge variant="secondary" className="ml-1.5 h-4 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="ml-1.5 h-4 px-1.5 text-3xs">
                 {data?.sessions.length}
               </Badge>
             )}
@@ -393,14 +393,14 @@ export default function AiSwarmAdminPage() {
             {(approvalsQuery.data?.count ?? 0) > 0 ? (
               <Badge
                 variant="destructive"
-                className="ml-1.5 h-4 px-1.5 text-[10px] animate-pulse"
+                className="ml-1.5 h-4 px-1.5 text-3xs animate-pulse"
               >
                 {approvalsQuery.data?.count}
               </Badge>
             ) : (
               <Badge
                 variant="outline"
-                className="ml-1.5 h-4 px-1.5 text-[10px] text-muted-foreground"
+                className="ml-1.5 h-4 px-1.5 text-3xs text-muted-foreground"
               >
                 0
               </Badge>
@@ -470,7 +470,7 @@ export default function AiSwarmAdminPage() {
                       <Users className="h-4 w-4 text-primary" />
                       {tm.name}
                     </span>
-                    <Badge variant="outline" className="font-mono text-[10px]">
+                    <Badge variant="outline" className="font-mono text-3xs">
                       {tm.mode}
                     </Badge>
                   </div>
@@ -481,7 +481,7 @@ export default function AiSwarmAdminPage() {
                     {tm.members.map((m) => (
                       <span
                         key={m}
-                        className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                        className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-3xs text-muted-foreground"
                       >
                         {m}
                       </span>
@@ -513,7 +513,7 @@ export default function AiSwarmAdminPage() {
                       <Workflow className="h-4 w-4 text-emerald-500" />
                       {wf.name}
                     </span>
-                    <Badge variant="outline" className="font-mono text-[10px]">
+                    <Badge variant="outline" className="font-mono text-3xs">
                       {wf.stepsCount} krokov
                     </Badge>
                   </div>
@@ -588,7 +588,7 @@ export default function AiSwarmAdminPage() {
                             <div className="font-semibold text-foreground">
                               {ag.name}
                             </div>
-                            <div className="font-mono text-[10px] text-muted-foreground">
+                            <div className="font-mono text-3xs text-muted-foreground">
                               {ag.id}
                             </div>
                           </div>
@@ -598,15 +598,15 @@ export default function AiSwarmAdminPage() {
                         <div className="font-medium text-foreground">
                           {ag.role}
                         </div>
-                        <div className="text-[11px] text-muted-foreground max-w-sm truncate">
+                        <div className="text-2xs text-muted-foreground max-w-sm truncate">
                           {ag.description}
                         </div>
                       </td>
                       <td className={tableCellClass}>
-                        <Badge variant="secondary" className="text-[10px] font-mono">
+                        <Badge variant="secondary" className="text-3xs font-mono">
                           {ag.model}
                         </Badge>
-                        <div className="mt-0.5 text-[10px] text-muted-foreground">
+                        <div className="mt-0.5 text-3xs text-muted-foreground">
                           {ag.provider}
                         </div>
                       </td>
@@ -615,7 +615,7 @@ export default function AiSwarmAdminPage() {
                           {ag.tools.map((tl) => (
                             <span
                               key={tl}
-                              className="rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground"
+                              className="rounded bg-muted px-1.5 py-0.5 font-mono text-4xs text-muted-foreground"
                             >
                               {tl}
                             </span>
@@ -733,7 +733,7 @@ export default function AiSwarmAdminPage() {
                           {s.module}
                         </div>
                         {s.promptSummary && (
-                          <div className="text-[11px] text-muted-foreground truncate max-w-sm">
+                          <div className="text-2xs text-muted-foreground truncate max-w-sm">
                             {s.promptSummary}
                           </div>
                         )}
@@ -742,11 +742,11 @@ export default function AiSwarmAdminPage() {
                         {renderStatusBadge(s.status)}
                       </td>
                       <td className={tableCellClass}>
-                        <div className="max-w-xs truncate text-[11px] text-muted-foreground">
+                        <div className="max-w-xs truncate text-2xs text-muted-foreground">
                           {s.progress || "—"}
                         </div>
                       </td>
-                      <td className={cn(tableCellClass, "font-mono text-[11px] text-muted-foreground")}>
+                      <td className={cn(tableCellClass, "font-mono text-2xs text-muted-foreground")}>
                         {s.createdAt || "—"}
                       </td>
                       <td className={cn(tableCellClass, "text-right")}>
@@ -809,7 +809,7 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateGitPush", "Git Push na origin/main")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
                 </div>
               </div>
@@ -823,7 +823,7 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gatePrMerge", "PR Merge do main")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
                 </div>
               </div>
@@ -837,7 +837,7 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateDeploy", "Deploy do produkcie")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   {t("admin.aiSwarm.approvals.required", "Required (@approval)")}
                 </div>
               </div>
@@ -851,7 +851,7 @@ export default function AiSwarmAdminPage() {
                 <div className="truncate text-xs font-semibold text-foreground">
                   {t("admin.aiSwarm.approvals.gateOpl", "Klinický audit OPL (Zákon 139/1998)")}
                 </div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-2xs text-muted-foreground">
                   {t("admin.aiSwarm.approvals.auditLog", "Audit Log (@approval)")}
                 </div>
               </div>
@@ -908,12 +908,12 @@ export default function AiSwarmAdminPage() {
                         <div className="font-medium text-foreground">
                           {appr.agent_id || appr.sender || "pipeline_team"}
                         </div>
-                        <div className="font-mono text-[10px] text-muted-foreground">
+                        <div className="font-mono text-3xs text-muted-foreground">
                           {appr.session_id || appr.created_at || "—"}
                         </div>
                       </td>
                       <td className={tableCellClass}>
-                        <pre className="max-w-md truncate rounded bg-muted/50 p-1 font-mono text-[10px] text-foreground">
+                        <pre className="max-w-md truncate rounded bg-muted/50 p-1 font-mono text-3xs text-foreground">
                           {JSON.stringify(appr.args || appr.parameters || appr.tool_args || {}, null, 1)}
                         </pre>
                       </td>
@@ -971,7 +971,7 @@ export default function AiSwarmAdminPage() {
                       "Human-in-the-Loop brána (Zákon 39/2007 Z. z.)"
                     )}
                   </h3>
-                  <Badge variant="outline" className="mt-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="outline" className="mt-0.5 text-3xs text-emerald-600 dark:text-emerald-400">
                     AKTÍVNY DOHĽAD
                   </Badge>
                 </div>
@@ -996,7 +996,7 @@ export default function AiSwarmAdminPage() {
                       "Brána omamných a psychotropných látok (Zákon 139/1998 Z. z.)"
                     )}
                   </h3>
-                  <Badge variant="outline" className="mt-0.5 text-[10px] text-destructive">
+                  <Badge variant="outline" className="mt-0.5 text-3xs text-destructive">
                     STRIKTNÝ ZÁKAZ AI PREFILLU
                   </Badge>
                 </div>
@@ -1021,7 +1021,7 @@ export default function AiSwarmAdminPage() {
                       "Sympatická brána pietneho kľudu"
                     )}
                   </h3>
-                  <Badge variant="outline" className="mt-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+                  <Badge variant="outline" className="mt-0.5 text-3xs text-blue-600 dark:text-blue-400">
                     GDPR & AUTOMATION SUPPRESSION
                   </Badge>
                 </div>
@@ -1046,7 +1046,7 @@ export default function AiSwarmAdminPage() {
                       "Zero-Conflict Upstream architektúra"
                     )}
                   </h3>
-                  <Badge variant="outline" className="mt-0.5 text-[10px] text-purple-600 dark:text-purple-400">
+                  <Badge variant="outline" className="mt-0.5 text-3xs text-purple-600 dark:text-purple-400">
                     VANILLA SCHEMAS IMMUTABLE
                   </Badge>
                 </div>
@@ -1069,7 +1069,7 @@ export default function AiSwarmAdminPage() {
                 <h3 className="text-sm font-semibold text-foreground">
                   {t("admin.aiSwarm.agentUiView.title", "Živá Agent UI Konzola (:3007)")}
                 </h3>
-                <Badge variant={isOnline ? "default" : "secondary"} className="text-[10px]">
+                <Badge variant={isOnline ? "default" : "secondary"} className="text-3xs">
                   {isOnline ? "AgentOS :7777 Ready" : "AgentOS Standby"}
                 </Badge>
               </div>

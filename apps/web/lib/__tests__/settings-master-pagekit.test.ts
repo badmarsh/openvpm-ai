@@ -99,7 +99,7 @@ describe("settings master hub uses one DataTableFrame per settings panel", () =>
   });
 
   it("renders dense tables through the shared table tokens", () => {
-    expect(pageKitSource).toContain('"h-9 px-3 py-2 text-left align-middle text-[11px]');
+    expect(pageKitSource).toContain('"h-9 px-3 py-2 text-left align-middle text-2xs');
     expect(countOccurrences(pageSource, "tableHeadClass")).toBeGreaterThanOrEqual(33);
     expect(countOccurrences(pageSource, "tableCellClass")).toBeGreaterThanOrEqual(40);
     expect(countOccurrences(pageSource, "tableRowClass")).toBeGreaterThanOrEqual(6);

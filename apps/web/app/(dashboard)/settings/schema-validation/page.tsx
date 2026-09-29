@@ -262,7 +262,7 @@ export default function SchemaValidationPage() {
                       <div className="font-medium text-foreground">
                         {contract.title}
                       </div>
-                      <div className="font-mono text-[11px] text-muted-foreground">
+                      <div className="font-mono text-2xs text-muted-foreground">
                         {contract.id}
                       </div>
                     </td>
@@ -387,10 +387,10 @@ export default function SchemaValidationPage() {
                       </span>
                     </td>
                     <td className={tableCellClass}>
-                      <div className="font-mono text-[11px] text-foreground">
+                      <div className="font-mono text-2xs text-foreground">
                         {event.contractId}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-2xs text-muted-foreground">
                         v{event.schemaVersion}
                       </div>
                     </td>
@@ -518,7 +518,7 @@ export default function SchemaValidationPage() {
                       {playgroundOutcome.issues.map((issue, index) => (
                         <tr key={`${issue.field}-${issue.code}-${index}`} className={tableRowClass}>
                           <td className={tableCellClass}>
-                            <span className="font-mono text-[11px]">
+                            <span className="font-mono text-2xs">
                               {issue.field}
                             </span>
                           </td>
@@ -534,7 +534,7 @@ export default function SchemaValidationPage() {
                                 )}
                               </Badge>
                             ) : (
-                              <span className="font-mono text-[11px]">
+                              <span className="font-mono text-2xs">
                                 {issue.code}
                               </span>
                             )}

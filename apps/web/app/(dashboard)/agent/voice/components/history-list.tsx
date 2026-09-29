@@ -16,6 +16,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -212,12 +213,12 @@ export function HistoryList({
                       {status.label}
                     </span>
                     {duration && (
-                      <span className="text-[10px] font-mono text-muted-foreground px-1.5 py-0.2 rounded bg-muted">
+                      <span className="text-3xs font-mono text-muted-foreground px-1.5 py-0.2 rounded bg-muted">
                         {duration}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
+                  <span className="text-2xs text-muted-foreground shrink-0 font-mono">
                     {item.createdAt
                       ? new Date(item.createdAt).toLocaleString("sk-SK", {
                           day: "numeric",
@@ -242,7 +243,7 @@ export function HistoryList({
                 )}
 
                 {/* Footer with Audio player toggle and GDPR status */}
-                <div className="mt-2.5 pt-2 border-t flex items-center justify-between text-[10px]">
+                <div className="mt-2.5 pt-2 border-t flex items-center justify-between text-3xs">
                   <div className="flex items-center gap-1.5">
                     {isAudioAvailable ? (
                       <Button
@@ -251,7 +252,7 @@ export function HistoryList({
                         size="sm"
                         onClick={(e) => handlePlayAudio(e, item)}
                         className={cn(
-                          "h-6 px-2 text-[11px] gap-1 rounded-md font-medium",
+                          "h-6 px-2 text-2xs gap-1 rounded-md font-medium",
                           isPlayingThis
                             ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
                             : "bg-violet-50 text-violet-700 hover:bg-violet-100 dark:bg-violet-950 dark:text-violet-300",
@@ -274,16 +275,18 @@ export function HistoryList({
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 rounded-md"
-                      title="Zmazať záznam"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    <TooltipHint content="Zmazať záznam">
+                      <Button
+                        aria-label="Zmazať záznam"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 rounded-md"
+                      >
+                        <Trash2 aria-hidden="true" className="h-3 w-3" />
+                      </Button>
+                    </TooltipHint>
                   </div>
                 </div>
               </div>

@@ -151,6 +151,11 @@ function handleDocumentClick(event: MouseEvent) {
     replaceSentinelHash(anchor.href);
     return;
   }
+  // Deliberate native confirm: this capture-phase handler must decide
+  // synchronously whether the click proceeds — an async themed dialog cannot
+  // answer before the navigation commits. This is the WIG-sanctioned
+  // beforeunload family (unsaved-changes guard), not an app action; every
+  // app-level action confirmation goes through ConfirmDialog instead.
   if (window.confirm(activeMessage())) {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -165,6 +170,9 @@ function handleDocumentClick(event: MouseEvent) {
 function handlePopState(event: PopStateEvent) {
   const needsDecision =
     pendingPopAction === null && activeGuards.size > 0 && sentinelActive;
+  // Deliberate native confirm (see handleDocumentClick): popstate only offers
+  // a synchronous decision point. Theming this requires re-architecting the
+  // sentinel protocol around an async UI, which is a separate product change.
   const effect = resolveUnsavedPopEffect({
     pendingAction: pendingPopAction,
     guardActive: activeGuards.size > 0,

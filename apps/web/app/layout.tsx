@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter, DM_Sans } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import { SkipToContent } from "@/components/layout/skip-to-content";
@@ -20,6 +21,18 @@ const dmSans = DM_Sans({
   display: "swap",
   preload: true,
 });
+
+/**
+ * `theme-color` + `color-scheme` keep the browser chrome (address bar, native
+ * form controls, scrollbars) on the same palette as the page — including the
+ * dark theme, where they otherwise stay light.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "MVDr. Martin Sýkora: Súkromná veterinárna ambulancia",

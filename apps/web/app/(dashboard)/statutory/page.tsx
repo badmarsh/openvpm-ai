@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import {
   PageHeader,
@@ -849,7 +850,7 @@ function RabiesRegisterTab() {
                     </TableCell>
                     <TableCell className="px-3 py-2.5">
                       <div className="text-sm font-semibold text-foreground">{r.patientName}</div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-2xs text-muted-foreground">
                         {r.species} {r.breed ? `• ${r.breed}` : ""}
                       </div>
                     </TableCell>
@@ -863,7 +864,7 @@ function RabiesRegisterTab() {
                     <TableCell className="px-3 py-2.5">
                       <div className="text-sm font-medium text-foreground">{r.vaccineName}</div>
                       {r.lotNumber && (
-                        <div className="font-mono text-[11px] text-muted-foreground">
+                        <div className="font-mono text-2xs text-muted-foreground">
                           {t("statutory.rabies.lotLabel")} {r.lotNumber}
                         </div>
                       )}
@@ -882,7 +883,7 @@ function RabiesRegisterTab() {
                         {r.clientFirstName} {r.clientLastName}
                       </div>
                       {r.clientCity && (
-                        <div className="text-[11px] text-muted-foreground">{r.clientCity}</div>
+                        <div className="text-2xs text-muted-foreground">{r.clientCity}</div>
                       )}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
@@ -891,36 +892,37 @@ function RabiesRegisterTab() {
                     <TableCell className="px-3 py-2.5 whitespace-nowrap">
                       <Badge
                         variant="outline"
-                        className={cn("text-[10px] font-medium border", comp.badgeClass)}
+                        className={cn("text-3xs font-medium border", comp.badgeClass)}
                       >
                         {t(comp.labelKey, comp.labelKey, comp.labelParams ?? {})}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-3 py-2.5 whitespace-nowrap text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title={t("statutory.rabies.printBiteReport")}
-                        onClick={() =>
-                          printRabiesBiteInspectionReport({
-                            language: locale,
-                            patientName: r.patientName,
-                            species: r.species,
-                            breed: r.breed ?? undefined,
-                            microchipNumber: r.microchipNumber ?? undefined,
-                            clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
-                            clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
-                            clientPhone: r.clientPhone ?? undefined,
-                            vaccineName: r.vaccineName,
-                            lotNumber: r.lotNumber ?? undefined,
-                            administeredAt: r.administeredAt,
-                          })
-                        }
-                        className="h-7 shrink-0 gap-1 whitespace-nowrap px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
-                      >
-                        <Printer className="h-3 w-3" />
-                        <span>RVPS</span>
-                      </Button>
+                      <TooltipHint content={t("statutory.rabies.printBiteReport")}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            printRabiesBiteInspectionReport({
+                              language: locale,
+                              patientName: r.patientName,
+                              species: r.species,
+                              breed: r.breed ?? undefined,
+                              microchipNumber: r.microchipNumber ?? undefined,
+                              clientName: `${r.clientFirstName || ""} ${r.clientLastName}`.trim(),
+                              clientAddress: `${r.clientAddress || ""}, ${r.clientCity || ""}`.trim(),
+                              clientPhone: r.clientPhone ?? undefined,
+                              vaccineName: r.vaccineName,
+                              lotNumber: r.lotNumber ?? undefined,
+                              administeredAt: r.administeredAt,
+                            })
+                          }
+                          className="h-7 shrink-0 gap-1 whitespace-nowrap px-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                        >
+                          <Printer className="h-3 w-3" />
+                          <span>RVPS</span>
+                        </Button>
+                      </TooltipHint>
                     </TableCell>
                   </TableRow>
                 );
@@ -1105,7 +1107,7 @@ function TreatmentDiaryTab() {
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
                     <div className="font-semibold text-foreground">{item.patientName}</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-2xs text-muted-foreground">
                       {item.clientFirstName} {item.clientLastName} • {item.species}
                     </div>
                   </TableCell>
@@ -1298,11 +1300,11 @@ function EuthanasiaRegisterTab() {
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
                     <div className="font-semibold text-foreground">{item.name}</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-2xs text-muted-foreground">
                       {item.species} {item.breed ? `• ${item.breed}` : ""}
                     </div>
                   </TableCell>
-                  <TableCell className="px-3 py-2.5 font-mono text-[11px]">
+                  <TableCell className="px-3 py-2.5 font-mono text-2xs">
                     {item.microchipNumber || "—"}
                   </TableCell>
                   <TableCell className="px-3 py-2.5 font-medium text-foreground">
@@ -1571,7 +1573,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
         </TableCell>
         <TableCell className="px-3 py-2.5">
           <span className={cn(
-            "inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium",
+            "inline-flex rounded px-1.5 py-0.5 text-3xs font-medium",
             item.action === "received" && "bg-blue-100 text-blue-700",
             item.action === "administered" && "bg-green-100 text-green-700",
             item.action === "wasted" && "bg-amber-100 text-amber-700",
@@ -1581,7 +1583,7 @@ td{border:1px solid #999;padding:3px 4px;vertical-align:top}
           </span>
         </TableCell>
         <TableCell className="px-3 py-2.5 text-right font-mono">{item.quantity} {item.unit}</TableCell>
-        <TableCell className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">{item.lotNumber || "—"}</TableCell>
+        <TableCell className="px-3 py-2.5 font-mono text-2xs text-muted-foreground">{item.lotNumber || "—"}</TableCell>
         <TableCell className="px-3 py-2.5">{item.patientName || "—"}</TableCell>
         <TableCell className="px-3 py-2.5 whitespace-nowrap">{item.performerName || "—"}</TableCell>
         <TableCell className="px-3 py-2.5 whitespace-nowrap">{item.witnessName || "—"}</TableCell>
@@ -1703,7 +1705,7 @@ function ProtocolsTab() {
                   }`}
                 >
                   <div className="font-semibold text-sm line-clamp-1">{f.title}</div>
-                  <div className="text-[11px] text-muted-foreground mt-1 font-mono">
+                  <div className="text-2xs text-muted-foreground mt-1 font-mono">
                     {t("statutory.protocols.slugLabel", "Slug")}: {f.slug}
                   </div>
                 </button>

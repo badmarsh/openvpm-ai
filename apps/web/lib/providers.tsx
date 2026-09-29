@@ -13,6 +13,7 @@ import { createAppQueryClient } from "./query-client";
 import { trpc } from "./trpc";
 import { I18nProvider } from "./i18n";
 import { GuiThemeProvider } from "./theme/theme-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const ACTIVE_THEME = "light";
 
@@ -78,9 +79,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           >
             <I18nProvider>
               <GuiThemeProvider>
-                {children}
-                <Toaster richColors position="bottom-right" />
-                <Analytics beforeSend={filterVercelAnalyticsEvent} />
+                <TooltipProvider delayDuration={200}>
+                  {children}
+                  <Toaster richColors position="bottom-right" />
+                  <Analytics beforeSend={filterVercelAnalyticsEvent} />
+                </TooltipProvider>
               </GuiThemeProvider>
             </I18nProvider>
           </ThemeProvider>

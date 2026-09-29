@@ -289,6 +289,7 @@ export function MessagingRegistrationForm() {
         <TextField
           label="Business phone"
           type="tel"
+          inputMode="tel"
           autoComplete="tel"
           value={form.businessPhone}
           onChange={(v) => update("businessPhone", v)}
@@ -410,6 +411,7 @@ function TextField({
   value,
   onChange,
   type = "text",
+  inputMode,
   autoComplete,
   disabled,
   description,
@@ -418,6 +420,11 @@ function TextField({
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "email" | "tel" | "url";
+  /**
+   * Virtual-keyboard hint. `type="tel"`/`type="url"` already imply one, but an
+   * explicit `inputMode` keeps the numeric pad on browsers that only honour it.
+   */
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   /** HTML autocomplete token so browsers/password managers can prefill. */
   autoComplete?: React.HTMLInputAutoCompleteAttribute;
   disabled?: boolean;
@@ -427,7 +434,11 @@ function TextField({
     <Field label={label}>
       <Input
         type={type}
+        inputMode={inputMode}
         autoComplete={autoComplete}
+        // Identifiers (emails, URLs, phone numbers) are not prose: spellcheck
+        // underlines them red for no reason.
+        spellCheck={type === "text" ? undefined : false}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}

@@ -141,7 +141,7 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
                       </h3>
                     </div>
                     {content.practicalExample.badge && (
-                      <span className="text-[10px] font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/20">
+                      <span className="text-3xs font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/20">
                         {content.practicalExample.badge}
                       </span>
                     )}
@@ -206,7 +206,7 @@ export function HelpModal({ content, onClose }: HelpModalProps) {
                         className="flex items-center justify-between rounded-lg border border-border/50 bg-background/60 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                       >
                         <span>{mod.name}</span>
-                        <span className="text-muted-foreground text-[10px]">→</span>
+                        <span className="text-muted-foreground text-3xs">→</span>
                       </Link>
                     ))}
                   </div>

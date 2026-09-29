@@ -115,7 +115,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         sideOffset={6}
         className="w-44 p-1 shadow-md border-border bg-popover"
       >
-        <div className="text-[10px] font-bold text-muted-foreground px-2.5 py-1 uppercase tracking-wider">
+        <div className="text-3xs font-bold text-muted-foreground px-2.5 py-1 uppercase tracking-wider">
           {t("locale.language", "Language")}
         </div>
         <div className="space-y-0.5 mt-0.5">

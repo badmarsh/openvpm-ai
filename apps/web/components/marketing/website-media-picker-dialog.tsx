@@ -120,7 +120,7 @@ export function WebsiteMediaPickerDialog({
                     </div>
 
                     {asset.patientName && (
-                      <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-2xs px-2 py-1 text-[10px] text-white truncate">
+                      <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-2xs px-2 py-1 text-3xs text-white truncate">
                         {asset.patientName}
                       </div>
                     )}

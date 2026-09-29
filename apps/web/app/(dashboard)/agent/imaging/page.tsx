@@ -971,7 +971,7 @@ function ImagingContent() {
                           <div className="text-xs text-foreground">
                             {new Date(item.createdAt).toLocaleDateString("sk-SK")}
                           </div>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                          <div className="mt-0.5 text-2xs text-muted-foreground">
                             {new Date(item.createdAt).toLocaleTimeString("sk-SK", {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -1006,7 +1006,7 @@ function ImagingContent() {
                           <Badge variant="outline" className="uppercase">
                             {item.imageType}
                           </Badge>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                          <div className="mt-0.5 text-2xs text-muted-foreground">
                             {item.modelId}
                           </div>
                         </DataTableCell>
@@ -1028,7 +1028,7 @@ function ImagingContent() {
                                   ? "destructive"
                                   : "secondary"
                             }
-                            className="text-[11px]"
+                            className="text-2xs"
                           >
                             {item.status === "COMPLETED"
                               ? t("imaging.status.completed", "Vyhodnotené")
@@ -1037,7 +1037,7 @@ function ImagingContent() {
                                 : t("imaging.status.inProgress", "Prebieha")}
                           </Badge>
                           {item.revision > 0 ? (
-                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            <div className="mt-0.5 text-2xs text-muted-foreground">
                               {t("imaging.register.revision", "rev. {count}", {
                                 count: item.revision,
                               })}
@@ -1403,7 +1403,7 @@ function ImagingContent() {
                       size="sm"
                       onClick={togglePromptVoice}
                       className={cn(
-                        "h-6 px-2 text-[11px] gap-1.5 rounded-md",
+                        "h-6 px-2 text-2xs gap-1.5 rounded-md",
                         isPromptListening && "animate-pulse font-semibold text-white",
                       )}
                       title={isPromptListening ? "Zastaviť diktovanie" : "Hlasové diktovanie otázky"}
@@ -1517,7 +1517,7 @@ function ImagingContent() {
                         <Sparkles className="h-4 w-4" />
                         <span>{t("imaging.result.analysisFor", "Analýza pre")}: {selectedPatient?.name} ({imageType.toUpperCase()})</span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         {currentAnalysis.completedAt
                           ? new Date(currentAnalysis.completedAt).toLocaleString("sk-SK")
                           : ""}
@@ -1563,7 +1563,7 @@ function ImagingContent() {
                             <Heart className="h-4 w-4 text-rose-500" />
                             <span>{t("imaging.vhs.title", "Vertebral Heart Score (VHS) – Buchananova metóda")}</span>
                           </div>
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge variant="outline" className="text-3xs">
                             {vhsSpecies === "feline"
                               ? t("imaging.vhs.normFeline", "Mačka: norma < 8.0 v")
                               : t("imaging.vhs.normCanine", "Pes: norma 8.5–10.5 v")}
@@ -1572,7 +1572,7 @@ function ImagingContent() {
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.vhs.longAxis", "Dlhá os L (mm)")}
                             </label>
                             <Input
@@ -1584,7 +1584,7 @@ function ImagingContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.vhs.shortAxis", "Krátka os S (mm)")}
                             </label>
                             <Input
@@ -1596,7 +1596,7 @@ function ImagingContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.vhs.t4", "Stavec T4 (mm)")}
                             </label>
                             <Input
@@ -1608,7 +1608,7 @@ function ImagingContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.vhs.species", "Druh pacienta")}
                             </label>
                             <select
@@ -1650,10 +1650,10 @@ function ImagingContent() {
                               <Badge
                                 className={
                                   vhsResult.status === "normal"
-                                    ? "bg-emerald-600 text-white text-[11px]"
+                                    ? "bg-emerald-600 text-white text-2xs"
                                     : vhsResult.status === "borderline"
-                                      ? "bg-amber-600 text-white text-[11px]"
-                                      : "bg-rose-600 text-white text-[11px]"
+                                      ? "bg-amber-600 text-white text-2xs"
+                                      : "bg-rose-600 text-white text-2xs"
                                 }
                               >
                                 {vhsResult.statusLabelSk}
@@ -1681,13 +1681,13 @@ function ImagingContent() {
                             <Megaphone className="h-4 w-4 text-amber-500" />
                             <span>{t("imaging.quiz.title", "Kvíz týždňa zo snímky pre sociálne siete (KVL SR)")}</span>
                           </div>
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge variant="outline" className="text-3xs">
                             {t("imaging.quiz.anonymizedBadge", "Anonymizovaný edukačný príspevok")}
                           </Badge>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[11px] font-medium text-muted-foreground">
+                          <label className="text-2xs font-medium text-muted-foreground">
                             {t("imaging.quiz.questionLabel", "Otázka kvízu pre verejnosť")}
                           </label>
                           <Input
@@ -1700,7 +1700,7 @@ function ImagingContent() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 font-semibold">
+                            <label className="text-2xs font-medium text-emerald-700 dark:text-emerald-400 font-semibold">
                               {t("imaging.quiz.correctAnswer", "Správna odpoveď (A)")}
                             </label>
                             <Input
@@ -1712,7 +1712,7 @@ function ImagingContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.quiz.wrongB", "Nesprávna možnosť (B)")}
                             </label>
                             <Input
@@ -1724,7 +1724,7 @@ function ImagingContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-muted-foreground">
+                            <label className="text-2xs font-medium text-muted-foreground">
                               {t("imaging.quiz.wrongC", "Nesprávna možnosť (C)")}
                             </label>
                             <Input
@@ -1783,8 +1783,8 @@ function ImagingContent() {
                                 }
                                 className={
                                   quizCreatedPost.validationReport?.verdict === "pass"
-                                    ? "bg-emerald-600 text-white text-[10px]"
-                                    : "bg-amber-600 text-white text-[10px]"
+                                    ? "bg-emerald-600 text-white text-3xs"
+                                    : "bg-amber-600 text-white text-3xs"
                                 }
                               >
                                 KVL SR: {quizCreatedPost.validationReport?.verdict?.toUpperCase() ?? "PASS"}
@@ -1806,7 +1806,7 @@ function ImagingContent() {
                       </div>
                     )}
 
-                    <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t">
+                    <p className="text-2xs text-muted-foreground leading-relaxed pt-2 border-t">
                       * {t("imaging.result.disclaimer", "Upozornenie: AI analýza zobrazovacích metód má výhradne podporný a odporúčací charakter. Konečné stanovenie diagnózy patrí vždy ošetrujúcemu veterinárnemu lekárovi.")}
                     </p>
                   </div>

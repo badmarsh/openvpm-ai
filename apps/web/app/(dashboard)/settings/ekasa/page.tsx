@@ -16,7 +16,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
@@ -367,25 +366,24 @@ export default function EkasaSettingsPage() {
                       <Label htmlFor="ekasa-register-type">
                         {t("settings.ekasa.fields.pokladnicaType.label", "Typ pokladnice")}
                       </Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground"
-                              aria-label={t(
-                                "settings.ekasa.fields.pokladnicaType.tooltipLabel",
-                                "Pomoc k typu pokladnice",
-                              )}
-                            >
-                              <Info className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{registerTypeTooltips[form.pokladnicaType]}</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {/* Global TooltipProvider lives in lib/providers.tsx */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground"
+                            aria-label={t(
+                              "settings.ekasa.fields.pokladnicaType.tooltipLabel",
+                              "Pomoc k typu pokladnice",
+                            )}
+                          >
+                            <Info className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{registerTypeTooltips[form.pokladnicaType]}</TooltipContent>
+                      </Tooltip>
                     </div>
                     <select
                       id="ekasa-register-type"

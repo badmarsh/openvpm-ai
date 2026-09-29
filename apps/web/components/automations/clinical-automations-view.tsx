@@ -85,7 +85,7 @@ export function ClinicalAutomationsView() {
                 <Pill className="h-4 w-4 text-destructive" />
                 {t("clinicalGuardian.rules.medSafetyTitle", "Lieková bezpečnosť")}
               </CardTitle>
-              <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300">
+              <Badge variant="outline" className="text-3xs text-emerald-600 border-emerald-300">
                 {t("common.active", "Aktívne")}
               </Badge>
             </div>
@@ -109,7 +109,7 @@ export function ClinicalAutomationsView() {
                 <Clock className="h-4 w-4 text-amber-600" />
                 {t("clinicalGuardian.rules.statutoryTitle", "Zákonné lehoty ŠVPS")}
               </CardTitle>
-              <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300">
+              <Badge variant="outline" className="text-3xs text-emerald-600 border-emerald-300">
                 {t("common.active", "Aktívne")}
               </Badge>
             </div>
@@ -132,7 +132,7 @@ export function ClinicalAutomationsView() {
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 {t("clinicalGuardian.rules.hitlTitle", "Human-in-the-Loop & Etika")}
               </CardTitle>
-              <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+              <Badge variant="outline" className="text-3xs text-primary border-primary/30">
                 {t("common.enforced", "Vynútené")}
               </Badge>
             </div>
@@ -264,11 +264,11 @@ export function ClinicalAutomationsView() {
                           <span className="text-sm font-semibold">{alert.title}</span>
                           <Badge
                             variant={isCritical ? "destructive" : "secondary"}
-                            className="text-[10px] font-medium uppercase"
+                            className="text-3xs font-medium uppercase"
                           >
                             {alert.severity}
                           </Badge>
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                          <Badge variant="outline" className="text-3xs text-muted-foreground">
                             {alert.category}
                           </Badge>
                           {alert.patientName && (
@@ -286,7 +286,7 @@ export function ClinicalAutomationsView() {
                         </p>
 
                         {alert.suggestedAction && (
-                          <p className="text-[11px] text-foreground font-medium mt-1">
+                          <p className="text-2xs text-foreground font-medium mt-1">
                             <span className="text-primary font-semibold">
                               {t("clinicalGuardian.widget.actionPrefix", "Odporúčaný krok:")}{" "}
                             </span>

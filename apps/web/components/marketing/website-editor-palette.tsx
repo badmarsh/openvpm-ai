@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import type { SectionType } from "@/lib/marketing/website-builder-types";
 
 export interface TemplateDefinition {
@@ -183,7 +184,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-foreground">Knižnica sekcií</h2>
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge variant="secondary" className="text-3xs">
             {SECTION_TEMPLATES.length} šablón
           </Badge>
         </div>
@@ -202,7 +203,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
           <button
             type="button"
             onClick={() => setActiveCategory("all")}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-2xs font-semibold transition-colors ${
               activeCategory === "all"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -213,7 +214,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
           <button
             type="button"
             onClick={() => setActiveCategory("hero_about")}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-2xs font-semibold transition-colors ${
               activeCategory === "hero_about"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -224,7 +225,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
           <button
             type="button"
             onClick={() => setActiveCategory("services_team")}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-2xs font-semibold transition-colors ${
               activeCategory === "services_team"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -235,7 +236,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
           <button
             type="button"
             onClick={() => setActiveCategory("booking_contact")}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-2xs font-semibold transition-colors ${
               activeCategory === "booking_contact"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -246,7 +247,7 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
           <button
             type="button"
             onClick={() => setActiveCategory("media_content")}
-            className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+            className={`px-2 py-0.5 rounded text-2xs font-semibold transition-colors ${
               activeCategory === "media_content"
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:text-foreground"
@@ -278,21 +279,23 @@ export function WebsiteEditorPalette({ onAddSection }: WebsiteEditorPaletteProps
                     <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
                       {t.name}
                     </h4>
-                    <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+                    <p className="text-2xs text-muted-foreground leading-snug line-clamp-2">
                       {t.description}
                     </p>
                   </div>
                 </div>
 
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => onAddSection(t.type)}
-                  className="h-7 w-7 shrink-0 text-primary hover:bg-primary/10"
-                  title="Pridať na stránku"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <TooltipHint content="Pridať na stránku">
+                  <Button
+                    aria-label="Pridať na stránku"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onAddSection(t.type)}
+                    className="h-7 w-7 shrink-0 text-primary hover:bg-primary/10"
+                  >
+                    <Plus aria-hidden="true" className="h-4 w-4" />
+                  </Button>
+                </TooltipHint>
               </div>
             );
           })

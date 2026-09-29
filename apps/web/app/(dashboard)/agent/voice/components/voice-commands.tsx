@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -254,7 +255,7 @@ export function VoiceCommandsModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold">Hlasové Príkazy</h2>
-                <Badge variant="outline" className="text-[10px] font-mono gap-1 border-violet-300 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                <Badge variant="outline" className="text-3xs font-mono gap-1 border-violet-300 dark:border-violet-800 text-violet-700 dark:text-violet-300">
                   <Sparkles className="h-2.5 w-2.5" /> STT Control
                 </Badge>
               </div>
@@ -340,7 +341,7 @@ export function VoiceCommandsModal({
                         </span>
                         <Badge
                           variant="outline"
-                          className={cn("text-[10px] font-medium border", cmd.badgeColor)}
+                          className={cn("text-3xs font-medium border", cmd.badgeColor)}
                         >
                           {cmd.categoryLabel}
                         </Badge>
@@ -350,32 +351,33 @@ export function VoiceCommandsModal({
                         {cmd.description}
                       </p>
 
-                      <div className="mt-1 text-[11px] text-muted-foreground/80 italic">
+                      <div className="mt-1 text-2xs text-muted-foreground/80 italic">
                         Príklad: {cmd.exampleUsage}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2.5"
-                      onClick={() => copyPhrase(cmd)}
-                      title="Skopírovať príkaz"
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check className="h-3.5 w-3.5 text-success" />
-                          <span className="text-success">Skopírované</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5" />
-                          <span>Kopírovať</span>
-                        </>
-                      )}
-                    </Button>
+                    <TooltipHint content="Skopírovať príkaz">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2.5"
+                        onClick={() => copyPhrase(cmd)}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-success" />
+                            <span className="text-success">Skopírované</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Kopírovať</span>
+                          </>
+                        )}
+                      </Button>
+                    </TooltipHint>
 
                     <Button
                       size="sm"

@@ -13,14 +13,21 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  X,
   Building2,
   FileCheck,
   Filter,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import {
@@ -527,25 +534,25 @@ export function WithdrawalPeriodPanel() {
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{item.patientName}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           {item.species} {item.breed ? `• ${item.breed}` : ""}
                           <span className="ml-1 text-primary/80">
                             ({TARGET_ANIMAL_LABELS[item.targetAnimalType] || item.targetAnimalType})
                           </span>
                         </div>
                       </td>
-                      <td className="p-3 font-mono text-[11px]">
+                      <td className="p-3 font-mono text-2xs">
                         {item.microchipNumber || "—"}
                       </td>
                       <td className="p-3">
                         <div className="font-medium text-foreground">
                           {item.clientFirstName} {item.clientLastName}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">{item.clientPhone || "—"}</div>
+                        <div className="text-2xs text-muted-foreground">{item.clientPhone || "—"}</div>
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{item.medicationName}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground">
+                        <div className="text-2xs font-mono text-muted-foreground">
                           {item.batchNumber || "—"}
                         </div>
                       </td>
@@ -561,7 +568,7 @@ export function WithdrawalPeriodPanel() {
                         {isRunning ? (
                           <Badge
                             variant="outline"
-                            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 text-[10px] font-semibold"
+                            className="bg-red-50 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 text-3xs font-semibold"
                           >
                             <Clock className="h-3 w-3 mr-1" />
                             {t("statutory.withdrawal.statusActive", "In Withdrawal")} ({diffDays} d)
@@ -569,7 +576,7 @@ export function WithdrawalPeriodPanel() {
                         ) : (
                           <Badge
                             variant="outline"
-                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 text-[10px]"
+                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900 text-3xs"
                           >
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             {t("statutory.withdrawal.statusCleared", "Cleared")}
@@ -577,16 +584,17 @@ export function WithdrawalPeriodPanel() {
                         )}
                       </td>
                       <td className="p-3 text-right whitespace-nowrap">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePrintCertificate(item)}
-                          title={t("statutory.withdrawal.btnCertificate", "Certificate")}
-                          className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 px-2"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          <span>{t("statutory.withdrawal.forFarmer", "For farmer")}</span>
-                        </Button>
+                        <TooltipHint content={t("statutory.withdrawal.btnCertificate", "Certificate")}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePrintCertificate(item)}
+                            className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 px-2"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>{t("statutory.withdrawal.forFarmer", "For farmer")}</span>
+                          </Button>
+                        </TooltipHint>
                       </td>
                     </tr>
                   );
@@ -598,27 +606,19 @@ export function WithdrawalPeriodPanel() {
       </div>
 
       {/* Modal: Zaevidovať ochrannú lehotu */}
-      {isNewDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="relative w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setIsNewDialogOpen(false)}
-              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="mb-5">
-              <h2 className="text-base font-bold text-foreground">
+      <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
+        <DialogContent className="w-full max-w-xl gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+            <DialogHeader className="text-left pr-8">
+              <DialogTitle className="text-base font-bold text-foreground">
                 {t("statutory.withdrawal.modalTitle", "Record Veterinary Drug Administration")}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
                 {t(
                   "statutory.withdrawal.subtitle",
                   "Statutory tracking of drug withdrawal periods for food-producing and livestock animals."
                 )}
-              </p>
-            </div>
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="space-y-4 text-xs">
               {/* Patient search / selection */}
@@ -655,7 +655,7 @@ export function WithdrawalPeriodPanel() {
                             <span className="font-semibold">{p.name}</span>
                             <span className="ml-1 text-muted-foreground">({p.species})</span>
                           </div>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             {p.clientLastName ? `${p.clientFirstName || ""} ${p.clientLastName}` : p.breed || "—"}
                           </span>
                         </button>
@@ -664,7 +664,7 @@ export function WithdrawalPeriodPanel() {
                   )}
                 </div>
                 {selectedPatientId && (
-                  <div className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                  <div className="mt-1 text-2xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
                     <CheckCircle2 className="h-3 w-3" /> {t("statutory.withdrawal.patientSelected", "Patient selected")}
                   </div>
                 )}
@@ -775,7 +775,7 @@ export function WithdrawalPeriodPanel() {
               {/* Real-time calculated box */}
               <div className="rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/20 p-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                  <div className="text-2xs font-semibold text-amber-900 dark:text-amber-200">
                     {t("statutory.withdrawal.calculatedEnd", "Calculated end of withdrawal period (Safe Until):")}
                   </div>
                   <div className="text-sm font-bold text-amber-800 dark:text-amber-300 font-mono mt-0.5">
@@ -836,9 +836,8 @@ export function WithdrawalPeriodPanel() {
                 <span>{t("statutory.withdrawal.btnSavePeriod", "Save and set period")}</span>
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

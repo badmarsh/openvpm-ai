@@ -32,7 +32,7 @@ export function ClinicalSimulationAdminCard() {
               <h3 className="text-base font-semibold font-heading">
                 {t("admin.simulation.title", "Klinická simulácia & Journey Discovery")}
               </h3>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-300 text-[11px] font-semibold">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-300 text-2xs font-semibold">
                 {t("admin.simulation.badgePilot", "PILOT-READY (v0.6)")}
               </Badge>
             </div>
@@ -76,7 +76,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <Layers className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[11px] font-medium">{t("admin.simulation.badgeWorkflows", "30 tokov (J1–J30)")}</span>
+            <span className="text-2xs font-medium">{t("admin.simulation.badgeWorkflows", "30 tokov (J1–J30)")}</span>
           </div>
           <p className="text-sm font-bold text-foreground">100% Pokrytie</p>
         </div>
@@ -84,7 +84,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[11px] font-medium">{t("admin.simulation.badgeCases", "5 prípadov")}</span>
+            <span className="text-2xs font-medium">{t("admin.simulation.badgeCases", "5 prípadov")}</span>
           </div>
           <p className="text-sm font-bold text-emerald-600">Reálna ambulancia</p>
         </div>
@@ -92,7 +92,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <Users className="h-3.5 w-3.5 text-blue-600" />
-            <span className="text-[11px] font-medium">6 Persón</span>
+            <span className="text-2xs font-medium">6 Persón</span>
           </div>
           <p className="text-sm font-bold text-foreground">P1–P6 profily</p>
         </div>
@@ -100,7 +100,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[11px] font-medium">4 858 Testov</span>
+            <span className="text-2xs font-medium">4 858 Testov</span>
           </div>
           <p className="text-sm font-bold text-foreground">100% Pass</p>
         </div>
@@ -108,7 +108,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-            <span className="text-[11px] font-medium">6 Gaps (C-01..06)</span>
+            <span className="text-2xs font-medium">6 Gaps (C-01..06)</span>
           </div>
           <p className="text-sm font-bold text-amber-600">Roadmapa v0.7</p>
         </div>
@@ -116,7 +116,7 @@ export function ClinicalSimulationAdminCard() {
         <div className="rounded-md border border-border bg-background p-2.5">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[11px] font-medium">Legislatíva SR</span>
+            <span className="text-2xs font-medium">Legislatíva SR</span>
           </div>
           <p className="text-sm font-bold text-emerald-600">Z39 / Z139 / e-Kasa</p>
         </div>

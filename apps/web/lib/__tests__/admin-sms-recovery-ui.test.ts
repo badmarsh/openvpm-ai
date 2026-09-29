@@ -36,7 +36,11 @@ describe("platform-admin SMS recovery console", () => {
     expect(source).toContain("attemptReviewed &&");
     expect(source).toContain("deliveryReviewed &&");
     expect(source).toContain("exactQuarantineEvidence &&");
-    expect(source).toContain("window.confirm(");
+    // Every write is gated by the themed, localised ConfirmDialog (the
+    // previous native window.confirm was unthemed and unlocalised).
+    expect(source).toContain("useConfirmDialog");
+    expect(source).toContain("ConfirmDialog");
+    expect(source).not.toContain("window.confirm(");
     expect(source).toContain("Evidence source ${attemptEvidence}");
     expect(source).toContain("reviewedHistoryId: quarantineReason");
   });

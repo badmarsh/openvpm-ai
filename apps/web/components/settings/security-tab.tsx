@@ -137,7 +137,7 @@ export function SecurityTab() {
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40">
             <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-medium text-muted-foreground block">
+              <span className="text-2xs font-medium text-muted-foreground block">
                 {t("settings.security.name", "Meno")}
               </span>
               <span className="text-sm font-semibold text-foreground truncate block">
@@ -149,7 +149,7 @@ export function SecurityTab() {
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40">
             <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-medium text-muted-foreground block">
+              <span className="text-2xs font-medium text-muted-foreground block">
                 {t("settings.security.email", "E-mail")}
               </span>
               <span className="text-sm font-semibold text-foreground truncate block">
@@ -161,7 +161,7 @@ export function SecurityTab() {
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40">
             <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-medium text-muted-foreground block">
+              <span className="text-2xs font-medium text-muted-foreground block">
                 {t("settings.security.role", "Rola")}
               </span>
               <span className="text-sm font-semibold text-foreground capitalize block">
@@ -179,12 +179,12 @@ export function SecurityTab() {
               <Building className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
             <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-medium text-muted-foreground block">
+              <span className="text-2xs font-medium text-muted-foreground block">
                 {t("settings.security.operatorStatus", "Platform Operator")}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {isPlatformAdminUser ? (
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[11px] font-medium">
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-2xs font-medium">
                     {t("settings.security.operatorGranted", "Platform Admin")}
                   </Badge>
                 ) : (

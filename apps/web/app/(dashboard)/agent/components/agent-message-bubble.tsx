@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import type { PersistedChatMessage } from "./agent-chat-history";
 import { PrescriptionProposalCard } from "./prescription-proposal-card";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 const MarkdownView = dynamic(
   () =>
@@ -64,7 +65,7 @@ export function AgentMessageBubble({
       >
         {!isUser && !message.isError && (
           <div className="flex items-center gap-1.5 mb-1.5 pr-7">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-medium bg-primary/10 text-primary border border-primary/20">
               {t("agent.aiGeneratedBadge", "Vygenerované AI Asistentom")}
             </span>
           </div>
@@ -72,24 +73,25 @@ export function AgentMessageBubble({
         {isUser || message.isError ? (
           <div className="whitespace-pre-wrap">{message.content}</div>
         ) : (
-          <MarkdownView className="prose prose-sm max-w-none dark:prose-invert text-xs leading-relaxed text-foreground break-words prose-p:my-1.5 prose-p:text-xs prose-p:leading-relaxed first:prose-p:mt-0 last:prose-p:mb-0 prose-headings:my-2 prose-headings:text-sm prose-headings:font-semibold prose-headings:text-foreground prose-ul:my-1.5 prose-ul:list-disc prose-ul:pl-4 prose-ol:my-1.5 prose-ol:list-decimal prose-ol:pl-4 prose-li:my-0.5 prose-li:text-xs prose-strong:font-semibold prose-strong:text-foreground prose-code:before:content-none prose-code:after:content-none prose-code:rounded prose-code:bg-background/60 prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-[11px] prose-pre:my-2 prose-pre:rounded-md prose-pre:bg-background/80 prose-pre:p-2.5">
+          <MarkdownView className="prose prose-sm max-w-none dark:prose-invert text-xs leading-relaxed text-foreground break-words prose-p:my-1.5 prose-p:text-xs prose-p:leading-relaxed first:prose-p:mt-0 last:prose-p:mb-0 prose-headings:my-2 prose-headings:text-sm prose-headings:font-semibold prose-headings:text-foreground prose-ul:my-1.5 prose-ul:list-disc prose-ul:pl-4 prose-ol:my-1.5 prose-ol:list-decimal prose-ol:pl-4 prose-li:my-0.5 prose-li:text-xs prose-strong:font-semibold prose-strong:text-foreground prose-code:before:content-none prose-code:after:content-none prose-code:rounded prose-code:bg-background/60 prose-code:px-1 prose-code:py-0.5 prose-code:font-mono prose-code:text-2xs prose-pre:my-2 prose-pre:rounded-md prose-pre:bg-background/80 prose-pre:p-2.5">
             {message.content}
           </MarkdownView>
         )}
 
         {!isUser && (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
-            title={t("agent.copyReply", "Kopírovať odpoveď")}
-          >
-          {isCopied ? (
-            <Check className="h-3 w-3 text-success" />
-          ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </button>
+          <TooltipHint content={t("agent.copyReply", "Kopírovať odpoveď")}>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-background/40 text-muted-foreground hover:text-foreground"
+            >
+            {isCopied ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </button>
+          </TooltipHint>
         )}
 
         {message.toolCalls && message.toolCalls.length > 0 ? (
@@ -97,7 +99,7 @@ export function AgentMessageBubble({
             <button
               type="button"
               onClick={() => setTraceOpen((o) => !o)}
-              className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground hover:text-foreground"
             >
               {traceOpen ? (
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -113,7 +115,7 @@ export function AgentMessageBubble({
                   <li
                     key={i}
                     className={cn(
-                      "rounded-md border p-2 font-mono text-[11px]",
+                      "rounded-md border p-2 font-mono text-2xs",
                       call.error
                         ? "border-destructive/30 bg-destructive/5 text-destructive"
                         : "border-border bg-card text-muted-foreground",

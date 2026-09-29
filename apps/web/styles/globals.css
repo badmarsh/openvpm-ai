@@ -18,6 +18,7 @@
     --brand: 0 0% 0%;
     --brand-foreground: 0 0% 100%;
 
+<<<<<<< HEAD
     /* ── Primary (monochrome default, clinic-overridable via BrandTheme) ───────────────── */
     --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
@@ -37,19 +38,57 @@
 
     /* ── Status (minimal color for critical info only) ─────────────────── */
     --success: 0 0% 12%;
+=======
+    /* ── Primary (clinic-overridable via BrandTheme) ───────────────── */
+    /* #259361 — the brand green darkened to the lightest value whose white
+       label still clears WCAG AA (4,75 : 1). The bright Supabase emerald
+       (154.9 65% 53%) is 1,89 : 1 with white and stays reserved for --brand. */
+    --primary: 153 60% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    /* ── Neutrals ──────────────────────────────────────────────────── */
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 44%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    /* ── Borders ───────────────────────────────────────────────────── */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    /* Focus ring: 4,75 : 1 on white, well past the 3 : 1 floor (WCAG 1.4.11). */
+    --ring: 153 60% 32%;
+
+    /* ── Status (non-competing with brand emerald) ─────────────────── */
+    --success: 142 71% 30%;
+>>>>>>> origin/main
     --success-foreground: 0 0% 100%;
     --success-muted: 0 0% 96%;
     --success-muted-foreground: 0 0% 24%;
 
+<<<<<<< HEAD
     --warning: 0 0% 12%;
     --warning-foreground: 0 0% 100%;
     --warning-muted: 0 0% 96%;
     --warning-muted-foreground: 0 0% 28%;
+=======
+    --warning: 38 92% 50%;
+    /* White on amber is 2,14 : 1 — no amber can carry white text. Dark ink is
+       7,68 : 1 and matches the dark theme's warning treatment. */
+    --warning-foreground: 38 60% 10%;
+    --warning-muted: 38 100% 96%;
+    --warning-muted-foreground: 32 95% 28%;
+>>>>>>> origin/main
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84.2% 45%;
     --destructive-foreground: 0 0% 98%;
 
+<<<<<<< HEAD
     --info: 0 0% 12%;
+=======
+    --info: 217 91% 45%;
+>>>>>>> origin/main
     --info-foreground: 0 0% 100%;
     --info-muted: 0 0% 96%;
     --info-muted-foreground: 0 0% 32%;
@@ -97,10 +136,18 @@
     --ring: 0 0% 98%;
 
     /* ── Status ────────────────────────────────────────────────────── */
+<<<<<<< HEAD
     --success: 0 0% 92%;
     --success-foreground: 0 0% 6%;
     --success-muted: 0 0% 14%;
     --success-muted-foreground: 0 0% 58%;
+=======
+    --success: 142 71% 42%;
+    /* 2,26 : 1 with the pale foreground it shipped with; dark ink is 6,76 : 1. */
+    --success-foreground: 142 30% 8%;
+    --success-muted: 142 40% 14%;
+    --success-muted-foreground: 142 60% 58%;
+>>>>>>> origin/main
 
     --warning: 0 0% 92%;
     --warning-foreground: 0 0% 6%;
@@ -110,10 +157,17 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
+<<<<<<< HEAD
     --info: 0 0% 92%;
     --info-foreground: 0 0% 6%;
     --info-muted: 0 0% 16%;
     --info-muted-foreground: 0 0% 64%;
+=======
+    --info: 217 91% 56%;
+    --info-foreground: 217 30% 6%;
+    --info-muted: 217 50% 16%;
+    --info-muted-foreground: 217 80% 64%;
+>>>>>>> origin/main
 
     /* ── Sidebar (deep monochrome panel) ───────────────────────────────── */
     --sidebar: 0 0% 6%;
@@ -128,11 +182,27 @@
 }
 
 @layer base {
+  /* Native widgets (scrollbars, <select> popups, date pickers, form controls)
+     follow the active palette instead of staying light in dark mode. */
+  :root {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
   html {
-    scroll-behavior: smooth;
     /* Baseline root size. The font-scale switcher (TopBar) overrides it via
        data-font-scale; every rem-based Tailwind utility scales with it. */
     font-size: 16px;
+  }
+
+  /* Smooth scrolling is a motion preference, not a default. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   html[data-font-scale="large"] {
@@ -148,12 +218,40 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    /* Kills the 300 ms double-tap-zoom delay on the tablet/field surfaces. */
+    @apply bg-background text-foreground antialiased touch-manipulation;
   }
 
   ::selection {
     background-color: hsl(var(--primary) / 0.2);
     color: hsl(var(--primary));
+  }
+
+  /* ── Reduced motion ──────────────────────────────────────────────────
+     Targeted, not a blanket `animation: none`: fades are kept because they
+     carry state (dialog opened, toast appeared), while travel, scale, rotate
+     and looping decoration are removed. `animate-spin` stays — a spinner that
+     freezes reads as a hung request. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-pulse,
+    .animate-ping,
+    .animate-bounce {
+      animation: none !important;
+    }
+
+    /* tailwindcss-animate / Radix enter-exit: opacity only, no displacement. */
+    [class*="animate-in"],
+    [class*="animate-out"] {
+      --tw-enter-translate-x: 0 !important;
+      --tw-enter-translate-y: 0 !important;
+      --tw-enter-scale: 1 !important;
+      --tw-enter-rotate: 0deg !important;
+      --tw-exit-translate-x: 0 !important;
+      --tw-exit-translate-y: 0 !important;
+      --tw-exit-scale: 1 !important;
+      --tw-exit-rotate: 0deg !important;
+      animation-duration: 120ms !important;
+    }
   }
 }
 

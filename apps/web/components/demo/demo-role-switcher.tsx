@@ -79,7 +79,7 @@ export function DemoRoleSwitcherView({
           ) : (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground"
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-3xs text-muted-foreground"
             >
               ▾
             </span>

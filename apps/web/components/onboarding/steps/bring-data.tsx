@@ -954,7 +954,7 @@ function ImportFileFields({
         <span className="text-sm font-medium text-slate-700">
           {stepNumber}. {step.label}
         </span>
-        <span className="text-[11px] text-slate-400">CSV</span>
+        <span className="text-2xs text-slate-400">CSV</span>
       </div>
       <p className="text-xs text-slate-500">Columns: {step.columnHint}</p>
       <input
@@ -1150,7 +1150,7 @@ function ImportIssues({
 function ImportStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded bg-slate-100 px-2 py-1.5">
-      <p className="text-[11px] text-slate-500">{label}</p>
+      <p className="text-2xs text-slate-500">{label}</p>
       <p className="text-sm font-semibold text-slate-900">
         {value.toLocaleString()}
       </p>

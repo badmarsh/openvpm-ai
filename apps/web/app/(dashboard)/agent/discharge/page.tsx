@@ -65,6 +65,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 // react-markdown + remark-gfm are heavy; the preview only exists after the
 // first AI result, so the renderer loads lazily and never blocks page paint.
@@ -791,7 +792,7 @@ function DischargeContent() {
                                 </span>
                               )}
                             </CardTitle>
-                            <Badge variant="outline" className="text-[11px]">
+                            <Badge variant="outline" className="text-2xs">
                               {new Date(item.createdAt).toLocaleDateString()}
                             </Badge>
                           </div>
@@ -882,7 +883,7 @@ function DischargeContent() {
                       >
                         <div className="truncate">
                           <span className="font-medium">{p.name}</span>
-                          <span className="text-[11px] text-muted-foreground ml-2">
+                          <span className="text-2xs text-muted-foreground ml-2">
                             {p.species || t("discharge.defaultSpecies", "zviera")} — {p.clientFirstName} {p.clientLastName}
                           </span>
                         </div>
@@ -920,7 +921,7 @@ function DischargeContent() {
                     "Notice: This patient is marked as deceased. The generated message will automatically be formatted as a condolence note."
                   )}
                 </span>
-                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/50 rounded px-2 py-1 border">
+                <div className="mt-2 flex items-center gap-1.5 text-2xs text-muted-foreground bg-muted/50 rounded px-2 py-1 border">
                   <ShieldCheck className="h-3 w-3" />
                   <span>
                     {t(
@@ -1135,14 +1136,14 @@ function DischargeContent() {
                             <span className="text-xs font-semibold text-foreground block">
                               {t("discharge.clinicianConfirmShort", "Reviewed by clinician")}
                             </span>
-                            <span className="text-[11px] text-muted-foreground leading-relaxed">
+                            <span className="text-2xs text-muted-foreground leading-relaxed">
                               {t("discharge.clinicianConfirm", "I reviewed this AI report and confirm it for the chart")}
                             </span>
                           </div>
                           <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
                         </label>
                         {!clinicianConfirmed && (
-                          <p className="text-[11px] text-muted-foreground bg-muted/50 rounded px-2 py-1 border">
+                          <p className="text-2xs text-muted-foreground bg-muted/50 rounded px-2 py-1 border">
                             {t(
                               "discharge.approvalRequiredNote",
                               "AI výstup musí skontrolovať ošetrujúci veterinár pred tlačou alebo odoslaním majiteľovi."
@@ -1196,16 +1197,17 @@ function DischargeContent() {
                           <Printer className="h-3.5 w-3.5" />
                           {t("discharge.print", "Print / PDF")}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleExportPdf}
-                          className="h-8 px-2.5 text-xs gap-1"
-                          title="Export PDF via dynamic import"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          PDF
-                        </Button>
+                        <TooltipHint content="Export PDF via dynamic import">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleExportPdf}
+                            className="h-8 px-2.5 text-xs gap-1"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </Button>
+                        </TooltipHint>
                         <Button
                           variant="default"
                           size="sm"
@@ -1269,12 +1271,12 @@ function DischargeContent() {
                           <MessageSquare className="h-3.5 w-3.5" />
                           {t("discharge.tabs.smsSchedule", "SMS & Pill Schedule")}
                           {smsScheduleData && !isDeceased && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 ml-1">
+                            <Badge variant="secondary" className="text-3xs px-1 py-0 h-4 ml-1">
                               {t("discharge.smsBadge", "160 zn.")}
                             </Badge>
                           )}
                           {isDeceased && (
-                            <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4 ml-1">
+                            <Badge variant="destructive" className="text-3xs px-1 py-0 h-4 ml-1">
                               {t("discharge.sympathyFlow", "Režim sústrasti")}
                             </Badge>
                           )}
@@ -1288,7 +1290,7 @@ function DischargeContent() {
                           <Megaphone className="h-3.5 w-3.5" />
                           {t("discharge.tabs.marketing", "Educational Post (Ethics)")}
                           {marketingPostData && !isDeceased && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 ml-1 bg-success/20 text-success">
+                            <Badge variant="secondary" className="text-3xs px-1 py-0 h-4 ml-1 bg-success/20 text-success">
                               ✓
                             </Badge>
                           )}
@@ -1323,7 +1325,7 @@ function DischargeContent() {
                             </p>
                             <div className="mt-4 h-16 border-b border-foreground/20 w-2/3" />
                           </div>
-                          <div className="clinic-footer mt-4 p-3 rounded-lg bg-muted/30 border text-[11px] text-muted-foreground">
+                          <div className="clinic-footer mt-4 p-3 rounded-lg bg-muted/30 border text-2xs text-muted-foreground">
                             <p className="m-0">
                               {t(
                                 "discharge.footerNote",
@@ -1353,7 +1355,7 @@ function DischargeContent() {
                                 "Notice: This patient is marked as deceased. The generated message will automatically be formatted as a condolence note."
                               )}
                             </p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-2xs text-muted-foreground">
                               SMS a marketing sú automaticky potlačené. Záznam v ext_automation_suppression_log.
                             </p>
                           </div>
@@ -1374,7 +1376,7 @@ function DischargeContent() {
                                       ? "secondary"
                                       : "destructive"
                                   }
-                                  className="text-[11px] font-mono"
+                                  className="text-2xs font-mono"
                                 >
                                   {t("discharge.smsCharCount", "{count} / 160 znakov", { count: smsScheduleData?.smsText.length ?? 0 })}
                                 </Badge>
@@ -1449,14 +1451,14 @@ function DischargeContent() {
                                               <td className={cn(tableCellClass, "font-medium text-foreground")}>
                                                 {item.medicationName}
                                                 {item.dosage && (
-                                                  <span className="block text-[11px] text-muted-foreground">
+                                                  <span className="block text-2xs text-muted-foreground">
                                                     {item.dosage}
                                                   </span>
                                                 )}
                                               </td>
                                               <td className={cn(tableCellClass, "text-center")}>
                                                 {item.morning ? (
-                                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                                  <Badge variant="secondary" className="text-3xs px-1.5 py-0">
                                                     {t("discharge.yes", "Áno")}
                                                   </Badge>
                                                 ) : (
@@ -1465,7 +1467,7 @@ function DischargeContent() {
                                               </td>
                                               <td className={cn(tableCellClass, "text-center")}>
                                                 {item.noon ? (
-                                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                                  <Badge variant="secondary" className="text-3xs px-1.5 py-0">
                                                     {t("discharge.yes", "Áno")}
                                                   </Badge>
                                                 ) : (
@@ -1474,7 +1476,7 @@ function DischargeContent() {
                                               </td>
                                               <td className={cn(tableCellClass, "text-center")}>
                                                 {item.evening ? (
-                                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                                  <Badge variant="secondary" className="text-3xs px-1.5 py-0">
                                                     {t("discharge.yes", "Áno")}
                                                   </Badge>
                                                 ) : (
@@ -1483,7 +1485,7 @@ function DischargeContent() {
                                               </td>
                                               <td className={cn(tableCellClass, "text-center")}>
                                                 {item.night ? (
-                                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                                  <Badge variant="secondary" className="text-3xs px-1.5 py-0">
                                                     {t("discharge.yes", "Áno")}
                                                   </Badge>
                                                 ) : (
@@ -1492,7 +1494,7 @@ function DischargeContent() {
                                               </td>
                                               <td className={cn(tableCellClass, "text-muted-foreground")}>
                                                 {item.withFood ? (
-                                                  <Badge variant="outline" className="text-[10px] border-success/30 bg-success/10 text-success mr-1">
+                                                  <Badge variant="outline" className="text-3xs border-success/30 bg-success/10 text-success mr-1">
                                                     {t("discharge.withFood", "S krmivom")}
                                                   </Badge>
                                                 ) : null}
@@ -1608,8 +1610,8 @@ function DischargeContent() {
                                       }
                                       className={
                                         marketingPostData.validationReport?.verdict === "pass"
-                                          ? "bg-success text-success-foreground text-[10px]"
-                                          : "bg-warning text-warning-foreground text-[10px]"
+                                          ? "bg-success text-success-foreground text-3xs"
+                                          : "bg-warning text-warning-foreground text-3xs"
                                       }
                                     >
                                       KVL SR: {marketingPostData.validationReport?.verdict?.toUpperCase() ?? "PASS"}
@@ -1621,7 +1623,7 @@ function DischargeContent() {
                                   </div>
 
                                   <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
-                                    <span className="text-[11px] text-muted-foreground">
+                                    <span className="text-2xs text-muted-foreground">
                                       {t("discharge.marketingQueued", "Zaradené v marketingovom štúdiu ako koncept")}
                                     </span>
                                     <Button variant="outline" size="sm" asChild className="h-7 text-xs gap-1">
