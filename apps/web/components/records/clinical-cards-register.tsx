@@ -260,7 +260,7 @@ export function ClinicalCardsRegister() {
                 {t("records.register.statusAll", "Všetky stavy")}
               </option>
             </DataTableSelect>
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1 text-2xs text-muted-foreground">
               <Syringe className="h-3 w-3" />
               {t("records.register.legendOverdue", "prepadnutá vakcinácia")}
             </span>
@@ -377,7 +377,7 @@ export function ClinicalCardsRegister() {
                               {alerts > 0 ? (
                                 <Badge
                                   variant="destructive"
-                                  className="h-4 gap-1 px-1.5 text-[10px]"
+                                  className="h-4 gap-1 px-1.5 text-3xs"
                                 >
                                   <ShieldAlert className="h-2.5 w-2.5" />
                                   {alerts}
@@ -386,7 +386,7 @@ export function ClinicalCardsRegister() {
                               {card.status !== "active" ? (
                                 <Badge
                                   variant="outline"
-                                  className="h-4 px-1.5 text-[10px] text-muted-foreground"
+                                  className="h-4 px-1.5 text-3xs text-muted-foreground"
                                 >
                                   {card.status === "deceased"
                                     ? t(
@@ -422,7 +422,7 @@ export function ClinicalCardsRegister() {
                           {ownerName}
                         </div>
                         {card.clientPhone ? (
-                          <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                          <div className="mt-0.5 font-mono text-2xs text-muted-foreground">
                             {card.clientPhone}
                           </div>
                         ) : null}
@@ -434,7 +434,7 @@ export function ClinicalCardsRegister() {
                             <div className="text-xs text-foreground">
                               {lastVisit}
                             </div>
-                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            <div className="mt-0.5 text-2xs text-muted-foreground">
                               {card.lastVisitAuthor ??
                                 t("records.register.unknownAuthor", "—")}
                             </div>
@@ -478,7 +478,7 @@ export function ClinicalCardsRegister() {
                         {vaccinationOverdue ? (
                           <Badge
                             variant="warning"
-                            className="gap-1 text-[11px]"
+                            className="gap-1 text-2xs"
                           >
                             <Syringe className="h-3 w-3" />
                             {t("records.register.vaccinationOverdue", "Po termíne")}

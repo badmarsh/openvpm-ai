@@ -58,7 +58,7 @@ export function ClinicalStatusBadge({
           variant="outline"
           className={`bg-warning-muted text-warning-muted-foreground border-warning/30 ${
             isSm
-              ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
+              ? "text-3xs px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
           }`}
           title={t(
@@ -69,7 +69,7 @@ export function ClinicalStatusBadge({
           <Sparkles className={isSm ? "h-3 w-3 text-warning" : "h-3.5 w-3.5 text-warning"} />
           <span>{t("clinical.status.aiDraft", "AI Koncept (Čaká na autorizáciu)")}</span>
           {formattedScore !== null && (
-            <span className="font-mono text-[10px] bg-warning/15 px-1 py-0.2 rounded font-bold">
+            <span className="font-mono text-3xs bg-warning/15 px-1 py-0.2 rounded font-bold">
               {formattedScore}%
             </span>
           )}
@@ -85,7 +85,7 @@ export function ClinicalStatusBadge({
           variant="outline"
           className={`bg-muted text-muted-foreground border-border ${
             isSm
-              ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
+              ? "text-3xs px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
           }`}
           title={t(
@@ -107,7 +107,7 @@ export function ClinicalStatusBadge({
           variant="outline"
           className={`bg-info-muted text-info-muted-foreground border-info/30 ${
             isSm
-              ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
+              ? "text-3xs px-1.5 py-0 gap-1 font-medium"
               : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
           }`}
           title={t(
@@ -139,7 +139,7 @@ export function ClinicalStatusBadge({
         variant="outline"
         className={`bg-success-muted text-success-muted-foreground border-success/30 ${
           isSm
-            ? "text-[10px] px-1.5 py-0 gap-1 font-medium"
+            ? "text-3xs px-1.5 py-0 gap-1 font-medium"
             : "text-xs px-2.5 py-0.5 gap-1.5 font-semibold"
         }`}
         title={t(
@@ -155,7 +155,7 @@ export function ClinicalStatusBadge({
           </span>
         )}
         {formattedDate && (
-          <span className="font-mono text-[10px] opacity-75">
+          <span className="font-mono text-3xs opacity-75">
             ({formattedDate})
           </span>
         )}

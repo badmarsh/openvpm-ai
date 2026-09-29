@@ -186,7 +186,7 @@ export function ClinicalTemplatesModal({
                       </span>
                       <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
                     </div>
-                    <span className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                    <span className="text-2xs text-muted-foreground line-clamp-1 mt-0.5">
                       {tmpl.description}
                     </span>
                   </div>
@@ -199,7 +199,7 @@ export function ClinicalTemplatesModal({
           <div className="md:col-span-7 flex flex-col overflow-y-auto p-4 space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <Badge variant="outline" className={cn("text-[11px] font-medium mb-1", selectedTemplate.badgeColor)}>
+                <Badge variant="outline" className={cn("text-2xs font-medium mb-1", selectedTemplate.badgeColor)}>
                   {selectedTemplate.category}
                 </Badge>
                 <h3 className="text-base font-semibold tracking-tight">
@@ -220,7 +220,7 @@ export function ClinicalTemplatesModal({
                 {selectedTemplate.keyPhrases.map((phrase, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-0.5 rounded-md bg-muted text-[11px] font-mono text-foreground border"
+                    className="px-2 py-0.5 rounded-md bg-muted text-2xs font-mono text-foreground border"
                   >
                     {phrase}
                   </span>

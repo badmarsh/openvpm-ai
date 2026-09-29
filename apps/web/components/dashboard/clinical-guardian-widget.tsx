@@ -210,7 +210,7 @@ export function ClinicalGuardianWidget() {
                       {alert.message}
                     </p>
                     {alert.suggestedAction && (
-                      <p className="text-[11px] text-foreground font-medium mt-1">
+                      <p className="text-2xs text-foreground font-medium mt-1">
                         <span className="text-primary font-semibold">
                           {t("clinicalGuardian.widget.actionPrefix", "Odporúčaný krok:")}{" "}
                         </span>

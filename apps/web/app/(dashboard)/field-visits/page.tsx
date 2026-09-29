@@ -782,7 +782,7 @@ export default function FieldVisitsPage() {
                               </Badge>
                             ) : status.milk.days > 0 ? (
                               // Vypršaná mliečna lehota — neutrálna šedá, nie varovná červená.
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-2xs text-muted-foreground">
                                 {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
                               </span>
                             ) : (
@@ -795,7 +795,7 @@ export default function FieldVisitsPage() {
                                 {meatBadgeText(status.meat.remainingDays)}
                               </Badge>
                             ) : status.meat.days > 0 ? (
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-2xs text-muted-foreground">
                                 {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
                               </span>
                             ) : (
@@ -810,7 +810,7 @@ export default function FieldVisitsPage() {
                                     date: formatDate(status.overallSafeUntil),
                                   })}
                                 </Badge>
-                                <p className="text-[11px] text-red-700 dark:text-red-400 font-medium">
+                                <p className="text-2xs text-red-700 dark:text-red-400 font-medium">
                                   {t(
                                     "fieldVisits.withdrawalWatch.activeWarning",
                                     "Zákaz dodávky mlieka a porážky na ľudský konzum — lehota ešte plynie (podané {date}).",
@@ -826,7 +826,7 @@ export default function FieldVisitsPage() {
                                 >
                                   {t("fieldVisits.withdrawalWatch.expiredChip", "Lehota vypršala")}
                                 </Badge>
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="text-2xs text-muted-foreground">
                                   {t(
                                     "fieldVisits.withdrawalWatch.expiredNote",
                                     "Lehota vypršala — zviera je opäť vhodné na dodávku mlieka a porážku."
@@ -1029,7 +1029,7 @@ export default function FieldVisitsPage() {
                                 <td className="py-2.5 px-3 text-muted-foreground">{cow.breed}</td>
                                 <td className="py-2.5 px-3">
                                   {cow.activeWithdrawal ? (
-                                    <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 text-[10px]">
+                                    <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 text-3xs">
                                       <AlertTriangle className="h-3 w-3 mr-1" />
                                       {t("fieldVisits.farms.inWithdrawal", "V ochrannej lehote")}
                                     </Badge>
@@ -1099,7 +1099,7 @@ export default function FieldVisitsPage() {
                             </div>
                           ))}
                           {farm.draftInvoice.items.length > 3 && (
-                            <div className="text-[11px] text-amber-700 italic">
+                            <div className="text-2xs text-amber-700 italic">
                               {t("fieldVisits.farms.moreItems", "+ ďalších {count} položiek", {
                                 count: farm.draftInvoice.items.length - 3,
                               })}
@@ -1204,7 +1204,7 @@ export default function FieldVisitsPage() {
                               <td className="py-2.5 px-3">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="font-semibold text-foreground">{farm?.name ?? "—"}</span>
-                                  <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+                                  <span className="text-2xs text-muted-foreground font-mono tabular-nums">
                                     ({farm?.cehz})
                                   </span>
                                 </div>
@@ -1226,11 +1226,11 @@ export default function FieldVisitsPage() {
                               </td>
                               <td className="py-2.5 px-3">
                                 <div className="flex flex-wrap gap-1.5 whitespace-nowrap">
-                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 text-[11px]">
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 text-2xs">
                                     <ShieldCheck className="h-3 w-3" />
                                     {t("fieldVisits.visits.kvepisReceipt", "KVEPIS doručenka")}
                                   </Badge>
-                                  <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                                  <Badge variant="outline" className="text-2xs text-muted-foreground">
                                     {t("fieldVisits.visits.billedRetainer", "Účtované do paušálu")}
                                   </Badge>
                                 </div>
@@ -1298,11 +1298,11 @@ export default function FieldVisitsPage() {
                             <td className="py-2.5 px-3 font-mono text-muted-foreground tabular-nums whitespace-nowrap">{item.sku}</td>
                             <td className="py-2.5 px-3 font-semibold text-foreground">{item.name}</td>
                             <td className="py-2.5 px-3">
-                              <Badge variant="secondary" className="text-[10px]">
+                              <Badge variant="secondary" className="text-3xs">
                                 {item.category}
                               </Badge>
                             </td>
-                            <td className="py-2.5 px-3 font-mono text-[11px] tabular-nums">{item.lotNumber || "—"}</td>
+                            <td className="py-2.5 px-3 font-mono text-2xs tabular-nums">{item.lotNumber || "—"}</td>
                             <td className="py-2.5 px-3 text-muted-foreground tabular-nums whitespace-nowrap">{item.expirationDate || "—"}</td>
                             <td className="py-2.5 px-3 text-right font-bold text-emerald-700 tabular-nums whitespace-nowrap">
                               {item.stockQuantity} ks/fl.
@@ -1530,7 +1530,7 @@ export default function FieldVisitsPage() {
                       <button
                         key={diag.key}
                         type="button"
-                        className="min-h-[44px] text-[11px] px-3 py-1 rounded-full border bg-muted/60 hover:bg-emerald-50 hover:border-emerald-300"
+                        className="min-h-[44px] text-2xs px-3 py-1 rounded-full border bg-muted/60 hover:bg-emerald-50 hover:border-emerald-300"
                         onClick={() => setFormDiagnosis(diag.label)}
                       >
                         {diag.label}
@@ -1649,7 +1649,7 @@ export default function FieldVisitsPage() {
                         className="min-h-[44px] tabular-nums"
                       />
                     </div>
-                    <p className="col-span-2 text-[11px] text-red-700 dark:text-red-400">
+                    <p className="col-span-2 text-2xs text-red-700 dark:text-red-400">
                       {t(
                         "fieldVisits.form.withdrawalHint",
                         "Evidencia podľa Zákona č. 39/2007 Z. z. — maximálne {max} dní. Do konca lehoty je zákaz dodávky mlieka / porážky na ľudský konzum.",
@@ -1776,7 +1776,7 @@ export default function FieldVisitsPage() {
                 </select>
               </div>
 
-              <div className="rounded-lg border bg-muted/30 p-3 text-[11px] text-muted-foreground">
+              <div className="rounded-lg border bg-muted/30 p-3 text-2xs text-muted-foreground">
                 {t(
                   "fieldVisits.batch.sharedHint",
                   "Diagnóza, úkon, liek, ochranné lehoty a poznámka z formulára vyššie sa použijú pre všetky vybrané zvieratá (najprv vyberte farmu)."

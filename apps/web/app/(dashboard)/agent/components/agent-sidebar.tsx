@@ -110,7 +110,7 @@ export function AgentSidebar({
                 {t("agent.morningBrief.title", "Ranný prehľad")}
                 {dateLabel ? ` — ${dateLabel}` : ""}
               </p>
-              <p className="text-[11px] text-warning-muted-foreground/80">
+              <p className="text-2xs text-warning-muted-foreground/80">
                 {t(
                   "agent.morningBrief.subtitle",
                   "Spustite AI dopyt pre okamžitý prehľad dňa",

@@ -103,7 +103,7 @@ export function ImagingTab({
                         {modality ? <ModalityBadge code={modality} /> : null}
                         <span className="truncate text-xs font-medium">{file.fileName}</span>
                       </div>
-                      <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                      <p className="mt-1 truncate text-2xs text-muted-foreground">
                         {t("patients.imagingTab.study", "Zobrazovacia štúdia")} ·{" "}
                         {formatClinicalDateTime(file.createdAt as Date, timeZone, "—")}
                       </p>
@@ -112,7 +112,7 @@ export function ImagingTab({
                           href={file.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                          className="inline-flex items-center gap-1 text-2xs font-medium text-primary hover:underline"
                         >
                           <ExternalLink className="h-3 w-3" />
                           {t("patients.imagingTab.view", "Zobraziť")}
@@ -120,7 +120,7 @@ export function ImagingTab({
                         <a
                           href={file.fileUrl}
                           download={file.fileName}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                          className="inline-flex items-center gap-1 text-2xs font-medium text-primary hover:underline"
                         >
                           <Download className="h-3 w-3" />
                           {t("patients.imagingTab.download", "Stiahnuť")}

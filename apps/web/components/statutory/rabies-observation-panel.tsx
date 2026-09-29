@@ -383,27 +383,27 @@ export function RabiesObservationPanel() {
                       </td>
                       <td className="p-3">
                         <div className="font-semibold text-foreground">{obs.patientName}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           {obs.species} • {obs.breed || t("statutory.rabies.mixedBreed", "Mixed breed")}
                         </div>
-                        <div className="text-[10px] font-mono text-muted-foreground/80">
+                        <div className="text-3xs font-mono text-muted-foreground/80">
                           {obs.microchipNumber || t("statutory.rabies.noChip", "Unchipped")}
                         </div>
                       </td>
                       <td className="p-3">
                         <div className="font-medium text-foreground">{obs.injuredPersonName}</div>
-                        <div className="text-[11px] text-muted-foreground">{obs.injuredPersonContact || "—"}</div>
+                        <div className="text-2xs text-muted-foreground">{obs.injuredPersonContact || "—"}</div>
                       </td>
 
                       {/* Checkpoint Day 1 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day1ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day1ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-3xs gap-1">
                             <Clock className="h-3 w-3" />
                             {t("statutory.rabies.badgeWaiting", "Pending")}
                           </Badge>
@@ -413,12 +413,12 @@ export function RabiesObservationPanel() {
                       {/* Checkpoint Day 5 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day5ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day5ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px]">
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-3xs">
                             —
                           </Badge>
                         )}
@@ -427,12 +427,12 @@ export function RabiesObservationPanel() {
                       {/* Checkpoint Day 14 */}
                       <td className="p-3 text-center whitespace-nowrap">
                         {obs.day14ExaminedAt ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1">
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-3xs gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             {formatDate(obs.day14ExaminedAt)}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px]">
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-3xs">
                             —
                           </Badge>
                         )}
@@ -441,16 +441,16 @@ export function RabiesObservationPanel() {
                       {/* Overall Status */}
                       <td className="p-3 whitespace-nowrap">
                         {isCompleted ? (
-                          <Badge className="bg-emerald-600 text-white text-[10px] font-semibold">
+                          <Badge className="bg-emerald-600 text-white text-3xs font-semibold">
                             {t("statutory.rabies.statusRuledOut", "Rabies Ruled Out")}
                           </Badge>
                         ) : isSuspicious ? (
-                          <Badge variant="destructive" className="text-[10px] font-semibold gap-1">
+                          <Badge variant="destructive" className="text-3xs font-semibold gap-1">
                             <AlertTriangle className="h-3 w-3" />
                             {t("statutory.rabies.statusSuspiciousRvps", "Suspicious (RVPS)")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-[10px] font-semibold">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 text-3xs font-semibold">
                             {t("statutory.rabies.statusInObservation", "In Observation")}
                           </Badge>
                         )}

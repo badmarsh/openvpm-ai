@@ -1430,7 +1430,7 @@ export default function PatientDetailPage() {
                     className="group inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background/80 hover:bg-muted/60 px-2.5 py-1 text-xs font-mono tabular-nums text-foreground/90 transition-all shadow-2xs hover:border-primary/40 cursor-pointer"
                     title={t("patients.profile.copyMicrochip", "Click to copy microchip")}
                   >
-                    <span className="text-[10px] uppercase font-sans text-muted-foreground font-semibold">{t("patients.profile.chipLabel", "Chip:")}</span>
+                    <span className="text-3xs uppercase font-sans text-muted-foreground font-semibold">{t("patients.profile.chipLabel", "Chip:")}</span>
                     <span className="tracking-tight">{patient.microchipNumber}</span>
                     {copiedMicrochip ? (
                       <Check className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -1593,7 +1593,7 @@ export default function PatientDetailPage() {
           {weightTrendIndicator ? (
             <span
               className={cn(
-                "ml-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                "ml-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-2xs font-medium",
                 weightTrendIndicator.tone === "warning"
                   ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                   : weightTrendIndicator.tone === "primary"
@@ -1737,7 +1737,7 @@ export default function PatientDetailPage() {
                 <p className="font-semibold text-sm">
                   {t("patients.sympathy.inMemoriam", "In Memoriam")}
                 </p>
-                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-2xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   {t("patients.sympathy.gateActive", "Sympathy Gate Active")}
                 </span>
               </div>
@@ -1889,7 +1889,7 @@ export default function PatientDetailPage() {
                   <h4 className="text-sm font-semibold text-red-900 dark:text-red-200">
                     {t("patients.profile.allergies", "Allergies")}
                   </h4>
-                  <span className="rounded-full bg-red-200/70 px-2 py-0.5 text-[11px] font-bold text-red-800 dark:bg-red-900/60 dark:text-red-200">
+                  <span className="rounded-full bg-red-200/70 px-2 py-0.5 text-2xs font-bold text-red-800 dark:bg-red-900/60 dark:text-red-200">
                     {patient.allergies.length}
                   </span>
                 </div>
@@ -1924,7 +1924,7 @@ export default function PatientDetailPage() {
                       </span>
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+                          "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs font-bold uppercase tracking-wider",
                           allergy.severity === "severe"
                             ? "bg-red-600 text-white shadow-2xs"
                             : allergy.severity === "moderate"
@@ -2369,7 +2369,7 @@ export default function PatientDetailPage() {
             <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
               <span className="font-semibold">{t("patients.prescriptionsTab.controlledBadge", "Controlled")}</span> —{" "}
               {t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}{" "}
-              <span className="ml-2 font-mono text-[11px]">{t("patients.prescriptionsTab.withdrawal", "Withdrawal")}</span>:{" "}
+              <span className="ml-2 font-mono text-2xs">{t("patients.prescriptionsTab.withdrawal", "Withdrawal")}</span>:{" "}
               {t("patients.clinicalDossier.prescriptions", "Recepty a Medikácie")} —{" "}
               {t("patients.remindersTab.help", "ochranná lehota")}
             </div>

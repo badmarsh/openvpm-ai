@@ -312,7 +312,7 @@ export function CarcassDisposalPanel() {
             <h3 className="text-base font-semibold tracking-tight">
               {t("statutory.carcass.title", "Kniha kadáverov a neškodného odstraňovania (Kafiléria)")}
             </h3>
-            <Badge variant="outline" className="text-[10px] border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            <Badge variant="outline" className="text-3xs border-rose-300 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
               {t("statutory.carcass.badgeCategory", "Kafiléria & Asanácia")}
             </Badge>
           </div>
@@ -398,11 +398,11 @@ export function CarcassDisposalPanel() {
                         <Skull className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{r.patientName}</span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-2xs text-muted-foreground">
                         {r.species} {r.breed ? `• ${r.breed}` : ""}
                       </div>
                     </td>
-                    <td className="p-3 font-mono text-[11px]">
+                    <td className="p-3 font-mono text-2xs">
                       {r.microchipNumber || "—"}
                     </td>
                     <td className="p-3 whitespace-nowrap font-medium text-foreground">
@@ -413,7 +413,7 @@ export function CarcassDisposalPanel() {
                         {r.clientFirstName} {r.clientLastName}
                       </div>
                       {r.clientPhone && (
-                        <div className="text-[11px] text-muted-foreground">{r.clientPhone}</div>
+                        <div className="text-2xs text-muted-foreground">{r.clientPhone}</div>
                       )}
                     </td>
                     <td className="p-3 max-w-[200px] truncate" title={r.reason}>
@@ -422,16 +422,16 @@ export function CarcassDisposalPanel() {
                     <td className="p-3">
                       <div className="font-medium">{r.medicationUsed}</div>
                       {r.doseAdministered && (
-                        <div className="text-[11px] text-muted-foreground">Dávka: {r.doseAdministered}</div>
+                        <div className="text-2xs text-muted-foreground">Dávka: {r.doseAdministered}</div>
                       )}
                     </td>
                     <td className="p-3">
                       <div className="font-medium text-foreground">{r.renderingPlant}</div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-2xs text-muted-foreground">
                         {r.disposalDocumentNumber ? `List: ${r.disposalDocumentNumber}` : t("statutory.carcass.waitingPickup", "Čaká na odvoz")}
                       </div>
                     </td>
-                    <td className="p-3 whitespace-nowrap text-muted-foreground text-[11px]">
+                    <td className="p-3 whitespace-nowrap text-muted-foreground text-2xs">
                       {r.storageLocation || t("statutory.carcass.freezerBox", "Mraziaci box")}
                     </td>
                     <td className="p-3 whitespace-nowrap text-right">

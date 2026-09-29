@@ -149,7 +149,7 @@ export function SocialApprovalQueueTab() {
             <h1 className="text-xl font-bold tracking-tight">
               {t("marketing.queue.pageTitle", "Schvaľovací proces obsahu")}
             </h1>
-            <Badge variant="outline" className="text-[11px] gap-1 border-emerald-300 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
+            <Badge variant="outline" className="text-2xs gap-1 border-emerald-300 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30">
               <ShieldCheck className="h-3 w-3" />
               {t("marketing.queue.statutoryBadge", "KVL SR Overenie")}
             </Badge>
@@ -163,7 +163,7 @@ export function SocialApprovalQueueTab() {
         </div>
 
         {/* Sympathy Gate Indicator */}
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/30 border rounded-lg px-3 py-1.5">
+        <div className="flex items-center gap-1.5 text-2xs text-muted-foreground bg-muted/30 border rounded-lg px-3 py-1.5">
           <HeartHandshake className="h-3.5 w-3.5 text-rose-500 shrink-0" />
           <span className="hidden sm:inline">
             {t(
@@ -186,7 +186,7 @@ export function SocialApprovalQueueTab() {
             )}
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground hidden md:inline">
+            <span className="text-2xs text-muted-foreground hidden md:inline">
               {t(
                 "marketing.queue.connectedChannelsDesc",
                 "Aktívne OAuth prepojenia na sociálne siete kliniky"
@@ -236,14 +236,14 @@ export function SocialApprovalQueueTab() {
               >
                 <div className="min-w-0">
                   <p className="text-xs font-medium truncate">{providerName}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">
+                  <p className="text-3xs text-muted-foreground truncate">
                     {channel.displayName}
                   </p>
                 </div>
                 <Badge
                   variant={isConnected ? "default" : "outline"}
                   className={cn(
-                    "text-[10px] shrink-0",
+                    "text-3xs shrink-0",
                     isConnected
                       ? "bg-emerald-600 hover:bg-emerald-600 text-white"
                       : "text-muted-foreground"
@@ -277,7 +277,7 @@ export function SocialApprovalQueueTab() {
             <span>{t("marketing.queue.tabReview", "Na schválenie lekárom")}</span>
             {pendingReviewCount > 0 && (
               <span className={cn(
-                "ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold",
+                "ml-1 text-3xs px-1.5 py-0.2 rounded-full font-bold",
                 statusFilter === "review" ? "bg-white text-amber-700" : "bg-amber-100 text-amber-800"
               )}>
                 {pendingReviewCount}
@@ -296,7 +296,7 @@ export function SocialApprovalQueueTab() {
             )}
           >
             <span>{t("marketing.queue.tabAll", "Všetky")}</span>
-            <span className="text-[10px] opacity-75">({allBriefs.length})</span>
+            <span className="text-3xs opacity-75">({allBriefs.length})</span>
           </button>
 
           <button
@@ -311,7 +311,7 @@ export function SocialApprovalQueueTab() {
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>{t("marketing.queue.tabApproved", "Schválené")}</span>
-            <span className="text-[10px] opacity-75">
+            <span className="text-3xs opacity-75">
               ({allBriefs.filter((b) => b.status === "approved").length})
             </span>
           </button>
@@ -328,7 +328,7 @@ export function SocialApprovalQueueTab() {
           >
             <XCircle className="h-3.5 w-3.5" />
             <span>{t("marketing.queue.tabRejected", "Zamietnuté")}</span>
-            <span className="text-[10px] opacity-75">
+            <span className="text-3xs opacity-75">
               ({allBriefs.filter((b) => b.status === "rejected").length})
             </span>
           </button>
@@ -344,7 +344,7 @@ export function SocialApprovalQueueTab() {
             )}
           >
             <span>{t("marketing.queue.tabPending", "Koncepty")}</span>
-            <span className="text-[10px] opacity-75">
+            <span className="text-3xs opacity-75">
               ({allBriefs.filter((b) => b.status === "pending").length})
             </span>
           </button>
@@ -410,7 +410,7 @@ export function SocialApprovalQueueTab() {
                         <Badge
                           key={ch}
                           variant="secondary"
-                          className="text-[10px] uppercase font-mono"
+                          className="text-3xs uppercase font-mono"
                         >
                           {ch === "google_business"
                             ? "Google Profil"
@@ -423,7 +423,7 @@ export function SocialApprovalQueueTab() {
                       ))}
 
                       {hasClaims && (
-                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 text-[10px]">
+                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 text-3xs">
                           <Stethoscope className="h-3 w-3 mr-1" />
                           {claims.length} {t("marketing.calendar.claimsBadge", "Klinické tvrdenia")}
                         </Badge>
@@ -476,14 +476,14 @@ export function SocialApprovalQueueTab() {
                       <div className="space-y-1.5 pl-5 border-l-2 border-amber-400">
                         {claims.map((claim, idx) => (
                           <div key={idx} className="text-xs space-y-0.5">
-                            <span className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                            <span className="text-3xs font-semibold text-amber-800 dark:text-amber-300">
                               [{getClaimKindLabel(claim.kind)}]
                             </span>{" "}
                             <span className="italic font-medium text-foreground">
                               „{claim.claim}“
                             </span>
                             {claim.sourceRef && (
-                              <span className="text-[10px] text-muted-foreground ml-1.5">
+                              <span className="text-3xs text-muted-foreground ml-1.5">
                                 ({claim.sourceRef})
                               </span>
                             )}
@@ -496,7 +496,7 @@ export function SocialApprovalQueueTab() {
                   {/* Review Audit Record (if already reviewed) */}
                   {(brief.reviewedBy || brief.reviewNote) && (
                     <div className="border rounded-lg p-2.5 text-xs bg-muted/20 space-y-1">
-                      <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+                      <div className="flex items-center justify-between text-muted-foreground text-2xs">
                         <span className="flex items-center gap-1">
                           <UserCheck className="h-3 w-3 text-emerald-600" />
                           {t("marketing.queue.reviewedByLabel", "Posúdil")}:{" "}
@@ -520,7 +520,7 @@ export function SocialApprovalQueueTab() {
 
                   {/* Action Buttons Footer */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t">
-                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                    <span className="text-2xs text-muted-foreground tabular-nums">
                       {formatDateToDisplay(brief.createdAt)}
                     </span>
 

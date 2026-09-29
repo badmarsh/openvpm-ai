@@ -758,7 +758,7 @@ export function WebsiteEditorSheet({
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <Label className="font-bold">{t("marketing.website.liveStats.source", "Štatistické ukazovatele & Dáta")}</Label>
-                    <span className="text-[11px] text-muted-foreground">{t("marketing.website.liveStats.liveBadge", "Prepojené s live databázou")}</span>
+                    <span className="text-2xs text-muted-foreground">{t("marketing.website.liveStats.liveBadge", "Prepojené s live databázou")}</span>
                   </div>
                   {(draftContent.items || []).map((item: any, idx: number) => {
                     const isLiveData = item.source && item.source !== "custom";
@@ -785,7 +785,7 @@ export function WebsiteEditorSheet({
                                 : t("marketing.website.liveStats.customText", "Vlastný text")}
                             </Label>
                           </div>
-                          <span className="text-[10px] text-muted-foreground font-mono">
+                          <span className="text-3xs text-muted-foreground font-mono">
                             {isLiveData
                               ? t("marketing.website.liveStats.liveBadge", "ŽIVÉ PREPOJENIE")
                               : t("marketing.website.liveStats.staticBadge", "STATICKÉ")}
@@ -795,7 +795,7 @@ export function WebsiteEditorSheet({
                         <div className="grid grid-cols-2 gap-2">
                           {isLiveData ? (
                             <div className="space-y-1">
-                              <Label className="text-[10px]">{t("marketing.website.liveStats.source", "Zdroj údajov")}</Label>
+                              <Label className="text-3xs">{t("marketing.website.liveStats.source", "Zdroj údajov")}</Label>
                               <Select
                                 value={item.source || "patients"}
                                 onValueChange={(val) => {
@@ -819,7 +819,7 @@ export function WebsiteEditorSheet({
                             </div>
                           ) : (
                             <div className="space-y-1">
-                              <Label className="text-[10px]">{t("marketing.website.liveStats.customValue", "Vlastná hodnota")}</Label>
+                              <Label className="text-3xs">{t("marketing.website.liveStats.customValue", "Vlastná hodnota")}</Label>
                               <Input
                                 placeholder="napr. 15+"
                                 value={item.value}
@@ -837,7 +837,7 @@ export function WebsiteEditorSheet({
                           )}
 
                           <div className="space-y-1">
-                            <Label className="text-[10px]">
+                            <Label className="text-3xs">
                               {isLiveData
                                 ? t("marketing.website.liveStats.fallbackValue", "Záložná hodnota (ak nie sú dáta)")
                                 : t("marketing.website.liveStats.subtext", "Doplnkový text")}
@@ -866,7 +866,7 @@ export function WebsiteEditorSheet({
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-[10px]">{t("marketing.website.liveStats.label", "Popis ukazovateľa")}</Label>
+                          <Label className="text-3xs">{t("marketing.website.liveStats.label", "Popis ukazovateľa")}</Label>
                           <Input
                             placeholder="napr. Ošetrených pacientov"
                             value={item.label}
@@ -884,7 +884,7 @@ export function WebsiteEditorSheet({
 
                         {isLiveData && (
                           <div className="space-y-1">
-                            <Label className="text-[10px]">{t("marketing.website.liveStats.subtext", "Doplnkový text")}</Label>
+                            <Label className="text-3xs">{t("marketing.website.liveStats.subtext", "Doplnkový text")}</Label>
                             <Input
                               placeholder="napr. Psov, mačiek a drobných zvierat"
                               value={item.subtext || ""}

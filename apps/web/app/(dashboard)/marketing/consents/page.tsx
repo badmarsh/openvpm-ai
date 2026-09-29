@@ -298,17 +298,17 @@ export default function MarketingCompliancePage() {
                             {client?.firstName} {client?.lastName}
                           </span>
                           {patient?.name && (
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className="text-3xs">
                               Pacient: {patient.name}
                             </Badge>
                           )}
                           {isRevoked ? (
-                            <Badge variant="destructive" className="text-[10px] gap-1">
+                            <Badge variant="destructive" className="text-3xs gap-1">
                               <XCircle className="w-3 h-3" />
                               Odvolaný ({new Date(consent.revokedAt!).toLocaleDateString("sk-SK")})
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1">
+                            <Badge variant="secondary" className="text-3xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                               Aktívny
                             </Badge>
@@ -391,7 +391,7 @@ export default function MarketingCompliancePage() {
                         >
                           <div className="flex items-center justify-between gap-2">
                             <h3 className="font-bold text-sm text-foreground">{script.title}</h3>
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className="text-3xs">
                               {catKey}
                             </Badge>
                           </div>
@@ -401,7 +401,7 @@ export default function MarketingCompliancePage() {
                           </div>
 
                           {script.note && (
-                            <p className="text-[11px] text-muted-foreground pt-1">
+                            <p className="text-2xs text-muted-foreground pt-1">
                               <strong>Poznámka pre personál:</strong> {script.note}
                             </p>
                           )}

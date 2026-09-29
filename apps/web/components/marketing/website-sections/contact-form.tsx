@@ -167,7 +167,7 @@ export function ContactFormSection({ content, contextData, isEditor }: ContactFo
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-0.5">
+              <div className="flex justify-between items-center text-2xs text-muted-foreground pt-0.5">
                 <span>Min. 5 znakov</span>
                 <span className={message.length > 1900 ? "text-amber-500 font-medium" : ""}>
                   {message.length} / 2000

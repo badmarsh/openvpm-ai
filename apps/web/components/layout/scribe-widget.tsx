@@ -65,7 +65,7 @@ export function ScribeWidget() {
             <h3 className="font-semibold text-primary flex items-center gap-2 text-sm">
               <Mic className="w-4 h-4 text-primary" />
               <span>AI Voice Scribe</span>
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+              <span className="inline-flex items-center gap-0.5 text-3xs font-mono px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                 <Sparkles className="w-2.5 h-2.5" /> STT
               </span>
             </h3>
@@ -128,7 +128,7 @@ export function ScribeWidget() {
                     <span className="font-semibold text-xs text-foreground truncate max-w-[200px]">
                       {patient.name}
                     </span>
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                    <span className="text-2xs text-muted-foreground truncate max-w-[200px]">
                       {patient.species || "Pacient"}
                       {patient.breed ? ` • ${patient.breed}` : ""}
                       {clientName ? ` (${clientName})` : ""}

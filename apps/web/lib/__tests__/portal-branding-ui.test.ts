@@ -31,8 +31,12 @@ describe("portal branding UI", () => {
   });
 
   it("scopes the tenant accent variables to the portal shell", () => {
-    expect(shell).toContain('"--primary": brandHsl');
-    expect(shell).toContain('"--ring": brandHsl');
+    // Derived through brandThemeVariables so the tenant's hex cannot produce an
+    // unreadable button label or focus ring on the portal's white surface.
+    expect(shell).toContain('import { brandThemeVariables } from "@/lib/theme/contrast"');
+    expect(shell).toContain("brandThemeVariables(");
+    expect(shell).toContain('"--primary-foreground"?: string');
+    expect(shell).toContain("<div className=\"min-h-screen bg-white\" style={themeStyle}>");
     for (const page of portalPages) {
       expect(page).not.toMatch(/(?:bg|text|border|ring)-teal-/);
     }

@@ -127,7 +127,7 @@ export function AudioPlayer({
           variant="ghost"
           size="sm"
           onClick={handleRateChange}
-          className="h-5 px-1.5 text-[10px] font-mono text-muted-foreground"
+          className="h-5 px-1.5 text-3xs font-mono text-muted-foreground"
         >
           {playbackRate}x
         </Button>
@@ -150,7 +150,7 @@ export function AudioPlayer({
             <Volume2 className="h-3.5 w-3.5 text-violet-500" />
             <span>{title}</span>
           </div>
-          <span className="font-mono text-[11px] tabular-nums">
+          <span className="font-mono text-2xs tabular-nums">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>

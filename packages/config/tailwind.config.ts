@@ -83,6 +83,16 @@ const config: Partial<Config> = {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         heading: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
       },
+      /* Dense clinical UI needs sizes below `text-xs`. They are rem, not px, so
+         the font-scale switcher (`html[data-font-scale]`) scales them too —
+         `text-[11px]` stayed 11 px at every setting. Plain strings keep the
+         utility font-size-only, exactly like the arbitrary value it replaces. */
+      fontSize: {
+        "2xs": "0.6875rem", // 11px @ 16px root
+        "3xs": "0.625rem", // 10px
+        "4xs": "0.5625rem", // 9px
+        "5xs": "0.5rem", // 8px
+      },
       boxShadow: {
         elevated: "0 4px 6px -1px rgba(0, 0, 0, 0.07)",
       },

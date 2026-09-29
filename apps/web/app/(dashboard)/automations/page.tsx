@@ -607,11 +607,11 @@ function AutomationsContent() {
                                 {journey.name}
                               </div>
                               {journey.description ? (
-                                <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                <p className="text-2xs text-muted-foreground line-clamp-1 mt-0.5">
                                   {journey.description}
                                 </p>
                               ) : null}
-                              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                              <div className="text-3xs text-muted-foreground font-mono mt-0.5">
                                 {t("automations.table.frequencyCap", "Limit: {max} / {days}d", {
                                   max: journey.frequencyCapMaxSteps,
                                   days: journey.frequencyCapWindowDays,
@@ -626,24 +626,24 @@ function AutomationsContent() {
                         </td>
 
                         <td className={tableCellClass}>
-                          <Badge variant="outline" className="font-mono text-[11px]">
+                          <Badge variant="outline" className="font-mono text-2xs">
                             {t(`automations.triggers.${journey.triggerEventType}`, journey.triggerEventType)}
                           </Badge>
                         </td>
 
                         <td className={tableCellClass}>
                           {status === "active" ? (
-                            <Badge variant="default" className="text-[11px]">
+                            <Badge variant="default" className="text-2xs">
                               {t("automations.status.active", "Aktívna")}
                             </Badge>
                           ) : status === "paused" ? (
-                            <Badge variant="secondary" className="text-[11px]">
+                            <Badge variant="secondary" className="text-2xs">
                               {t("automations.status.paused", "Pozastavená")}
                             </Badge>
                           ) : (
                             <Badge
                               variant="outline"
-                              className="text-[11px] border-dashed text-muted-foreground"
+                              className="text-2xs border-dashed text-muted-foreground"
                             >
                               {t("automations.status.draft", "Koncept")}
                             </Badge>
@@ -736,7 +736,7 @@ function AutomationsContent() {
                       "Auditný denník potlačených správ & Sympathy Gate",
                     )}
                   </h3>
-                  <Badge variant="outline" className="border-destructive/30 text-destructive text-[10px]">
+                  <Badge variant="outline" className="border-destructive/30 text-destructive text-3xs">
                     Zákon 39/2007 Z. z.
                   </Badge>
                 </div>
@@ -746,7 +746,7 @@ function AutomationsContent() {
                     "Zákonná ochrana klientov a etické blokovanie správ (Zákon 39/2007 Z. z., GDPR Čl. 9).",
                   )}
                 </p>
-                <p className="text-[11px] font-medium text-destructive">
+                <p className="text-2xs font-medium text-destructive">
                   {t(
                     "automations.suppression.readOnlyNotice",
                     "Záznamy potlačenia sú striktne na čítanie pre účely auditovateľnosti a zákonného dozoru.",
@@ -904,7 +904,7 @@ function AutomationsContent() {
                               "—"
                             )}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-2xs text-muted-foreground">
                             {log.clientFirstName || log.clientLastName
                               ? `${log.clientFirstName ?? ""} ${log.clientLastName ?? ""}`.trim()
                               : "—"}
@@ -915,7 +915,7 @@ function AutomationsContent() {
                           {isDeceased ? (
                             <Badge
                               variant="destructive"
-                              className="gap-1 bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 text-[11px]"
+                              className="gap-1 bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 text-2xs"
                             >
                               <Heart className="h-3 w-3 fill-current" />
                               <span>
@@ -926,7 +926,7 @@ function AutomationsContent() {
                               </span>
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-[11px]">
+                            <Badge variant="secondary" className="text-2xs">
                               {t(
                                 `automations.suppression.reasons.${log.suppressionReason}`,
                                 log.suppressionReason,
@@ -948,7 +948,7 @@ function AutomationsContent() {
                           {log.channelAttempted ? (
                             <Badge
                               variant="outline"
-                              className="text-[10px] uppercase font-mono mt-0.5"
+                              className="text-3xs uppercase font-mono mt-0.5"
                             >
                               {log.channelAttempted}
                             </Badge>
@@ -973,7 +973,7 @@ function AutomationsContent() {
                         </td>
 
                         <td className={tableCellClass}>
-                          <span className="text-[11px] text-muted-foreground line-clamp-2 max-w-xs">
+                          <span className="text-2xs text-muted-foreground line-clamp-2 max-w-xs">
                             {log.detail || "—"}
                           </span>
                         </td>
@@ -1158,7 +1158,7 @@ function AutomationsContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                       <div className="sm:col-span-2 space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">
+                        <Label className="text-2xs text-muted-foreground">
                           {t("automations.builder.stepLabel", "Názov kroku")}
                         </Label>
                         <Input
@@ -1175,7 +1175,7 @@ function AutomationsContent() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">
+                        <Label className="text-2xs text-muted-foreground">
                           {t("automations.builder.channel", "Kanál")}
                         </Label>
                         <select
@@ -1201,7 +1201,7 @@ function AutomationsContent() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">
+                        <Label className="text-2xs text-muted-foreground">
                           {t("automations.builder.delayHours", "Oneskorenie (hodiny)")}
                         </Label>
                         <Input
@@ -1221,7 +1221,7 @@ function AutomationsContent() {
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">
+                      <Label className="text-2xs text-muted-foreground">
                         {t("automations.builder.legalBasis", "Právny základ (GDPR)")}
                       </Label>
                       <select

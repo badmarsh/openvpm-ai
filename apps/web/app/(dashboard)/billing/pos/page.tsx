@@ -565,7 +565,7 @@ function PosCheckoutForm() {
                         <div className="line-clamp-1 text-xs font-semibold group-hover:text-primary">
                           {p.name}
                         </div>
-                        <div className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
+                        <div className="mt-0.5 line-clamp-1 text-2xs text-muted-foreground">
                           {p.category ||
                             t(
                               "billing.pos.defaultCategory",
@@ -580,13 +580,13 @@ function PosCheckoutForm() {
                           {formatCurrency(p.unitPrice)}
                         </span>
                         {isSoldOut ? (
-                          <span className="rounded border border-destructive/30 bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                          <span className="rounded border border-destructive/30 bg-destructive/15 px-1.5 py-0.5 text-3xs font-medium text-destructive">
                             {t("billing.pos.soldOut", "Vypredané ({count} ks)", {
                               count: stock ?? 0,
                             })}
                           </span>
                         ) : isLowStock ? (
-                          <span className="rounded border border-warning/30 bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+                          <span className="rounded border border-warning/30 bg-warning/15 px-1.5 py-0.5 text-3xs font-medium text-warning">
                             {t(
                               "billing.pos.lowStockCount",
                               "Nízky stav: {count} ks",
@@ -594,7 +594,7 @@ function PosCheckoutForm() {
                             )}
                           </span>
                         ) : (
-                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground">
                             {stock !== null && stock !== undefined
                               ? t("billing.pos.stockCount", "Sklad: {count} ks", {
                                   count: stock,
@@ -629,7 +629,7 @@ function PosCheckoutForm() {
                 <button
                   type="button"
                   onClick={() => setSelectedClient(null)}
-                  className="text-[11px] text-primary hover:underline"
+                  className="text-2xs text-primary hover:underline"
                 >
                   {t(
                     "billing.pos.clientChangeToAnonymous",
@@ -932,7 +932,7 @@ function PosCheckoutForm() {
 
                       {/* Line discount */}
                       <div className="flex items-center justify-between border-t border-border/40 pt-1.5 text-xs">
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1 text-2xs text-muted-foreground">
                           <Percent className="h-3 w-3" />
                           <span>{t("billing.pos.discount", "Zľava")}</span>
                         </span>
@@ -952,7 +952,7 @@ function PosCheckoutForm() {
                             className="h-8 w-16 text-right text-xs tabular-nums"
                             aria-label={t("billing.pos.discount", "Zľava")}
                           />
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             %
                           </span>
                         </div>

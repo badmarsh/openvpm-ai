@@ -234,7 +234,7 @@ export default function EncountersPage() {
   };
 
   const countChipClass =
-    "ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground";
+    "ml-1 rounded-full bg-muted px-1.5 py-0.5 text-3xs font-semibold tabular-nums text-muted-foreground";
 
   return (
     <div className={pageShellClass}>
@@ -300,7 +300,7 @@ export default function EncountersPage() {
             <Activity className="h-3.5 w-3.5" />
             <span>{t("encounters.hub.tabActive", "V ambulancii a čakárni")}</span>
             {inClinicCount > 0 && (
-              <span className="ml-1 animate-pulse rounded-full bg-success px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-success-foreground">
+              <span className="ml-1 animate-pulse rounded-full bg-success px-1.5 py-0.5 text-3xs font-bold tabular-nums text-success-foreground">
                 {inClinicCount}
               </span>
             )}
@@ -309,7 +309,7 @@ export default function EncountersPage() {
             <HeartHandshake className="h-3.5 w-3.5" />
             <span>{t("encounters.hub.tabFollowUps", "Čakajúce kontroly")}</span>
             {followUps.length > 0 && (
-              <span className="ml-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-warning-foreground">
+              <span className="ml-1 rounded-full bg-warning px-1.5 py-0.5 text-3xs font-bold tabular-nums text-warning-foreground">
                 {followUps.length}
               </span>
             )}
@@ -761,7 +761,7 @@ export default function EncountersPage() {
                           <div className="font-semibold text-foreground">
                             {formatTime(apt.startTime)}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-2xs text-muted-foreground">
                             {t("encounters.hub.until", "do {time}", {
                               time: formatTime(apt.endTime),
                             })}
@@ -799,7 +799,7 @@ export default function EncountersPage() {
                             {apt.clientFirstName} {apt.clientLastName}
                           </div>
                           {apt.clientPhone ? (
-                            <div className="truncate text-[11px] text-muted-foreground">
+                            <div className="truncate text-2xs text-muted-foreground">
                               {apt.clientPhone}
                             </div>
                           ) : null}

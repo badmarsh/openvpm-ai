@@ -388,7 +388,7 @@ export function AiSettingsTab() {
               <div className="flex items-center justify-between">
                 <Label className="text-xs">{t("settings.ai.providers.apiKey", "API kľúč")}</Label>
                 {settings?.openai.hasKey && (
-                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="outline" className="text-3xs text-emerald-600 dark:text-emerald-400">
                     {t("settings.ai.providers.apiKeyConfigured", "Kľúč je nastavený")}
                   </Badge>
                 )}
@@ -442,7 +442,7 @@ export function AiSettingsTab() {
               </Button>
             </div>
 
-            <div className="rounded-md bg-muted/50 p-2 text-[11px] text-muted-foreground">
+            <div className="rounded-md bg-muted/50 p-2 text-2xs text-muted-foreground">
               {openaiModels.length > 0
                 ? t("settings.ai.providers.modelsLoaded", `Načítaných ${openaiModels.length} modelov`, {
                     count: openaiModels.length,
@@ -498,7 +498,7 @@ export function AiSettingsTab() {
               <div className="flex items-center justify-between">
                 <Label className="text-xs">{t("settings.ai.providers.apiKey", "API kľúč")}</Label>
                 {settings?.gemini.hasKey && (
-                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="outline" className="text-3xs text-emerald-600 dark:text-emerald-400">
                     {t("settings.ai.providers.apiKeyConfigured", "Kľúč je nastavený")}
                   </Badge>
                 )}
@@ -552,7 +552,7 @@ export function AiSettingsTab() {
               </Button>
             </div>
 
-            <div className="rounded-md bg-muted/50 p-2 text-[11px] text-muted-foreground">
+            <div className="rounded-md bg-muted/50 p-2 text-2xs text-muted-foreground">
               {geminiModels.length > 0
                 ? t("settings.ai.providers.modelsLoaded", `Načítaných ${geminiModels.length} modelov`, {
                     count: geminiModels.length,
@@ -597,11 +597,11 @@ export function AiSettingsTab() {
             {/* Presets */}
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <Label className="text-[11px] text-muted-foreground">
+                <Label className="text-2xs text-muted-foreground">
                   {t("settings.ai.providers.presets", "Rýchle predvoľby")}
                 </Label>
                 {aliHealth && (
-                  <div className="flex items-center gap-1 text-[10px]">
+                  <div className="flex items-center gap-1 text-3xs">
                     {aliHealth.online ? (
                       <span className="flex items-center text-emerald-600 dark:text-emerald-400">
                         <Wifi className="mr-0.5 h-3 w-3" />
@@ -621,7 +621,7 @@ export function AiSettingsTab() {
                   type="button"
                   variant={alibabaMode === "aliproxy_local" ? "secondary" : "outline"}
                   size="sm"
-                  className="h-7 text-[11px] px-2"
+                  className="h-7 text-2xs px-2"
                   onClick={() => handleApplyAlibabaPreset("local")}
                 >
                   {t("settings.ai.providers.presetLocal", "Lokálny AliProxy")}
@@ -630,7 +630,7 @@ export function AiSettingsTab() {
                   type="button"
                   variant={alibabaMode === "dashscope_intl" ? "secondary" : "outline"}
                   size="sm"
-                  className="h-7 text-[11px] px-2"
+                  className="h-7 text-2xs px-2"
                   onClick={() => handleApplyAlibabaPreset("intl")}
                 >
                   {t("settings.ai.providers.presetIntl", "DashScope Intl")}
@@ -639,7 +639,7 @@ export function AiSettingsTab() {
                   type="button"
                   variant={alibabaMode === "dashscope_cn" ? "secondary" : "outline"}
                   size="sm"
-                  className="h-7 text-[11px] px-2"
+                  className="h-7 text-2xs px-2"
                   onClick={() => handleApplyAlibabaPreset("cn")}
                 >
                   {t("settings.ai.providers.presetCn", "DashScope CN")}
@@ -661,7 +661,7 @@ export function AiSettingsTab() {
               <div className="flex items-center justify-between">
                 <Label className="text-xs">{t("settings.ai.providers.apiKey", "API kľúč")}</Label>
                 {settings?.alibaba.hasKey && (
-                  <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="outline" className="text-3xs text-emerald-600 dark:text-emerald-400">
                     {t("settings.ai.providers.apiKeyConfigured", "Kľúč je nastavený")}
                   </Badge>
                 )}
@@ -715,7 +715,7 @@ export function AiSettingsTab() {
               </Button>
             </div>
 
-            <div className="rounded-md bg-muted/50 p-2 text-[11px] text-muted-foreground">
+            <div className="rounded-md bg-muted/50 p-2 text-2xs text-muted-foreground">
               {alibabaModels.length > 0
                 ? t("settings.ai.providers.modelsLoaded", `Načítaných ${alibabaModels.length} modelov`, {
                     count: alibabaModels.length,
@@ -1040,7 +1040,7 @@ function FeatureRow({
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">{title}</p>
             {!isProviderActive && (
-              <Badge variant="destructive" className="h-4.5 text-[9px] px-1.5 py-0 font-normal">
+              <Badge variant="destructive" className="h-4.5 text-4xs px-1.5 py-0 font-normal">
                 {t("settings.ai.features.providerInactive", "Poskytovateľ je neaktívny")}
               </Badge>
             )}
@@ -1177,7 +1177,7 @@ function ModelPicker({
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="mt-2 h-7 w-full text-[11px] font-mono"
+                    className="mt-2 h-7 w-full text-2xs font-mono"
                     onClick={() => {
                       onChangeModel(search.trim());
                       setOpen(false);
@@ -1215,14 +1215,14 @@ function ModelPicker({
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-1">
                       {m.isVision && (
-                        <Badge variant="outline" className="text-[9px] py-0 px-1 font-sans">
+                        <Badge variant="outline" className="text-4xs py-0 px-1 font-sans">
                           Vision
                         </Badge>
                       )}
                       {m.isImageGeneration && (
                         <Badge
                           variant="outline"
-                          className="text-[9px] py-0 px-1 font-sans text-pink-600 dark:text-pink-400"
+                          className="text-4xs py-0 px-1 font-sans text-pink-600 dark:text-pink-400"
                         >
                           Img
                         </Badge>
@@ -1230,7 +1230,7 @@ function ModelPicker({
                       {m.isVideoGeneration && (
                         <Badge
                           variant="outline"
-                          className="text-[9px] py-0 px-1 font-sans text-indigo-600 dark:text-indigo-400"
+                          className="text-4xs py-0 px-1 font-sans text-indigo-600 dark:text-indigo-400"
                         >
                           Video
                         </Badge>

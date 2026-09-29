@@ -105,7 +105,7 @@ function SentimentBadge({
               : "outline"
       }
       className={cn(
-        "text-[11px]",
+        "text-2xs",
         key === "positive" && "bg-emerald-600 hover:bg-emerald-600",
         key === "mixed" &&
           "border-amber-300 text-amber-700 dark:text-amber-300",
@@ -306,7 +306,7 @@ function VetIntelContent() {
                         </span>
                       </td>
                       <td className={tableCellClass}>
-                        <Badge variant="outline" className="text-[11px]">
+                        <Badge variant="outline" className="text-2xs">
                           {platformLabel(review.platform, t)}
                         </Badge>
                       </td>
@@ -329,12 +329,12 @@ function VetIntelContent() {
                         {review.replyText ? (
                           <Badge
                             variant="secondary"
-                            className="text-[11px] text-emerald-700 dark:text-emerald-300"
+                            className="text-2xs text-emerald-700 dark:text-emerald-300"
                           >
                             {t("vetIntel.overview.replyDone", "Zodpovedané")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[11px]">
+                          <Badge variant="outline" className="text-2xs">
                             {t("vetIntel.overview.replyMissing", "Bez odpovede")}
                           </Badge>
                         )}
@@ -400,7 +400,7 @@ function VetIntelContent() {
             <p className="text-xs font-semibold">
               {t("vetIntel.reputation.title", "Sentiment podľa platforiem")}
             </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-2xs text-muted-foreground">
               {t(
                 "vetIntel.reputation.desc",
                 "Rozdelenie posledných 100 recenzií podľa sentimentu a zdroja.",
@@ -467,7 +467,7 @@ function VetIntelContent() {
                         </span>
                       </td>
                       <td className={tableCellClass}>
-                        <Badge variant="outline" className="text-[11px]">
+                        <Badge variant="outline" className="text-2xs">
                           {platformLabel(review.platform, t)}
                         </Badge>
                       </td>
@@ -496,7 +496,7 @@ function VetIntelContent() {
             <p className="text-xs font-semibold">
               {t("vetIntel.official.title", "Úradné zdroje a registre")}
             </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-2xs text-muted-foreground">
               {t(
                 "vetIntel.official.desc",
                 "Priame odkazy na štátne a stavovské portály. Automatické sledovanie vestníkov sa pripravuje — zatiaľ otvárajte zdroje ručne.",
@@ -517,7 +517,7 @@ function VetIntelContent() {
                     </span>
                     <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </span>
-                  <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
+                  <span className="mt-1 block text-2xs leading-relaxed text-muted-foreground">
                     {t(portal.descKey, portal.descFallback)}
                   </span>
                 </a>
@@ -535,7 +535,7 @@ function VetIntelContent() {
                   <p className="text-xs font-semibold">
                     {t("vetIntel.official.statutory", "Zákonné registre")}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  <p className="mt-0.5 text-2xs text-muted-foreground">
                     {t(
                       "vetIntel.official.statutoryDesc",
                       "Besnota, ošetrenia, ochranné lehoty, omamné látky a protokoly.",
@@ -553,7 +553,7 @@ function VetIntelContent() {
                   <p className="text-xs font-semibold">
                     {t("vetIntel.official.kvepis", "KVEPIS podania")}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  <p className="mt-0.5 text-2xs text-muted-foreground">
                     {t(
                       "vetIntel.official.kvepisDesc",
                       "Hlásenia a podania na ŠVPS cez KVEPIS.",

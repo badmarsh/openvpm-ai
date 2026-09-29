@@ -189,7 +189,7 @@ function StarRating({ rating, className }: { rating: number; className?: string 
 function PlatformBadge({ platform, t }: { platform: string; t: Translate }) {
   if (platform === "facebook") {
     return (
-      <Badge variant="info" className="gap-1 text-[11px] font-medium">
+      <Badge variant="info" className="gap-1 text-2xs font-medium">
         <FacebookIcon className="h-3 w-3" />
         {t("marketing.reviews.platformFacebook", "Facebook")}
       </Badge>
@@ -197,13 +197,13 @@ function PlatformBadge({ platform, t }: { platform: string; t: Translate }) {
   }
   if (platform === "internal") {
     return (
-      <Badge variant="secondary" className="text-[11px] font-medium">
+      <Badge variant="secondary" className="text-2xs font-medium">
         {t("marketing.reviews.platformInternal", "Interné")}
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="gap-1 text-[11px] font-medium">
+    <Badge variant="outline" className="gap-1 text-2xs font-medium">
       <GoogleIcon className="h-3 w-3" />
       {t("marketing.reviews.platformGoogle", "Google")}
     </Badge>
@@ -220,7 +220,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
 
   if (sentiment === "positive") {
     return (
-      <Badge variant="success" className="gap-1 text-[11px] font-medium">
+      <Badge variant="success" className="gap-1 text-2xs font-medium">
         <ThumbsUp className="h-3 w-3" aria-hidden="true" />
         {t("marketing.reviews.sentiment.positive", "Pozitívna")}
         {score}
@@ -229,7 +229,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
   }
   if (sentiment === "negative") {
     return (
-      <Badge variant="destructive" className="gap-1 text-[11px] font-medium">
+      <Badge variant="destructive" className="gap-1 text-2xs font-medium">
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
         {t("marketing.reviews.sentiment.negative", "Negatívna")}
         {score}
@@ -237,7 +237,7 @@ function SentimentBadge({ review, t }: { review: ReviewRow; t: Translate }) {
     );
   }
   return (
-    <Badge variant="secondary" className="text-[11px] font-medium">
+    <Badge variant="secondary" className="text-2xs font-medium">
       {t("marketing.reviews.sentiment.neutral", "Neutrálna")}
       {score}
     </Badge>
@@ -936,7 +936,7 @@ export default function ReviewsPage() {
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <PlatformBadge platform={review.platform} t={t} />
                             {review.platform === "facebook" && (review.rating ?? 5) >= 4 ? (
-                              <Badge variant="success" className="gap-1 text-[11px] font-medium">
+                              <Badge variant="success" className="gap-1 text-2xs font-medium">
                                 <ThumbsUp className="h-3 w-3" aria-hidden="true" />
                                 {t("marketing.reviews.facebookRecommends", "Odporúča kliniku")}
                               </Badge>
@@ -955,7 +955,7 @@ export default function ReviewsPage() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <SentimentBadge review={review} t={t} />
                             {severity ? (
-                              <Badge variant="warning" className="gap-1 text-[11px] font-medium">
+                              <Badge variant="warning" className="gap-1 text-2xs font-medium">
                                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                                 {severity}
                               </Badge>
@@ -963,7 +963,7 @@ export default function ReviewsPage() {
                             {review.escalationStatus === "escalated" ? (
                               <Badge
                                 variant="outline"
-                                className="gap-1 text-[11px] font-medium"
+                                className="gap-1 text-2xs font-medium"
                                 title={
                                   review.escalationReason
                                     ? t("marketing.reviews.queue.escalationReason", "Dôvod: {reason}", {
@@ -985,7 +985,7 @@ export default function ReviewsPage() {
                           {sla ? (
                             <Badge
                               variant={sla.variant}
-                              className="gap-1 text-[11px] font-medium"
+                              className="gap-1 text-2xs font-medium"
                             >
                               {sla.status === "replied" ? (
                                 <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
@@ -1002,7 +1002,7 @@ export default function ReviewsPage() {
                           {sympathyBlocked ? (
                             <Badge
                               variant="secondary"
-                              className="gap-1 text-[11px] font-medium"
+                              className="gap-1 text-2xs font-medium"
                               title={t(
                                 "marketing.reviews.queue.sympathyTitle",
                                 "Klientovi po úmrtí zvieratka neodchádzajú marketingové výzvy na recenziu.",
@@ -1084,12 +1084,12 @@ export default function ReviewsPage() {
                                       {t("marketing.reviews.yourReply", "Odpoveď kliniky")}
                                     </span>
                                     {review.repliedAt ? (
-                                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                                      <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                                         {formatDate(review.repliedAt, undefined, locale)}
                                       </span>
                                     ) : null}
                                   </div>
-                                  <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-foreground/80">
+                                  <p className="whitespace-pre-wrap text-2xs leading-relaxed text-foreground/80">
                                     {review.replyText}
                                   </p>
                                   <div className="flex items-center gap-3 pt-1">
@@ -1097,7 +1097,7 @@ export default function ReviewsPage() {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 gap-1 px-2 text-[11px] text-muted-foreground"
+                                      className="h-7 gap-1 px-2 text-2xs text-muted-foreground"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         void copyReply(review.replyText || "");
@@ -1110,7 +1110,7 @@ export default function ReviewsPage() {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 gap-1 px-2 text-[11px] text-muted-foreground"
+                                      className="h-7 gap-1 px-2 text-2xs text-muted-foreground"
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         startReply(review, review.replyText || "");
@@ -1126,14 +1126,14 @@ export default function ReviewsPage() {
                               {isReplying ? (
                                 <div className="space-y-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <span className="text-[11px] font-semibold text-muted-foreground">
+                                    <span className="text-2xs font-semibold text-muted-foreground">
                                       {t("marketing.reviews.quickReplies", "Rýchle predpripravené odpovede:")}
                                     </span>
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 gap-1 px-2 text-[11px]"
+                                      className="h-7 gap-1 px-2 text-2xs"
                                       disabled={generateReplyMutation.isPending}
                                       onClick={(event) => {
                                         event.stopPropagation();
@@ -1156,7 +1156,7 @@ export default function ReviewsPage() {
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="h-auto justify-start truncate p-2 text-left text-[11px] font-normal"
+                                        className="h-auto justify-start truncate p-2 text-left text-2xs font-normal"
                                         title={canned.text}
                                         onClick={(event) => {
                                           event.stopPropagation();

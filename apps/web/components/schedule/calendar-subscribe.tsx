@@ -107,7 +107,7 @@ export function CalendarSubscribe() {
           </div>
         ) : url ? (
           <>
-            <div className="mt-3 break-all rounded-md border border-border bg-muted px-2.5 py-2 font-mono text-[11px]">
+            <div className="mt-3 break-all rounded-md border border-border bg-muted px-2.5 py-2 font-mono text-2xs">
               {url}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">

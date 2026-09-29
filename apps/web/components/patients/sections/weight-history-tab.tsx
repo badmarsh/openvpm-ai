@@ -183,7 +183,7 @@ export function WeightHistoryTab({
                 max={maxMeasuredAt}
                 onChange={(val) => setWeightMeasuredAt(val)}
               />
-              <span className="mt-1 block text-[11px] text-muted-foreground font-normal">
+              <span className="mt-1 block text-2xs text-muted-foreground font-normal">
                 {t(
                   "patients.weight.leaveBlankHelp",
                   "Leave blank to record now; set a date for historical records.",

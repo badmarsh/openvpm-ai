@@ -276,13 +276,13 @@ export function MedicalRecordsTab({
                         : "Unknown"}
                     </p>
                     {note.imported ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                         {t("patients.recordsTab.imported", "Imported")}
                       </span>
                     ) : null}
                     <span
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        "rounded-full px-2 py-0.5 text-2xs font-medium",
                         note.status === "draft"
                           ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                           : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",

@@ -181,7 +181,7 @@ export function AccentColorPicker({
         </div>
       </div>
 
-      <div className="flex gap-4 text-[10px] text-muted-foreground">
+      <div className="flex gap-4 text-3xs text-muted-foreground">
         {COLOR_GROUPS.map((g) => (
           <span key={g.label}>{t(g.labelKey, g.label)}</span>
         ))}

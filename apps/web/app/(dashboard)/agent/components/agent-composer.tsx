@@ -76,7 +76,7 @@ export function AgentComposer({
         />
 
         <div className="flex items-center justify-between gap-3 px-1 pt-1">
-          <span className="text-[10px] text-muted-foreground font-mono">
+          <span className="text-3xs text-muted-foreground font-mono">
             {instruction.length > 0 && `${instruction.length}/${AGENT_INSTRUCTION_MAX_LENGTH}`}
           </span>
 
@@ -104,7 +104,7 @@ export function AgentComposer({
       </div>
 
       {allowWrites ? (
-        <div className="mt-2 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-2.5 text-[11px] text-warning-muted-foreground">
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-2.5 text-2xs text-warning-muted-foreground">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <p>
             {t(

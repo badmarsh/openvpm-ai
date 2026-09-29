@@ -60,7 +60,7 @@ export function FontScaleSwitcher({ className }: { className?: string }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
-        <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="px-2 py-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("chrome.fontScale.label", "Veľkosť písma")}
         </p>
         {FONT_SCALES.map((option) => (

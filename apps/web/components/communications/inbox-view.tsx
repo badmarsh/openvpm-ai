@@ -184,7 +184,7 @@ function ChannelBadge({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold leading-4",
+        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-3xs font-semibold leading-4",
         channelBadgeStyles[channel],
       )}
     >
@@ -249,7 +249,7 @@ function MessageContentBubble({
 
       {attachments.length > 0 ? (
         <div className="mt-2 space-y-1.5 pt-2 border-t border-border/50">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground mb-1">
+          <div className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground mb-1">
             <Paperclip className="h-3 w-3" />
             <span>
               {t("inbox.attachmentsCount", "Attachments ({count}):", {
@@ -272,7 +272,7 @@ function MessageContentBubble({
                   </span>
                   {(att.filename?.toLowerCase().endsWith(".pdf") ||
                     att.content_type?.toLowerCase() === "application/pdf") && (
-                    <span className="shrink-0 rounded border border-orange-200 bg-orange-50 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-orange-700 dark:border-orange-800/50 dark:bg-orange-950/60 dark:text-orange-200">
+                    <span className="shrink-0 rounded border border-orange-200 bg-orange-50 px-1 py-px text-4xs font-bold uppercase tracking-wide text-orange-700 dark:border-orange-800/50 dark:bg-orange-950/60 dark:text-orange-200">
                       PDF
                     </span>
                   )}
@@ -289,7 +289,7 @@ function MessageContentBubble({
                       setImportingAttId(att.id);
                       parseAttachmentMutation.mutate({ communicationId, attachmentId: att.id });
                     }}
-                    className="shrink-0 flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2 py-1.5 text-[11px] font-medium text-amber-800 transition-colors disabled:opacity-50"
+                    className="shrink-0 flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2 py-1.5 text-2xs font-medium text-amber-800 transition-colors disabled:opacity-50"
                   >
                     {importingAttId === att.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -326,7 +326,7 @@ function MessageContentBubble({
               e.stopPropagation();
               setShowHistory(!showHistory);
             }}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-2xs text-muted-foreground/80 hover:text-foreground transition-colors"
           >
             {showHistory ? (
               <>
@@ -1169,7 +1169,7 @@ export function InboxView() {
                   onClick={() => setChannelFilter(tab.key)}
                   aria-pressed={active}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium transition-colors",
                     active
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -1288,32 +1288,32 @@ export function InboxView() {
                             }
                           />
                           {isUnread && group.unreadCount > 1 ? (
-                            <span className="inline-flex items-center rounded-full bg-primary px-1.5 py-px text-[10px] font-bold leading-4 text-primary-foreground">
+                            <span className="inline-flex items-center rounded-full bg-primary px-1.5 py-px text-3xs font-bold leading-4 text-primary-foreground">
                               {group.unreadCount}
                             </span>
                           ) : null}
                           {group.latest.sympathyActive ? (
-                            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-stone-300 bg-stone-100 px-1.5 py-px text-[10px] font-semibold leading-4 text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
+                            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-stone-300 bg-stone-100 px-1.5 py-px text-3xs font-semibold leading-4 text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
                               <Heart className="h-2.5 w-2.5" />
                               {t("inbox.sympathyBadge", "Condolence")}
                             </span>
                           ) : null}
                           {supplierFlag.isSupplier ? (
-                            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-px text-[10px] font-semibold leading-4 text-orange-700 dark:border-orange-800/50 dark:bg-orange-950/60 dark:text-orange-200">
+                            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-px text-3xs font-semibold leading-4 text-orange-700 dark:border-orange-800/50 dark:bg-orange-950/60 dark:text-orange-200">
                               <Package className="h-2.5 w-2.5" />
                               {t("inbox.supplierBadge", "Invoice")}
                             </span>
                           ) : null}
                         </div>
                         {group.kind === "unmatched" ? (
-                          <p className="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                          <p className="mt-1 text-2xs font-medium text-amber-700 dark:text-amber-400">
                             {t(
                               "inbox.needsClientMatch",
                               "Needs client match",
                             )}
                           </p>
                         ) : group.latest.assignedTo ? (
-                          <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                          <p className="mt-1 text-2xs font-medium text-muted-foreground">
                             {group.latest.assignedTo === currentUserId
                               ? t("inbox.assignedToYou", "Assigned to you")
                               : t(
@@ -1488,18 +1488,18 @@ export function InboxView() {
                     <div className="flex items-center gap-2 rounded-md border border-amber-200/80 bg-amber-50/80 dark:border-amber-800/30 dark:bg-amber-950/20 px-3 py-1.5 mb-1">
                       <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                       <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium shrink-0">
+                        <span className="text-2xs text-amber-700 dark:text-amber-300 font-medium shrink-0">
                           {hasMatch ? t("inbox.aiSuggestionMatch", "Nájdený klient:") : t("inbox.aiSuggestionNew", "Vytvoriť klienta:")}
                         </span>
-                        <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-100 truncate">{displayName}</span>
+                        <span className="text-2xs font-semibold text-amber-900 dark:text-amber-100 truncate">{displayName}</span>
                         {hasMatch && primary?.email ? (
-                          <span className="text-[10px] text-amber-600/70 truncate hidden sm:inline">{primary.email}</span>
+                          <span className="text-3xs text-amber-600/70 truncate hidden sm:inline">{primary.email}</span>
                         ) : null}
                       </div>
                       {hasMatch ? (
                         <Button
                           size="sm"
-                          className="h-6 text-[11px] gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
+                          className="h-6 text-2xs gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
                           disabled={linkCommunicationMutation.isPending}
                           onClick={() => handleLinkUnmatchedClient(primary!)}
                         >
@@ -1509,7 +1509,7 @@ export function InboxView() {
                       ) : (
                         <Button
                           size="sm"
-                          className="h-6 text-[11px] gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
+                          className="h-6 text-2xs gap-1 px-2.5 shrink-0 bg-amber-600 hover:bg-amber-700 text-white border-0"
                           disabled={createAndLinkMutation.isPending}
                           onClick={() => {
                             createAndLinkMutation.mutate({
@@ -1548,7 +1548,7 @@ export function InboxView() {
                         <div className="flex items-center gap-1.5 mb-1 text-muted-foreground">
                           <ArrowLeft className="h-3 w-3" />
                           <SelectedUnmatchedIcon className="h-3 w-3" />
-                          <span className="text-[10px] uppercase font-medium">
+                          <span className="text-3xs uppercase font-medium">
                             {selectedUnmatchedChannel}
                           </span>
                         </div>
@@ -1569,11 +1569,11 @@ export function InboxView() {
 
                         <div className="flex items-center gap-1 mt-1.5 text-muted-foreground">
                           <Clock className="h-2.5 w-2.5" />
-                          <span className="text-[10px]">
+                          <span className="text-3xs">
                             {relativeTime(msg.createdAt, inboxTimeZone, t)}
                           </span>
                           {msg.status ? (
-                            <span className="text-[10px] ml-1 capitalize">
+                            <span className="text-3xs ml-1 capitalize">
                               {msg.status}
                             </span>
                           ) : null}
@@ -1590,7 +1590,7 @@ export function InboxView() {
                   <div className="px-3 py-1">
                     <button
                       type="button"
-                      className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                      className="flex w-full items-center gap-1.5 text-2xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
                       onClick={() => {
                         setShowClientSearch(v => !v);
                         if (showClientSearch) setLinkClientSearch("");
@@ -1674,8 +1674,8 @@ export function InboxView() {
                           <div className="flex items-center gap-1.5 justify-between">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <Send className="h-3 w-3 text-primary shrink-0" />
-                              <span className="text-[11px] font-medium">{t("inbox.replyUnmatchedTitle", "Odpovedať")}</span>
-                              <span className="font-mono text-[10px] text-muted-foreground truncate">{toEmail}</span>
+                              <span className="text-2xs font-medium">{t("inbox.replyUnmatchedTitle", "Odpovedať")}</span>
+                              <span className="font-mono text-3xs text-muted-foreground truncate">{toEmail}</span>
                             </div>
                             <button
                               type="button"
@@ -1734,7 +1734,7 @@ export function InboxView() {
                         >
                           <Send className="h-3.5 w-3.5 shrink-0" />
                           <span className="flex-1 text-left truncate text-muted-foreground/70">{t("inbox.replyContentPlaceholder", "Napíšte odpoveď…")}</span>
-                          <span className="font-mono text-[10px] shrink-0 text-muted-foreground/50">{toEmail}</span>
+                          <span className="font-mono text-3xs shrink-0 text-muted-foreground/50">{toEmail}</span>
                         </button>
                       )}
                     </div>
@@ -1771,7 +1771,7 @@ export function InboxView() {
                         {assignmentLabel}
                       </Badge>
                       {selectedGroup?.latest.sympathyActive ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-px text-[10px] font-semibold text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-px text-3xs font-semibold text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
                           <Heart className="h-2.5 w-2.5" />
                           {t("inbox.sympathyBadge", "Condolence")}
                         </span>
@@ -1782,7 +1782,7 @@ export function InboxView() {
                           href={`/patients/${patient.id}`}
                           title={t("inbox.openPatientCard", "Open patient card")}
                           className={cn(
-                            "inline-flex items-center rounded-full border px-2 py-px text-[10px] font-medium transition-colors",
+                            "inline-flex items-center rounded-full border px-2 py-px text-3xs font-medium transition-colors",
                             patient.status === "deceased"
                               ? "border-stone-300 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-300"
                               : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -1860,7 +1860,7 @@ export function InboxView() {
                               <ArrowLeft className="h-3 w-3" />
                             )}
                             <Icon className="h-3 w-3" />
-                            <span className="text-[10px] uppercase font-medium">
+                            <span className="text-3xs uppercase font-medium">
                               {localizedChannelLabels[msg.channel as Channel]}
                             </span>
                           </div>
@@ -1881,11 +1881,11 @@ export function InboxView() {
 
                           <div className="flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-2.5 w-2.5" />
-                            <span className="text-[10px]">
+                            <span className="text-3xs">
                               {relativeTime(msg.createdAt, inboxTimeZone)}
                             </span>
                             {statusLabel ? (
-                              <span className="text-[10px] ml-1 capitalize">
+                              <span className="text-3xs ml-1 capitalize">
                                 {statusLabel}
                               </span>
                             ) : null}
@@ -1942,18 +1942,18 @@ export function InboxView() {
                         : t("inbox.aiSuggestReply", "Suggest reply with AI")}
                     </Button>
                     {aiReplyMeta ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 font-mono text-3xs text-muted-foreground">
                         <Bot className="h-3 w-3" />
                         {aiReplyMeta.usedAi ? aiReplyMeta.model : t("inbox.aiModelFallback", "template")}
                       </span>
                     ) : null}
                     {aiReplyMeta?.sympathyFiltered ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-0.5 text-3xs font-medium text-stone-700 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-200">
                         <Heart className="h-3 w-3" />
                         {t("inbox.aiSympathyFiltered", "Condolence template applied")}
                       </span>
                     ) : null}
-                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
                       <Eye className="h-3 w-3" />
                       {t("inbox.aiReviewHint", "AI draft — review and edit before sending")}
                     </span>

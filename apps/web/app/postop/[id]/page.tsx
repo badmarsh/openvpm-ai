@@ -180,7 +180,7 @@ export default function PublicPostopCheckinPage() {
                     placeholder={t("postop.notePlaceholder", "Napr. pacient nechce piť, rana mierne mokvá, liek odmieta prehltnúť…")}
                     className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/60"
                   />
-                  <p className="text-[11px] text-muted-foreground text-right">{note.length} / 1000</p>
+                  <p className="text-2xs text-muted-foreground text-right">{note.length} / 1000</p>
                 </div>
               )}
 

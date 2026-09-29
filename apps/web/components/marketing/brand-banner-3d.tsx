@@ -333,7 +333,7 @@ export const BrandHeroCard3D = memo(function BrandHeroCard3D({
           </div>
           <div>
             <p className="text-sm font-bold text-white drop-shadow-sm">{clinicName}</p>
-            <p className="text-[10px] text-white/70">Veterinárna klinika</p>
+            <p className="text-3xs text-white/70">Veterinárna klinika</p>
           </div>
         </div>
       </div>

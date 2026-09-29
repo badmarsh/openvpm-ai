@@ -5,11 +5,13 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { PawMark } from "@/components/brand/paw-mark";
 import { trpc } from "@/lib/trpc";
-import { hexToHslString, initials } from "@/lib/utils";
+import { initials } from "@/lib/utils";
+import { brandThemeVariables } from "@/lib/theme/contrast";
 import { DEFAULT_PORTAL_BRAND_COLOR } from "@/lib/portal/branding";
 
 type PortalThemeStyle = CSSProperties & {
   "--primary"?: string;
+  "--primary-foreground"?: string;
   "--ring"?: string;
 };
 
@@ -26,12 +28,11 @@ export function PortalShell({ children }: { children: ReactNode }) {
     },
   );
   const practice = client.data?.practice;
-  const brandHsl = hexToHslString(
+  // The portal is a white surface, so the tenant accent is normalised against
+  // white: label colour and focus ring are derived, not assumed to be white.
+  const themeStyle = (brandThemeVariables(
     practice?.brandColor ?? DEFAULT_PORTAL_BRAND_COLOR,
-  );
-  const themeStyle: PortalThemeStyle | undefined = brandHsl
-    ? { "--primary": brandHsl, "--ring": brandHsl }
-    : undefined;
+  ) ?? undefined) as PortalThemeStyle | undefined;
   const practiceName = practice?.name ?? "OpenVPM";
 
   async function signOut() {

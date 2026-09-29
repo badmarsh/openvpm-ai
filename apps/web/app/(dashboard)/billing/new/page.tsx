@@ -669,7 +669,7 @@ function NewInvoiceForm() {
                         <span className="font-medium text-foreground">
                           {item.description}
                         </span>
-                        <span className="ml-2 text-[11px] text-muted-foreground">
+                        <span className="ml-2 text-2xs text-muted-foreground">
                           {item.taxable
                             ? t("billing.new.taxable", "Taxable")
                             : t("billing.new.notTaxable", "Not taxable")}

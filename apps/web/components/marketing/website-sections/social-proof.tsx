@@ -83,7 +83,7 @@ export function SocialProofSection({ content, brandKit }: SocialProofSectionProp
                   <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
                     {p.name}
                   </div>
-                  <div className="text-[11px] text-muted-foreground font-medium">
+                  <div className="text-2xs text-muted-foreground font-medium">
                     {p.handle}
                   </div>
                 </div>

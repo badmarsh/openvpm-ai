@@ -485,7 +485,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
               <h1 className="font-heading text-xl font-bold tracking-tight">
                 {branding?.name || "OpenVPM"}
               </h1>
-              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 text-[10px] font-semibold uppercase">
+              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 text-3xs font-semibold uppercase">
                 {t("nav.waitingRoomTv", "Čakáreň TV")}
               </Badge>
             </div>
@@ -498,7 +498,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
         {/* Live Clock & Controls */}
         <div className="flex items-center gap-3">
           {lastRefreshed && (
-            <div className="hidden items-center gap-1.5 text-[10px] text-muted-foreground sm:flex">
+            <div className="hidden items-center gap-1.5 text-3xs text-muted-foreground sm:flex">
               <RefreshCw className="h-3 w-3" />
               <span>
                 {t("waitingRoom.updated", "Updated")}{" "}
@@ -662,7 +662,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                         </Badge>
                       )}
                       {apt.typeName && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-3xs text-muted-foreground">
                           {apt.typeName}
                         </span>
                       )}
@@ -724,7 +724,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                     <Badge variant="secondary" className="text-xs font-semibold">
                       {apt.typeName || t("waitingRoom.exam", "Exam")}
                     </Badge>
-                    <span className="font-mono text-[10px] text-muted-foreground">
+                    <span className="font-mono text-3xs text-muted-foreground">
                       {formatShortTime(apt.startTime)}
                     </span>
                   </div>
@@ -827,7 +827,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                 <p className="font-semibold">
                   {t("waitingRoom.urgentCareBooking", "Urgent care & booking:")}
                 </p>
-                <p className="mt-0.5 text-[11px] text-foreground/80">
+                <p className="mt-0.5 text-2xs text-foreground/80">
                   {t("waitingRoom.bookingHelp", "Book appointments via the client portal or contact reception.")}
                 </p>
               </div>
@@ -843,7 +843,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                     <ListOrdered className="h-3.5 w-3.5" />
                     {t("waitingRoom.waitlist", "Waitlist")}
                   </span>
-                  <Badge className="bg-violet-600 text-white text-[10px]">
+                  <Badge className="bg-violet-600 text-white text-3xs">
                     {waitlistEntries.length}
                   </Badge>
                 </CardTitle>
@@ -862,7 +862,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                         <p className="font-semibold text-foreground">
                           {(entry as any).patient?.name || t("waitingRoom.patient", "Patient")}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-3xs text-muted-foreground">
                           {(entry as any).client
                             ? `${(entry as any).client.lastName} (${(entry as any).client.firstName?.[0] || ""}.)`
                             : ""}
@@ -870,7 +870,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                       </div>
                     </div>
                     {(entry as any).type && (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-3xs">
                         {(entry as any).type.name}
                       </Badge>
                     )}
@@ -899,11 +899,11 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                     </span>
                     <div className="flex items-center gap-2">
                       {apt.typeName && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-3xs text-muted-foreground">
                           {apt.typeName}
                         </span>
                       )}
-                      <span className="font-mono text-[11px] text-muted-foreground">
+                      <span className="font-mono text-2xs text-muted-foreground">
                         {formatShortTime(apt.startTime)}
                       </span>
                     </div>
@@ -978,7 +978,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
-                    <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b">
+                    <thead className="text-2xs text-muted-foreground uppercase bg-muted/50 border-b">
                       <tr>
                         <th className="px-3 py-2 w-12 text-center">{t("marketing.tv.colOrder", "Poradie")}</th>
                         <th className="px-3 py-2">{t("marketing.tv.colTitle", "Názov oznamu")}</th>
@@ -996,7 +996,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                           <td className="px-3 py-2.5">
                             <span className="font-semibold text-foreground block">{slide.title}</span>
                             {slide.body && (
-                              <span className="text-[11px] text-muted-foreground line-clamp-1">
+                              <span className="text-2xs text-muted-foreground line-clamp-1">
                                 {slide.body}
                               </span>
                             )}
@@ -1017,12 +1017,12 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                               {slide.isActive ? (
                                 <Badge
                                   variant="default"
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] py-0 px-1.5"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-3xs py-0 px-1.5"
                                 >
                                   {t("marketing.tv.active", "Aktívny")}
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                                <Badge variant="secondary" className="text-3xs py-0 px-1.5 text-muted-foreground">
                                   {t("marketing.tv.inactive", "Vypnutý")}
                                 </Badge>
                               )}
@@ -1144,7 +1144,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                     }
                     className="h-8 text-xs"
                   />
-                  <span className="text-[10px] text-muted-foreground">5 až 60 sekúnd</span>
+                  <span className="text-3xs text-muted-foreground">5 až 60 sekúnd</span>
                 </div>
 
                 <div className="space-y-1">
@@ -1157,7 +1157,7 @@ export function WaitingRoomTv({ embedded = false }: WaitingRoomTvProps) {
                     onChange={(e) => setSlideSortOrder(parseInt(e.target.value) || 0)}
                     className="h-8 text-xs"
                   />
-                  <span className="text-[10px] text-muted-foreground">Nižšie číslo = skôr</span>
+                  <span className="text-3xs text-muted-foreground">Nižšie číslo = skôr</span>
                 </div>
               </div>
 
@@ -1244,7 +1244,7 @@ function StatChip({
       {icon}
       <div>
         <p className="text-lg font-bold tabular-nums leading-none">{value}</p>
-        <p className="text-[10px] text-muted-foreground leading-tight">{label}</p>
+        <p className="text-3xs text-muted-foreground leading-tight">{label}</p>
       </div>
     </div>
   );

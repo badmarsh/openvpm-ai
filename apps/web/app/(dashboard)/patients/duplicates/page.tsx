@@ -317,7 +317,7 @@ function DuplicateGroupCard({
                         </Badge>
                       ) : null}
                     </div>
-                    <span className="mt-0.5 block font-mono text-[10px] font-normal text-muted-foreground">
+                    <span className="mt-0.5 block font-mono text-3xs font-normal text-muted-foreground">
                       {patient.id.slice(0, 8)}
                     </span>
                   </td>

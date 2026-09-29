@@ -141,7 +141,7 @@ export function ClinicalDiffConfirmModal({
             ) : (
               <Badge
                 variant="outline"
-                className="bg-slate-50 text-slate-700 border-slate-300 text-[10px] px-1.5 py-0 gap-1 dark:bg-slate-900/40 dark:text-slate-300"
+                className="bg-slate-50 text-slate-700 border-slate-300 text-3xs px-1.5 py-0 gap-1 dark:bg-slate-900/40 dark:text-slate-300"
               >
                 <ShieldCheck className="w-3 h-3" />
                 {t(
@@ -151,7 +151,7 @@ export function ClinicalDiffConfirmModal({
               </Badge>
             )}
           </div>
-          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-[10px]">
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-3xs">
             {t("copilot.diffModal.statutoryBadge", "Zákon 39/2007 Z. z. autorizácia")}
           </Badge>
         </div>
@@ -170,7 +170,7 @@ export function ClinicalDiffConfirmModal({
                   "UPOZORNENIE: Kontrolovaná látka (Zákon 139/1998 Z. z.)"
                 )}
               </div>
-              <p className="text-red-800 dark:text-red-400 leading-relaxed text-[11px]">
+              <p className="text-red-800 dark:text-red-400 leading-relaxed text-2xs">
                 {t(
                   "copilot.diffModal.controlledWarningText",
                   "Pre kontrolované omamné a psychotropné látky (opiáty, sedatíva) je automatické dopĺňanie AI prísne zakázané. Dávku, spôsob podania a spotrebu musí ošetrujúci veterinárny lekár zadať manuálne."
@@ -185,7 +185,7 @@ export function ClinicalDiffConfirmModal({
           <div className="rounded-lg border overflow-hidden text-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-muted/50 border-b font-semibold text-muted-foreground text-[11px]">
+                <thead className="bg-muted/50 border-b font-semibold text-muted-foreground text-2xs">
                   <tr>
                     <th className="py-2.5 px-3 w-1/4">
                       {t("copilot.diffModal.colField", "Pole záznamu")}
@@ -210,19 +210,19 @@ export function ClinicalDiffConfirmModal({
                         <td className="py-2.5 px-3 font-medium text-foreground align-top">
                           <div>{field.label}</div>
                           {isControlled && (
-                            <Badge variant="destructive" className="text-[9px] px-1 py-0 mt-1">
+                            <Badge variant="destructive" className="text-4xs px-1 py-0 mt-1">
                               {t("copilot.diffModal.controlledBadge", "Kontrolovaná látka")}
                             </Badge>
                           )}
                           {field.confidence != null && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                            <div className="text-3xs text-muted-foreground mt-0.5">
                               {Math.round(field.confidence * 100)}
                               {t("copilot.diffModal.confidenceSuffix", "% istota")}
                             </div>
                           )}
                         </td>
 
-                        <td className="py-2.5 px-3 text-muted-foreground align-top text-[11px]">
+                        <td className="py-2.5 px-3 text-muted-foreground align-top text-2xs">
                           {field.originalValue ? (
                             field.originalValue
                           ) : (

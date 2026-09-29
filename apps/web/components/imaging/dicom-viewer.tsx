@@ -195,7 +195,7 @@ export function DicomViewer({
       {/* Top Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-950 p-2.5 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="bg-zinc-900 border-zinc-700 text-zinc-300 font-mono text-[10px]">
+          <Badge variant="outline" className="bg-zinc-900 border-zinc-700 text-zinc-300 font-mono text-3xs">
             {metadata?.modality || "RTG"} • {metadata?.cols}x{metadata?.rows} • {metadata?.bitsAllocated}b
           </Badge>
 
@@ -207,7 +207,7 @@ export function DicomViewer({
                 variant="ghost"
                 size="sm"
                 onClick={() => applyPreset(p)}
-                className="h-6 px-2 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                className="h-6 px-2 text-2xs text-zinc-300 hover:bg-zinc-800 hover:text-white"
               >
                 {p.name}
               </Button>
@@ -274,19 +274,19 @@ export function DicomViewer({
         className="relative flex h-[480px] w-full items-center justify-center overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none"
       >
         {/* Corner HUD Overlays */}
-        <div className="pointer-events-none absolute left-3 top-3 text-[11px] font-mono text-zinc-400 drop-shadow">
+        <div className="pointer-events-none absolute left-3 top-3 text-2xs font-mono text-zinc-400 drop-shadow">
           <div>{metadata?.patientName || "Pacient"}</div>
-          <div className="text-[10px] text-zinc-500">ID: {metadata?.patientId || "—"}</div>
+          <div className="text-3xs text-zinc-500">ID: {metadata?.patientId || "—"}</div>
         </div>
 
-        <div className="pointer-events-none absolute right-3 top-3 text-right text-[11px] font-mono text-zinc-400 drop-shadow">
+        <div className="pointer-events-none absolute right-3 top-3 text-right text-2xs font-mono text-zinc-400 drop-shadow">
           <div>{metadata?.studyDate || "Dátum štúdie"}</div>
-          <div className="text-[10px] text-zinc-500">{metadata?.manufacturer || ""}</div>
+          <div className="text-3xs text-zinc-500">{metadata?.manufacturer || ""}</div>
         </div>
 
-        <div className="pointer-events-none absolute bottom-3 left-3 text-[11px] font-mono text-zinc-400 drop-shadow">
+        <div className="pointer-events-none absolute bottom-3 left-3 text-2xs font-mono text-zinc-400 drop-shadow">
           <div>WL: {Math.round(windowCenter)} WW: {Math.round(windowWidth)}</div>
-          <div className="text-[10px] text-zinc-500">Zoom: {Math.round(zoom * 100)}%</div>
+          <div className="text-3xs text-zinc-500">Zoom: {Math.round(zoom * 100)}%</div>
         </div>
 
         {/* Canvas Element */}
@@ -306,7 +306,7 @@ export function DicomViewer({
         <div className="flex items-center gap-4 w-full sm:w-auto">
           {/* Window Center (Jas) */}
           <div className="flex items-center gap-2 flex-1 sm:w-48">
-            <span className="text-[10px] font-mono text-zinc-400">WL:</span>
+            <span className="text-3xs font-mono text-zinc-400">WL:</span>
             <input
               type="range"
               min={-1000}
@@ -320,7 +320,7 @@ export function DicomViewer({
 
           {/* Window Width (Kontrast) */}
           <div className="flex items-center gap-2 flex-1 sm:w-48">
-            <span className="text-[10px] font-mono text-zinc-400">WW:</span>
+            <span className="text-3xs font-mono text-zinc-400">WW:</span>
             <input
               type="range"
               min={1}

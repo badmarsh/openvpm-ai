@@ -190,7 +190,7 @@ export function PrescriptionsTab({
                           {isControlled ? (
                             <span
                               title={t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}
-                              className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                              className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-2xs font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                             >
                               <ShieldAlert className="h-3 w-3" />
                               {t("patients.prescriptionsTab.controlledBadge", "Controlled")}
@@ -198,7 +198,7 @@ export function PrescriptionsTab({
                           ) : null}
                         </span>
                         {isControlled ? (
-                          <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+                          <p className="mt-0.5 text-2xs text-amber-700 dark:text-amber-300">
                             {t("patients.prescriptionsTab.controlledWarning", "Controlled substance — manual entry required (Act 139/1998). No AI prefill.")}
                           </p>
                         ) : null}

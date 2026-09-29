@@ -707,7 +707,7 @@ export const RecordingButton = forwardRef<
         {isActivelySimulating && (
           <Badge
             variant="outline"
-            className="gap-1 border-violet-300 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-[11px]"
+            className="gap-1 border-violet-300 dark:border-violet-800 bg-violet-50/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-2xs"
           >
             <Sparkles className="h-3 w-3 text-violet-500" />
             {t("voice.demo.simulationBadge", "Simulovaný mikrofón (Demo)")}

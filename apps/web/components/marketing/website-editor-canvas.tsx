@@ -108,7 +108,7 @@ function SortableSectionCard({
           </Badge>
 
           {!section.visible && (
-            <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20 text-[11px]">
+            <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20 text-2xs">
               <EyeOff className="h-3 w-3" />
               {t("marketing.website.hiddenSection", "Skrytá sekcia")}
             </Badge>

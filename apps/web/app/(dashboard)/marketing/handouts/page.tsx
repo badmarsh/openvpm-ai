@@ -186,7 +186,7 @@ export default function HandoutsPage() {
                   : t("marketing.handouts.aiToggleShow", "Otvoriť AI Generátor")}
               </Button>
               {aiImageUrl && (
-                <Badge variant="secondary" className="text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                <Badge variant="secondary" className="text-3xs bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
                   {t("marketing.handouts.aiImageBadge", "✓ AI obrázok vygenerovaný")}
                 </Badge>
               )}
@@ -247,7 +247,7 @@ export default function HandoutsPage() {
                     placeholder="starostlivost-po-kastraci"
                     pattern="[a-z0-9-]+"
                   />
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     {t("marketing.handouts.slugHelp", "Len malé písmená bez diakritiky, čísla a pomlčky.")}
                   </p>
                 </div>
@@ -370,22 +370,22 @@ export default function HandoutsPage() {
                     <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center shrink-0">
                       <PawPrint className="w-3.5 h-3.5 text-white" />
                     </span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest truncate">
+                    <span className="text-3xs font-extrabold uppercase tracking-widest truncate">
                       {clinicName}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90 uppercase tracking-wide">
+                    <span className="text-4xs font-bold px-2 py-0.5 rounded-full bg-white/15 text-white/90 uppercase tracking-wide">
                       EDUKAČNÝ LETÁK
                     </span>
                     {handout.isPublic ? (
-                      <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-success text-success-foreground">
+                      <span className="flex items-center gap-1 text-4xs font-bold px-2 py-0.5 rounded-full bg-success text-success-foreground">
                         <Globe className="h-2.5 w-2.5" />
                         Verejný
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                      <span className="flex items-center gap-1 text-4xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         <Lock className="h-2.5 w-2.5" />
                         Interný
                       </span>
@@ -407,7 +407,7 @@ export default function HandoutsPage() {
 
                     {/* Category Stamp on bottom-left */}
                     <div className="absolute bottom-2.5 left-2.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-white/95 text-stone-900 backdrop-blur-md shadow-sm border border-stone-200">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-3xs font-bold bg-white/95 text-stone-900 backdrop-blur-md shadow-sm border border-stone-200">
                         {theme.category}
                       </span>
                     </div>
@@ -417,7 +417,7 @@ export default function HandoutsPage() {
                       {handout.species?.map((s: string) => (
                         <span
                           key={s}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-900/80 text-white backdrop-blur-md shadow-xs"
+                          className="px-2 py-0.5 rounded-full text-3xs font-bold bg-stone-900/80 text-white backdrop-blur-md shadow-xs"
                         >
                           {s.toLowerCase() === "canine" || s.toLowerCase() === "pes"
                             ? "🐶 Pes"
@@ -439,13 +439,13 @@ export default function HandoutsPage() {
 
                     {/* Structured Flyer Checklist (Čo robiť / Zásady) */}
                     <div className="rounded-xl bg-muted/40 border border-border p-2.5 space-y-1.5">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground flex items-center gap-1">
+                      <p className="text-3xs font-extrabold uppercase tracking-wider text-foreground flex items-center gap-1">
                         <Check className="w-3 h-3 text-brand" />
                         Hlavné zásady starostlivosti:
                       </p>
                       <ul className="space-y-1">
                         {checklist.map((item, idx) => (
-                          <li key={idx} className="text-[11px] leading-tight text-muted-foreground flex items-start gap-1.5">
+                          <li key={idx} className="text-2xs leading-tight text-muted-foreground flex items-start gap-1.5">
                             <span className="text-brand font-bold shrink-0">✓</span>
                             <span className="line-clamp-1">{item}</span>
                           </li>
@@ -454,7 +454,7 @@ export default function HandoutsPage() {
                     </div>
 
                     {/* Warning Callout */}
-                    <div className="rounded-lg bg-warning/10 border border-warning/30 px-2.5 py-1.5 text-[10px] text-warning-muted-foreground flex items-start gap-1.5">
+                    <div className="rounded-lg bg-warning/10 border border-warning/30 px-2.5 py-1.5 text-3xs text-warning-muted-foreground flex items-start gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
                         <strong>Kedy volať lekára:</strong> Apatia, zvracanie, krvácanie z rany alebo teplota.
@@ -470,11 +470,11 @@ export default function HandoutsPage() {
                           <QrCode className="w-6 h-6 text-stone-900 dark:text-stone-100" />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-stone-800 dark:text-stone-200">
+                          <div className="flex items-center gap-1 text-3xs font-extrabold uppercase text-stone-800 dark:text-stone-200">
                             <Smartphone className="w-3 h-3 text-brand" />
                             Naskenujte do mobilu
                           </div>
-                          <p className="text-[10px] font-mono text-muted-foreground truncate">
+                          <p className="text-3xs font-mono text-muted-foreground truncate">
                             /h/{handout.slug}
                           </p>
                         </div>
@@ -483,7 +483,7 @@ export default function HandoutsPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="h-7 px-2.5 text-[11px] gap-1 shrink-0 font-semibold"
+                        className="h-7 px-2.5 text-2xs gap-1 shrink-0 font-semibold"
                         onClick={() => setPreviewHandout(handout)}
                         title="Zobraziť plný leták pripravený na tlač"
                       >
@@ -497,7 +497,7 @@ export default function HandoutsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="w-full gap-1 text-[11px] h-8 px-1.5"
+                        className="w-full gap-1 text-2xs h-8 px-1.5"
                         onClick={() => copyUrl(handout.slug)}
                       >
                         {copied === handout.slug ? (
@@ -516,7 +516,7 @@ export default function HandoutsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="w-full gap-1 text-[11px] h-8 px-1.5"
+                        className="w-full gap-1 text-2xs h-8 px-1.5"
                         onClick={() => window.open(`/h/${handout.slug}`, "_blank")}
                         title="Vytlačiť leták"
                       >
@@ -528,7 +528,7 @@ export default function HandoutsPage() {
                         href={`/h/${handout.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1 text-[11px] font-medium border rounded-md px-1.5 h-8 bg-background hover:bg-muted/80 transition-colors"
+                        className="inline-flex items-center justify-center gap-1 text-2xs font-medium border rounded-md px-1.5 h-8 bg-background hover:bg-muted/80 transition-colors"
                       >
                         <ExternalLink className="h-3 w-3" />
                         <span>Otvoriť</span>

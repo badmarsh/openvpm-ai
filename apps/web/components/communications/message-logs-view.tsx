@@ -116,7 +116,7 @@ export function MessageLogsView() {
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-foreground">{stats.delivered + stats.sent}</div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             {t("marketing.messages.statsDeliveredDesc", "Úspešne odoslané správy")}
           </p>
         </div>
@@ -127,7 +127,7 @@ export function MessageLogsView() {
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-bold text-foreground">{stats.queued}</div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             {t("marketing.messages.statsQueuedDesc", "Splatné podľa harmonogramu")}
           </p>
         </div>
@@ -138,7 +138,7 @@ export function MessageLogsView() {
             <ShieldAlert className="w-4 h-4 text-purple-500" />
           </div>
           <div className="text-2xl font-bold text-foreground">{stats.blocked_sympathy}</div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             {t("marketing.messages.statsBlockedSympathyDesc", "Ochrana smútiacich majiteľov")}
           </p>
         </div>
@@ -149,7 +149,7 @@ export function MessageLogsView() {
             <AlertTriangle className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="text-2xl font-bold text-foreground">{suppressedTotal}</div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             {t("marketing.messages.statsSuppressedDesc", "Rate limit, tichý režim, bez súhlasu")}
           </p>
         </div>
@@ -241,11 +241,11 @@ export function MessageLogsView() {
                         {client ? `${client.firstName} ${client.lastName}` : t("common.client", "Klient")}
                       </span>
                       {patient?.name && (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-3xs">
                           {patient.name} ({patient.species || t("inbox.patientSpeciesFallback", "Pet")})
                         </Badge>
                       )}
-                      <span className="text-muted-foreground text-[11px] flex items-center gap-1">
+                      <span className="text-muted-foreground text-2xs flex items-center gap-1">
                         {log.channel === "email" ? (
                           <Mail className="w-3 h-3 text-muted-foreground" />
                         ) : (
@@ -257,12 +257,12 @@ export function MessageLogsView() {
 
                     <div className="flex items-center gap-1.5">
                       {isBlockedSympathy ? (
-                        <Badge className="bg-purple-600 text-white font-semibold text-[10px] gap-1">
+                        <Badge className="bg-purple-600 text-white font-semibold text-3xs gap-1">
                           <ShieldAlert className="w-3 h-3" />
                           {t("marketing.messages.badgeBlockedSympathy", "Zablokované: Sympathy Flow")}
                         </Badge>
                       ) : isSuppressed ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-400 text-[10px]">
+                        <Badge variant="outline" className="text-amber-600 border-amber-400 text-3xs">
                           {log.status === "suppressed_no_consent"
                             ? t("marketing.messages.badgeNoConsent", "Potlačené: Bez súhlasu")
                             : log.status === "suppressed_rate"
@@ -270,17 +270,17 @@ export function MessageLogsView() {
                             : t("marketing.messages.badgeQuietHours", "Potlačené: Tichý režim")}
                         </Badge>
                       ) : isDelivered ? (
-                        <Badge className="bg-emerald-600 text-white text-[10px] gap-1">
+                        <Badge className="bg-emerald-600 text-white text-3xs gap-1">
                           <CheckCircle2 className="w-3 h-3" />
                           {t("marketing.messages.badgeDelivered", "Doručené")}
                         </Badge>
                       ) : log.status === "failed" ? (
-                        <Badge variant="destructive" className="text-[10px] gap-1">
+                        <Badge variant="destructive" className="text-3xs gap-1">
                           <XCircle className="w-3 h-3" />
                           {t("marketing.messages.badgeFailed", "Zlyhanie odoslania")}
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] gap-1">
+                        <Badge variant="secondary" className="text-3xs gap-1">
                           <Clock className="w-3 h-3" />
                           {t("marketing.messages.badgeQueued", "Vo fronte")}
                         </Badge>
@@ -288,11 +288,11 @@ export function MessageLogsView() {
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-muted/40 font-mono text-[12px] text-foreground leading-relaxed">
+                  <div className="p-3 rounded-lg bg-muted/40 font-mono text-xs text-foreground leading-relaxed">
                     {log.bodyRendered}
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between text-[11px] text-muted-foreground gap-2 pt-1">
+                  <div className="flex flex-wrap items-center justify-between text-2xs text-muted-foreground gap-2 pt-1">
                     <span>
                       {t("marketing.messages.logTemplate", "Šablóna:")} <strong>{log.templateKey}</strong> (v{log.templateVersion}) · {t("marketing.messages.logLegalBasis", "Základ:")} {log.legalBasis}
                     </span>

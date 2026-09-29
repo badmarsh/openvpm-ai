@@ -76,7 +76,7 @@ function DiffBlock({ before, after }: { before?: unknown; after?: unknown }) {
   const lines: DiffLine[] = diffLines(beforeStr, afterStr);
 
   return (
-    <div className="mt-2 overflow-hidden rounded-md border border-border font-mono text-[11px] leading-relaxed">
+    <div className="mt-2 overflow-hidden rounded-md border border-border font-mono text-2xs leading-relaxed">
       {lines.slice(0, 200).map((line, idx) => (
         <div
           key={idx}
@@ -132,11 +132,11 @@ export function AuditHistoryTimeline({
             <div className="rounded-lg border border-border bg-card p-3">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-sm font-semibold">{meta.label}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-2xs text-muted-foreground">
                   {event.action}
                 </span>
                 {event.reason && (
-                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-2xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                     Dôvod: {event.reason}
                   </span>
                 )}
@@ -147,7 +147,7 @@ export function AuditHistoryTimeline({
                   <User className="h-3.5 w-3.5" />
                   {event.actorName ?? "Neznámy používateľ"}
                   {event.actorRole ? (
-                    <span className="rounded bg-muted px-1 text-[10px] uppercase">
+                    <span className="rounded bg-muted px-1 text-3xs uppercase">
                       {event.actorRole}
                     </span>
                   ) : null}
@@ -167,7 +167,7 @@ export function AuditHistoryTimeline({
               {hasDiff && <DiffBlock before={event.before} after={event.after} />}
 
               {showHashChain && event.eventHash && (
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-2xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Fingerprint className="h-3.5 w-3.5" />
                     Pečať:{" "}
