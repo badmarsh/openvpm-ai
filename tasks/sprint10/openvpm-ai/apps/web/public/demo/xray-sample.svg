@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" style="background:#0a0c10; font-family: sans-serif;">
+  <!-- Grayscale gradient overlay -->
+  <defs>
+    <radialGradient id="lungField" cx="50%" cy="45%" r="40%">
+      <stop offset="0%" stop-color="#141923" />
+      <stop offset="100%" stop-color="#07090d" />
+    </radialGradient>
+    <radialGradient id="cardiac" cx="48%" cy="52%" r="30%">
+      <stop offset="0%" stop-color="#9aa4b2" stop-opacity="0.85" />
+      <stop offset="70%" stop-color="#555f6d" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#2a303c" stop-opacity="0.2" />
+    </radialGradient>
+    <linearGradient id="spine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#e2e8f0" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.9" />
+    </linearGradient>
+  </defs>
+
+  <!-- Patient & Clinic Metadata Overlay (DICOM style) -->
+  <g fill="#94a3b8" font-size="12" font-family="monospace">
+    <text x="25" y="30">VETSYKORA CLINIC - DIGITAL RADIOGRAPHY</text>
+    <text x="25" y="50">ID: PAT-BONO-2026-09</text>
+    <text x="25" y="70">PACIENT: BONO (CANINE, LABRADOR, 7Y)</text>
+    <text x="25" y="90">PROJECTION: RIGHT LATERAL THORAX</text>
+    <text x="25" y="110">kVp: 72  mA: 200  mAs: 4.0</text>
+    <text x="650" y="30">DATE: 2026-09-11</text>
+    <text x="650" y="50">ACC: #XR-88412</text>
+    <text x="730" y="90" font-size="28" font-weight="bold" fill="#f8fafc">R</text>
+  </g>
+
+  <!-- Thoracic Cavity Silhouette -->
+  <ellipse cx="440" cy="330" rx="260" ry="180" fill="url(#lungField)" stroke="#1e293b" stroke-width="2" />
+
+  <!-- Diaphragm Line -->
+  <path d="M 640 180 Q 560 330 650 480" fill="none" stroke="#64748b" stroke-width="4" opacity="0.6" />
+
+  <!-- Thoracic Spine (Vertebrae T1 to T13) -->
+  <rect x="180" y="145" width="460" height="28" rx="4" fill="url(#spine)" opacity="0.85" />
+  <!-- Vertebral body segments & Intervertebral discs -->
+  
+    <line x1="215" y1="145" x2="215" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 200 145 L 215 115 L 230 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="251" y1="145" x2="251" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 236 145 L 251 115 L 266 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="287" y1="145" x2="287" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 272 145 L 287 115 L 302 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="323" y1="145" x2="323" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 308 145 L 323 115 L 338 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="359" y1="145" x2="359" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 344 145 L 359 115 L 374 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="395" y1="145" x2="395" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 380 145 L 395 115 L 410 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="431" y1="145" x2="431" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 416 145 L 431 115 L 446 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="467" y1="145" x2="467" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 452 145 L 467 115 L 482 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="503" y1="145" x2="503" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 488 145 L 503 115 L 518 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="539" y1="145" x2="539" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 524 145 L 539 115 L 554 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="575" y1="145" x2="575" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 560 145 L 575 115 L 590 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+    <line x1="611" y1="145" x2="611" y2="173" stroke="#0a0c10" stroke-width="3" />
+    <path d="M 596 145 L 611 115 L 626 145 Z" fill="#94a3b8" opacity="0.5" />
+  
+
+  <!-- Ribs (Costae) curved shadows -->
+  
+    <path d="M 220 170 Q 260 320 210 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 255 170 Q 292 320 244 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 290 170 Q 324 320 278 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 325 170 Q 356 320 312 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 360 170 Q 388 320 346 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 395 170 Q 420 320 380 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 430 170 Q 452 320 414 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 465 170 Q 484 320 448 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 500 170 Q 516 320 482 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 535 170 Q 548 320 516 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+    <path d="M 570 170 Q 580 320 550 470" fill="none" stroke="#64748b" stroke-width="7" opacity="0.45" />
+  
+
+  <!-- Trachea radiolucent band (dark line sloping into thorax) -->
+  <path d="M 120 220 Q 280 250 380 275" fill="none" stroke="#07090d" stroke-width="14" stroke-linecap="round" opacity="0.9" />
+
+  <!-- Heart Silhouette (Cardiomegaly / VHS demo) -->
+  <ellipse cx="410" cy="350" rx="90" ry="115" transform="rotate(-18 410 350)" fill="url(#cardiac)" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.9" />
+
+  <!-- VHS Measurement Axis Lines (Subtle) -->
+  <line x1="330" y1="260" x2="480" y2="435" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.75" />
+  <line x1="475" y1="285" x2="335" y2="400" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.75" />
+  <text x="350" y="250" fill="#38bdf8" font-size="11" font-family="monospace">L: 104 mm</text>
+  <text x="485" y="295" fill="#38bdf8" font-size="11" font-family="monospace">S: 82 mm</text>
+
+  <!-- Sternum (bottom border) -->
+  <rect x="220" y="475" width="340" height="16" rx="3" fill="#cbd5e1" opacity="0.7" />
+
+  <!-- Scale calibration bar -->
+  <g transform="translate(40, 520)" fill="#64748b">
+    <line x1="0" y1="0" x2="100" y2="0" stroke="#64748b" stroke-width="3" />
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="#64748b" stroke-width="2" />
+    <line x1="50" y1="-4" x2="50" y2="4" stroke="#64748b" stroke-width="1" />
+    <line x1="100" y1="-6" x2="100" y2="6" stroke="#64748b" stroke-width="2" />
+    <text x="30" y="20" font-size="11" font-family="monospace">10 cm</text>
+  </g>
+</svg>

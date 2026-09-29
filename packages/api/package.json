@@ -8,6 +8,7 @@
     "./validators/*": "./validators/*.ts"
   },
   "dependencies": {
+    "@trpc/server": "^11.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

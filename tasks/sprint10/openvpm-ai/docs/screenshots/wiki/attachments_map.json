@@ -1,0 +1,314 @@
+{
+  "01-01-prihlasenie.png": {
+    "id": "f798d2c8-f44e-41c5-95b9-27400e198c76",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=f798d2c8-f44e-41c5-95b9-27400e198c76",
+    "name": "01-01-prihlasenie.png",
+    "size": 28614
+  },
+  "01-02-denny-harmonogram.png": {
+    "id": "5a820d0b-74bd-4c8f-91ff-7c38cddd7886",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=5a820d0b-74bd-4c8f-91ff-7c38cddd7886",
+    "name": "01-02-denny-harmonogram.png",
+    "size": 98473
+  },
+  "01-03-rychle-vyhladavanie-cmd-k.png": {
+    "id": "4376610f-118d-4896-b195-ca0d75482341",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=4376610f-118d-4896-b195-ca0d75482341",
+    "name": "01-03-rychle-vyhladavanie-cmd-k.png",
+    "size": 122789
+  },
+  "01-04-whiteboard-ambulancie.png": {
+    "id": "a5488390-b02b-48bc-b89f-63d290744bd0",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=a5488390-b02b-48bc-b89f-63d290744bd0",
+    "name": "01-04-whiteboard-ambulancie.png",
+    "size": 130333
+  },
+  "02-01-zoznam-pacientov.png": {
+    "id": "536c5963-eb01-4f18-bb76-415029a80a2a",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=536c5963-eb01-4f18-bb76-415029a80a2a",
+    "name": "02-01-zoznam-pacientov.png",
+    "size": 171553
+  },
+  "02-02-profil-pacienta.png": {
+    "id": "d1f656c4-b8a3-48c6-881f-342dbf4d8e95",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=d1f656c4-b8a3-48c6-881f-342dbf4d8e95",
+    "name": "02-02-profil-pacienta.png",
+    "size": 130541
+  },
+  "02-03-soap-klinicky-zaznam.png": {
+    "id": "7980d3dd-cf1d-4e8d-a5ac-7f8b159683cc",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=7980d3dd-cf1d-4e8d-a5ac-7f8b159683cc",
+    "name": "02-03-soap-klinicky-zaznam.png",
+    "size": 142286
+  },
+  "02-04-ockovania-preukaz.png": {
+    "id": "3e76e775-7a2e-41b4-94f0-cd2a61a5a02f",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=3e76e775-7a2e-41b4-94f0-cd2a61a5a02f",
+    "name": "02-04-ockovania-preukaz.png",
+    "size": 206755
+  },
+  "03-01-vystavenie-uctu.png": {
+    "id": "5c11a960-ddd4-4882-b1fb-f972e708c13c",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=5c11a960-ddd4-4882-b1fb-f972e708c13c",
+    "name": "03-01-vystavenie-uctu.png",
+    "size": 144281
+  },
+  "03-02-ekasa-prehlad.png": {
+    "id": "ff36da5e-917d-47ba-af43-291dbee50464",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=ff36da5e-917d-47ba-af43-291dbee50464",
+    "name": "03-02-ekasa-prehlad.png",
+    "size": 132309
+  },
+  "04-01-skladove-zasoby.png": {
+    "id": "36928ad3-6ec2-4a81-96a2-6d65dffb2e79",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=36928ad3-6ec2-4a81-96a2-6d65dffb2e79",
+    "name": "04-01-skladove-zasoby.png",
+    "size": 216869
+  },
+  "04-02-kniha-opl-narkotika.png": {
+    "id": "40339d8d-dbf2-4277-8152-f79decb8608d",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=40339d8d-dbf2-4277-8152-f79decb8608d",
+    "name": "04-02-kniha-opl-narkotika.png",
+    "size": 179001
+  },
+  "05-01-statne-registre-prehlad.png": {
+    "id": "f4d9b1eb-2c8e-4922-acf3-5065454f3f91",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=f4d9b1eb-2c8e-4922-acf3-5065454f3f91",
+    "name": "05-01-statne-registre-prehlad.png",
+    "size": 229013
+  },
+  "06-01-laboratorne-vysledky.png": {
+    "id": "c46ff92f-2b6f-4b78-bdd1-8be7528500fc",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=c46ff92f-2b6f-4b78-bdd1-8be7528500fc",
+    "name": "06-01-laboratorne-vysledky.png",
+    "size": 203317
+  },
+  "07-01-website-editor.png": {
+    "id": "cbe7ef63-62ff-46e6-ac4b-8f83363a5983",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=cbe7ef63-62ff-46e6-ac4b-8f83363a5983",
+    "name": "07-01-website-editor.png",
+    "size": 163038
+  },
+  "08-01-marketingove-kampane.png": {
+    "id": "bfdcab62-72d1-4475-97f1-e97cfdc18f8e",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=bfdcab62-72d1-4475-97f1-e97cfdc18f8e",
+    "name": "08-01-marketingove-kampane.png",
+    "size": 344702
+  },
+  "10-01-sprava-personalu-roly.png": {
+    "id": "13afb462-9070-486e-ade1-147a7a20675e",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=13afb462-9070-486e-ade1-147a7a20675e",
+    "name": "10-01-sprava-personalu-roly.png",
+    "size": 196228
+  },
+  "11-01-financny-dashboard.png": {
+    "id": "06b82bbd-024e-4227-b730-597393070a93",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=06b82bbd-024e-4227-b730-597393070a93",
+    "name": "11-01-financny-dashboard.png",
+    "size": 123343
+  },
+  "14-01-ai-sidebar-konzultacia.png": {
+    "id": "294076a4-2106-4984-aef1-2a2c614514a0",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=294076a4-2106-4984-aef1-2a2c614514a0",
+    "name": "14-01-ai-sidebar-konzultacia.png",
+    "size": 176701
+  },
+  "01-05-cakaren-ambulancie.png": {
+    "id": "23b4b091-f308-4c2b-ae76-a63f60936075",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=23b4b091-f308-4c2b-ae76-a63f60936075",
+    "name": "01-05-cakaren-ambulancie.png",
+    "size": 169529
+  },
+  "01-06-inbox-notifikacie.png": {
+    "id": "4a020d82-4381-4a67-a3a8-171f83f7f9e0",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=4a020d82-4381-4a67-a3a8-171f83f7f9e0",
+    "name": "01-06-inbox-notifikacie.png",
+    "size": 127112
+  },
+  "02-05-profil-klienta.png": {
+    "id": "2394be66-eada-4f68-85a5-fbffc7e751a6",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=2394be66-eada-4f68-85a5-fbffc7e751a6",
+    "name": "02-05-profil-klienta.png",
+    "size": 148260
+  },
+  "05-02-kniha-besnoty.png": {
+    "id": "11541dc5-a884-47ce-8e8e-997c41b06bd1",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=11541dc5-a884-47ce-8e8e-997c41b06bd1",
+    "name": "05-02-kniha-besnoty.png",
+    "size": 228633
+  },
+  "09-01-klientsky-portal-prehlad.png": {
+    "id": "62dcfb88-ae0d-4296-adf0-e7d28c2e7ad7",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=62dcfb88-ae0d-4296-adf0-e7d28c2e7ad7",
+    "name": "09-01-klientsky-portal-prehlad.png",
+    "size": 74954
+  },
+  "09-02-klientsky-portal-profil.png": {
+    "id": "143ebe82-2b40-4723-a508-6eda058282ed",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=143ebe82-2b40-4723-a508-6eda058282ed",
+    "name": "09-02-klientsky-portal-profil.png",
+    "size": 65126
+  },
+  "09-03-klientsky-portal-objednavanie.png": {
+    "id": "bc57d931-99ac-4bde-b380-bb234bda0415",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=bc57d931-99ac-4bde-b380-bb234bda0415",
+    "name": "09-03-klientsky-portal-objednavanie.png",
+    "size": 61810
+  },
+  "12-01-wellness-plany-prehlad.png": {
+    "id": "d5258cb3-514c-4de7-b400-00935c2d7f67",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=d5258cb3-514c-4de7-b400-00935c2d7f67",
+    "name": "12-01-wellness-plany-prehlad.png",
+    "size": 138591
+  },
+  "13-01-sprava-dat-exporty.png": {
+    "id": "3014a89f-4734-4826-bf95-04f726b70258",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=3014a89f-4734-4826-bf95-04f726b70258",
+    "name": "13-01-sprava-dat-exporty.png",
+    "size": 191076
+  },
+  "15-01-ical-subscribe-dialog.png": {
+    "id": "d3775b3b-916f-4ce5-b536-10c71b0e0a3b",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=d3775b3b-916f-4ce5-b536-10c71b0e0a3b",
+    "name": "15-01-ical-subscribe-dialog.png",
+    "size": 124155
+  },
+  "01-07-nova-rezervacia-dialog.png": {
+    "id": "7a9091c2-15a8-43ff-ba5c-e3fe5923f53a",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=7a9091c2-15a8-43ff-ba5c-e3fe5923f53a",
+    "name": "01-07-nova-rezervacia-dialog.png",
+    "size": 109849
+  },
+  "02-06-dialog-pridania-ockovania.png": {
+    "id": "6245a511-9c91-4aad-ab1b-a11f169d668f",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=6245a511-9c91-4aad-ab1b-a11f169d668f",
+    "name": "02-06-dialog-pridania-ockovania.png",
+    "size": 90300
+  },
+  "02-07-vahovy-graf-pupinka.png": {
+    "id": "7de3cde3-9c22-43b5-ab49-669c03ca56ce",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=7de3cde3-9c22-43b5-ab49-669c03ca56ce",
+    "name": "02-07-vahovy-graf-pupinka.png",
+    "size": 154670
+  },
+  "02-08-finalizacia-podpis-zaznamu.png": {
+    "id": "398ebe36-3c52-40d4-b87e-a43ab1df47bc",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=398ebe36-3c52-40d4-b87e-a43ab1df47bc",
+    "name": "02-08-finalizacia-podpis-zaznamu.png",
+    "size": 170104
+  },
+  "03-03-nova-faktura-tvorba.png": {
+    "id": "79db598c-99ed-4130-85ff-767d5c61f9ba",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=79db598c-99ed-4130-85ff-767d5c61f9ba",
+    "name": "03-03-nova-faktura-tvorba.png",
+    "size": 99781
+  },
+  "03-04-ekasa-hotovostny-blok.png": {
+    "id": "16b5c66c-e1d8-4176-85bf-b009a308c9c7",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=16b5c66c-e1d8-4176-85bf-b009a308c9c7",
+    "name": "03-04-ekasa-hotovostny-blok.png",
+    "size": 188542
+  },
+  "03-05-ekasa-denna-uzavierka.png": {
+    "id": "aabb81dc-4d4a-45e3-a490-ed6dc5c3db62",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=aabb81dc-4d4a-45e3-a490-ed6dc5c3db62",
+    "name": "03-05-ekasa-denna-uzavierka.png",
+    "size": 150551
+  },
+  "04-03-opl-dialog-zaznam-podania.png": {
+    "id": "c8b6c088-4f30-4cf4-a033-58c33ab6d5c6",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=c8b6c088-4f30-4cf4-a033-58c33ab6d5c6",
+    "name": "04-03-opl-dialog-zaznam-podania.png",
+    "size": 181666
+  },
+  "04-04-prijem-tovaru-form.png": {
+    "id": "9de7c352-d8a5-414b-b968-474a511a1e3a",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=9de7c352-d8a5-414b-b968-474a511a1e3a",
+    "name": "04-04-prijem-tovaru-form.png",
+    "size": 218540
+  },
+  "05-03-kvepis-prehlad.png": {
+    "id": "63facce2-d118-46d0-9191-1539a4742240",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=63facce2-d118-46d0-9191-1539a4742240",
+    "name": "05-03-kvepis-prehlad.png",
+    "size": 151071
+  },
+  "05-04-ochranne-lehoty-potraviny.png": {
+    "id": "71f97208-325f-4a3d-8cdd-4e991bbc27e6",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=71f97208-325f-4a3d-8cdd-4e991bbc27e6",
+    "name": "05-04-ochranne-lehoty-potraviny.png",
+    "size": 123976
+  },
+  "05-05-informovany-suhlas-dialog.png": {
+    "id": "8e83c6ae-5e25-477a-b0c9-303a15d3b777",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=8e83c6ae-5e25-477a-b0c9-303a15d3b777",
+    "name": "05-05-informovany-suhlas-dialog.png",
+    "size": 191453
+  },
+  "06-02-abnormalny-laboratorny-vysledok.png": {
+    "id": "912ad398-51b8-472e-8f7c-0b31aa6daf83",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=912ad398-51b8-472e-8f7c-0b31aa6daf83",
+    "name": "06-02-abnormalny-laboratorny-vysledok.png",
+    "size": 205445
+  },
+  "06-03-ai-analyza-rtg-snimky.png": {
+    "id": "f23420c7-dc62-4138-b1a0-e4a0b005869d",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=f23420c7-dc62-4138-b1a0-e4a0b005869d",
+    "name": "06-03-ai-analyza-rtg-snimky.png",
+    "size": 158569
+  },
+  "07-02-website-builder-mobilny-nahled.png": {
+    "id": "03a92043-4699-4eaa-b45a-949796b5a51f",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=03a92043-4699-4eaa-b45a-949796b5a51f",
+    "name": "07-02-website-builder-mobilny-nahled.png",
+    "size": 169155
+  },
+  "08-02-customer-journeys-automacie.png": {
+    "id": "48570dab-cc37-4ecb-900c-253a0b79d6fe",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=48570dab-cc37-4ecb-900c-253a0b79d6fe",
+    "name": "08-02-customer-journeys-automacie.png",
+    "size": 76306
+  },
+  "08-03-tv-cakarena-prezentacia.png": {
+    "id": "6105b401-516c-41e4-8c6f-74ad64d65e64",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=6105b401-516c-41e4-8c6f-74ad64d65e64",
+    "name": "08-03-tv-cakarena-prezentacia.png",
+    "size": 183100
+  },
+  "09-04-portal-triage-akutny-stav.png": {
+    "id": "588c0b93-180f-490f-895c-3682d7af1abe",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=588c0b93-180f-490f-895c-3682d7af1abe",
+    "name": "09-04-portal-triage-akutny-stav.png",
+    "size": 77369
+  },
+  "10-02-ekasa-konfiguracia-nastavenia.png": {
+    "id": "f9d4de30-ddd0-4e0b-a615-900e7d406eab",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=f9d4de30-ddd0-4e0b-a615-900e7d406eab",
+    "name": "10-02-ekasa-konfiguracia-nastavenia.png",
+    "size": 165738
+  },
+  "10-03-sablony-dokumentov.png": {
+    "id": "aa321585-2963-4852-aa29-abf6d9b03b36",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=aa321585-2963-4852-aa29-abf6d9b03b36",
+    "name": "10-03-sablony-dokumentov.png",
+    "size": 178990
+  },
+  "11-02-legislativny-report-svps.png": {
+    "id": "00000151-88dc-4155-9658-8ef59e2afc84",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=00000151-88dc-4155-9658-8ef59e2afc84",
+    "name": "11-02-legislativny-report-svps.png",
+    "size": 121355
+  },
+  "12-02-registracia-do-wellness-planu.png": {
+    "id": "9917ddf4-941f-4517-ab8b-1ae9f428e64a",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=9917ddf4-941f-4517-ab8b-1ae9f428e64a",
+    "name": "12-02-registracia-do-wellness-planu.png",
+    "size": 161554
+  },
+  "14-02-ai-agent-schvalenie-akcie.png": {
+    "id": "605e2620-ee1e-4426-84af-7741728d7361",
+    "url": "https://outline.dev.significa.sk/api/attachments.redirect?id=605e2620-ee1e-4426-84af-7741728d7361",
+    "name": "14-02-ai-agent-schvalenie-akcie.png",
+    "size": 173769
+  }
+}

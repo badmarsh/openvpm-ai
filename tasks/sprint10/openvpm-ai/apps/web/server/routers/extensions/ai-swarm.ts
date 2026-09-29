@@ -1,0 +1,330 @@
+/**
+ * AI Swarm & AgentOS Management Router for OpenVPM AI.
+ * Provides real-time status of AgentOS runtime (:7777), active Arena sessions,
+ * task pipelines, telemetry, and agent fleet configuration.
+ *
+ * Strict upstream zero-conflict compliance: Isolated under extensionsRouter.
+ */
+import fs from "fs";
+import path from "path";
+import { z } from "zod";
+import { createRouter, protectedProcedure } from "../../trpc";
+
+export interface SwarmAgentInfo {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  model: string;
+  provider: string;
+  category: "orchestrator" | "developer" | "qa" | "operations";
+  status: "ready" | "busy" | "standby";
+  tools: string[];
+}
+
+export interface SwarmTeamInfo {
+  id: string;
+  name: string;
+  mode: string;
+  leader: string;
+  members: string[];
+  description: string;
+}
+
+export interface SwarmWorkflowInfo {
+  id: string;
+  name: string;
+  stepsCount: number;
+  description: string;
+}
+
+export interface SwarmSession {
+  sessionId: string;
+  module: string;
+  promptSummary?: string;
+  targetModel?: string;
+  status: "COMPLETED" | "RUNNING" | "FAILED" | "PENDING" | "UNKNOWN";
+  createdAt?: string;
+  progress?: string;
+}
+
+export interface SwarmTask {
+  taskId: string;
+  title: string;
+  state: string;
+  declaredRisk?: string;
+  allowedPaths?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  failureReason?: string;
+  repairAttempts?: number;
+}
+
+const STATIC_FLEET: SwarmAgentInfo[] = [
+  {
+    id: "prompt_manager",
+    name: "Prompt Manager & Dev Leader",
+    role: "Orchestrácia & Golden Ticket architektúra",
+    description: "Preskúma požiadavku, overí pravidlá OpenVPM (AGENTS.md, UIKIT.md, i18n, zero-conflict) a pripraví Golden Ticket.",
+    model: "Gemini 3.8 Flash / Qwen Coder Plus",
+    provider: "Antigravity / AliProxy",
+    category: "orchestrator",
+    status: "ready",
+    tools: ["create_and_dispatch_arena_task", "evaluate_verification_and_repair", "read_project_file"],
+  },
+  {
+    id: "arena_dispatcher",
+    name: "Arena Dispatcher",
+    role: "Browser Automation & Tab Dispatch",
+    description: "Automatické otvorenie Arena.ai cez Chrome DevTools Protocol (port 9222) a vloženie zadania do relácie.",
+    model: "Gemini 3.8 Flash",
+    provider: "Antigravity Proxy",
+    category: "operations",
+    status: "ready",
+    tools: ["dispatch_to_arena_session", "send_prompt_to_arena_browser", "open_arena_in_browser"],
+  },
+  {
+    id: "arena_watcher",
+    name: "Arena Watcher & Heartbeat",
+    role: "Proaktívny dohľad & zber patchov",
+    description: "Sleduje prechody stavov v tasks/, deteguje uviaznuté relácie, zberá hotový diff a vytvára .patch súbory.",
+    model: "Gemini 3.8 Flash",
+    provider: "Antigravity Proxy",
+    category: "operations",
+    status: "ready",
+    tools: ["collect_code_from_arena_browser", "list_active_arena_sessions", "monitor_arena_health"],
+  },
+  {
+    id: "github_manager",
+    name: "Git & Worktree Manager",
+    role: "Izolované vetvy & worktree prostredia",
+    description: "Zabezpečuje prácu v oddelených worktrees bez blokovania hlavného pracovného stromu.",
+    model: "Gemini 3.8 Flash",
+    provider: "Antigravity Proxy",
+    category: "operations",
+    status: "ready",
+    tools: ["create_git_worktree", "remove_git_worktree", "git_checkout_branch", "git_diff_summary"],
+  },
+  {
+    id: "qwen_implementer",
+    name: "Qwen Implementer",
+    role: "Aplikácia zmien & TypeScript/React generovanie",
+    description: "Aplikuje Arena diffy do izolovanej vetvy swarm/agno-*, refaktoruje komponenty a rieši prípadné konflikty.",
+    model: "Qwen 2.5 Coder Plus (32B)",
+    provider: "AliProxy (:8080)",
+    category: "developer",
+    status: "ready",
+    tools: ["apply_arena_patch", "run_openvpm_verification", "write_project_file"],
+  },
+  {
+    id: "gemini_reviewer",
+    name: "Gemini Reviewer & QA",
+    role: "Architektonický & klinický audit",
+    description: "Audituje striktné vanilkové nemennosti schém, 100% i18n symetriu a klinické safety brány (Zákon 39/2007, 139/1998).",
+    model: "Gemini 3.8 Flash High",
+    provider: "Antigravity Proxy",
+    category: "qa",
+    status: "ready",
+    tools: ["audit_architectural_boundaries", "audit_clinical_and_safety_gates", "audit_i18n_symmetry"],
+  },
+  {
+    id: "prompt_architect",
+    name: "Prompt Architect",
+    role: "Štruktúrovanie XML & Prompt Engineering",
+    description: "Optimalizuje systémové inštrukcie, odstraňuje tokenovú redundanciu a validuje XML tagy.",
+    model: "Gemini 3.8 Flash",
+    provider: "Antigravity Proxy",
+    category: "orchestrator",
+    status: "ready",
+    tools: ["design_system_prompt", "validate_prompt_xml"],
+  },
+];
+
+const STATIC_TEAMS: SwarmTeamInfo[] = [
+  {
+    id: "openvpm-dev-team",
+    name: "OpenVPM Dev Team",
+    mode: "Coordinate / Leader Delegation",
+    leader: "prompt_manager",
+    members: ["prompt_manager", "arena_dispatcher", "arena_watcher", "github_manager", "qwen_implementer"],
+    description: "Autonómny vývojový tím koordinovaný lídrom pre paralelné sprinty, generovanie kódu a kontrolu kvality.",
+  },
+];
+
+const STATIC_WORKFLOWS: SwarmWorkflowInfo[] = [
+  {
+    id: "arena-dev-pipeline",
+    name: "Arena Dev Pipeline",
+    stepsCount: 5,
+    description: "5-fázový autonómny cyklus: Zadanie modulu -> Líder Prompt -> Arena.ai -> Vetva swarm/agno-* -> Verifikácia -> Líder Review.",
+  },
+];
+
+function findRepoRoot(): string {
+  const candidates = [
+    path.resolve(process.cwd(), "../.."),
+    process.cwd(),
+    path.resolve(process.cwd(), ".."),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(c, ".agents"))) {
+      return c;
+    }
+  }
+  return process.cwd();
+}
+
+function loadArenaSessions(repoRoot: string): SwarmSession[] {
+  const candidates = [
+    path.join(repoRoot, ".agents", "agno", "tmp", "arena_sessions.json"),
+    path.join(repoRoot, "tmp", "arena_sessions.json"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => ({
+            sessionId: String(item.session_id || item.sessionId || "unknown"),
+            module: String(item.module || "Neznáma úloha"),
+            promptSummary: item.prompt_summary || item.promptSummary,
+            targetModel: item.target_model || item.targetModel || "Arena.ai",
+            status: (item.status as SwarmSession["status"]) || "UNKNOWN",
+            createdAt: item.created_at || item.createdAt,
+            progress: item.progress,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to parse arena_sessions.json", err);
+      }
+    }
+  }
+  return [];
+}
+
+function loadTasks(repoRoot: string): SwarmTask[] {
+  const tasksDir = path.join(repoRoot, "tasks");
+  if (!fs.existsSync(tasksDir)) return [];
+  try {
+    const files = fs.readdirSync(tasksDir);
+    const tasks: SwarmTask[] = [];
+    for (const f of files) {
+      if (f.startsWith("run-") && f.endsWith(".json")) {
+        try {
+          const raw = fs.readFileSync(path.join(tasksDir, f), "utf-8");
+          const p = JSON.parse(raw);
+          tasks.push({
+            taskId: p.task_id || f.replace(".json", ""),
+            title: p.title || f,
+            state: p.state || "UNKNOWN",
+            declaredRisk: p.declared_risk,
+            allowedPaths: p.allowed_paths,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at,
+            failureReason: p.failure_reason,
+            repairAttempts: p.repair_attempts,
+          });
+        } catch {
+          // ignore corrupted json
+        }
+      }
+    }
+    return tasks.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  } catch (err) {
+    console.error("Failed to list tasks", err);
+    return [];
+  }
+}
+
+async function checkAgentOsHealth(url: string): Promise<{
+  online: boolean;
+  statusText: string;
+  statusCode?: number;
+  responseTimeMs?: number;
+}> {
+  const startTime = Date.now();
+  try {
+    const res = await fetch(`${url}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(2000),
+    });
+    return {
+      online: res.ok,
+      statusText: res.ok ? "Healthy" : `HTTP ${res.status}`,
+      statusCode: res.status,
+      responseTimeMs: Date.now() - startTime,
+    };
+  } catch (err) {
+    return {
+      online: false,
+      statusText: err instanceof Error ? err.message : "Connection refused",
+      responseTimeMs: Date.now() - startTime,
+    };
+  }
+}
+
+export const aiSwarmRouter = createRouter({
+  /**
+   * Get full telemetry, status, sessions, and fleet metadata for AI Swarm.
+   */
+  getStatus: protectedProcedure.query(async () => {
+    const agentOsUrl = process.env.AGENT_OS_URL || "http://127.0.0.1:7777";
+    const agentUiUrl = process.env.AGENT_UI_URL || "http://localhost:3007";
+    const repoRoot = findRepoRoot();
+
+    const osHealth = await checkAgentOsHealth(agentOsUrl);
+    const sessions = loadArenaSessions(repoRoot);
+    const tasks = loadTasks(repoRoot);
+
+    const completedSessions = sessions.filter((s) => s.status === "COMPLETED").length;
+    const runningSessions = sessions.filter((s) => s.status === "RUNNING").length;
+    const failedSessions = sessions.filter((s) => s.status === "FAILED").length;
+    const pendingSessions = sessions.filter((s) => s.status === "PENDING").length;
+
+    return {
+      runtime: {
+        agentOsUrl,
+        agentUiUrl,
+        isOnline: osHealth.online,
+        statusText: osHealth.statusText,
+        statusCode: osHealth.statusCode,
+        responseTimeMs: osHealth.responseTimeMs,
+        bindPort: 7777,
+        uiPort: 3007,
+      },
+      stats: {
+        totalAgents: STATIC_FLEET.length,
+        totalTeams: STATIC_TEAMS.length,
+        totalWorkflows: STATIC_WORKFLOWS.length,
+        totalSessions: sessions.length,
+        completedSessions,
+        runningSessions,
+        failedSessions,
+        pendingSessions,
+        activeTasksCount: tasks.length,
+      },
+      fleet: STATIC_FLEET,
+      teams: STATIC_TEAMS,
+      workflows: STATIC_WORKFLOWS,
+      sessions,
+      tasks,
+      guardrails: {
+        humanInTheLoop: true, // Zákon 39/2007 Z. z. §3
+        controlledSubstancesGate: true, // Zákon 139/1998 Z. z.
+        sympathyGate: true,
+        zeroConflictUpstream: true,
+      },
+    };
+  }),
+
+  /**
+   * Quick refresh of active sessions and tasks without full health re-ping.
+   */
+  getSessions: protectedProcedure.query(async () => {
+    const repoRoot = findRepoRoot();
+    const sessions = loadArenaSessions(repoRoot);
+    const tasks = loadTasks(repoRoot);
+    return { sessions, tasks };
+  }),
+});

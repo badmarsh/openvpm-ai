@@ -1,0 +1,33 @@
+{
+  "marketing": {
+    "automations": {
+      "title": "Automatizované pravidlá",
+      "subtitle": "Deterministické triggery správ. Systém sám stráži termíny očkovania, kontroly po operácii, žiadosti o recenzie a preventívny recall. Všetko bez zásahu LLM.",
+      "loading": "Načítavam automatizačné pravidlá...",
+      "noRules": "Žiadne pravidlá nie sú nakonfigurované",
+      "active": "Aktívne",
+      "paused": "Pozastavené",
+      "timing": "Časovanie",
+      "channel": "Kanál",
+      "legalBasis": "Základ",
+      "trigger": "Trigger",
+      "ruleKey": "Kľúč pravidla",
+      "recentEvents": "Nedávne udalosti",
+      "eventType": "Typ udalosti",
+      "status": "Stav",
+      "occurredAt": "Dátum",
+      "client": "Klient",
+      "patient": "Pacient",
+      "noEvents": "Žiadne udalosti",
+      "complianceTitle": "Klinické pravidlá a legislatívne limity (SR)",
+      "quietHours": "Tichý nočný režim",
+      "quietHoursDesc": "Žiadne správy neodchádzajú medzi 20:00 a 08:00 ani v nedeľu (zaradia sa do fronty na najbližšie povolené ráno).",
+      "smsRateLimit": "SMS Rate Limit",
+      "smsRateLimitDesc": "Maximálne 1 marketingová správa za 14 dní na jedného klienta (chráni pred spamovaním majiteľa).",
+      "sympathyGate": "Sympathy Gate",
+      "sympathyGateDesc": "Pri úmrtí pacienta sa všetky automatizované správy a recall pre zviera okamžite blokujú a vytvorí sa úloha pre personál.",
+      "legalBasisRule": "Právny základ",
+      "legalBasisRuleDesc": "Zmluvné správy (pripomienka očkovania, kontrola po operácii) nevyžadujú marketingový opt-in; propagačné správy a recenzie áno."
+    }
+  }
+}

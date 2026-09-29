@@ -20,7 +20,7 @@ export function PageToolbar({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border border-border bg-card/50 p-3 shadow-xs sm:flex-row sm:flex-wrap sm:items-center",
+        "flex flex-col gap-3 rounded-lg border border-border bg-card/50 p-3 sm:flex-row sm:flex-wrap sm:items-center",
         className,
       )}
     >
@@ -84,7 +84,7 @@ export function SearchField({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-9 pl-9 text-xs [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
+          "h-9 pl-9 text-xs transition-colors duration-200 [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none focus-visible:ring-1 focus-visible:ring-primary/50",
           inputClassName,
         )}
         autoFocus={autoFocus}
@@ -204,8 +204,8 @@ export function KpiCard({
     </>
   );
   const classes = cn(
-    "rounded-lg border border-border bg-card px-3 py-2 text-left shadow-xs",
-    onClick && "transition-colors hover:border-primary/40",
+    "rounded-lg border border-border bg-card px-3 py-2 text-left shadow-xs transition-all duration-200 ease-in-out",
+    onClick && "hover:border-primary/60 hover:bg-muted/10",
     active && "border-primary bg-primary/5",
     className,
   );

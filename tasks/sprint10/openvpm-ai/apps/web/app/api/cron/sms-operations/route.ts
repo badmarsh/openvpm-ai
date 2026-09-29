@@ -1,0 +1,187 @@
+import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { db } from "@openpims/db/client";
+import { alertOps, deliverOpsAlert } from "@/lib/alerts";
+import { cronAuthError } from "@/lib/cron-auth";
+import { reportCronHeartbeat } from "@/lib/cron-heartbeat";
+import {
+  getSmsOperationsHealth,
+  type SmsOperationsHealth,
+} from "@/lib/messaging/sms-operations-health";
+import { processSmsOperationsAlertState } from "@/lib/messaging/sms-operations-alert";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
+const MAX_ALERT_REASONS = 10;
+const SAFE_REASON_CODE = /^[a-z0-9_.:-]{1,64}$/;
+
+async function alertOpsSafely(subject: string, detail: string): Promise<void> {
+  try {
+    await alertOps(subject, detail);
+  } catch {
+    // Reporting must not turn this monitoring endpoint into a retry loop.
+  }
+}
+
+async function reportHeartbeatSafely(
+  input: Parameters<typeof reportCronHeartbeat>[0],
+): Promise<void> {
+  try {
+    await reportCronHeartbeat(input);
+  } catch {
+    // The heartbeat helper normally contains its own failures; fail safe if an
+    // unexpected implementation error escapes it.
+  }
+}
+
+function reasonSummary(reasons: SmsOperationsHealth["reasons"]): string {
+  const safe = reasons.slice(0, MAX_ALERT_REASONS).map((reason) => {
+    const code = SAFE_REASON_CODE.test(reason.reason)
+      ? reason.reason
+      : `unclassified_${reason.category}`;
+    return `${reason.severity}/${reason.category}/${code}=${reason.count}`;
+  });
+
+  return safe.length > 0 ? safe.join("; ") : "none reported";
+}
+
+function heartbeatMetrics(health: SmsOperationsHealth) {
+  return {
+    status: health.status,
+    critical: health.counts.critical,
+    attention: health.counts.attention,
+    carrier: health.counts.carrier,
+    profile: health.counts.profile,
+    sendAttempts: health.counts.sendAttempts,
+    deliveryEvents: health.counts.deliveryEvents,
+    staleWithoutFinal: health.counts.staleWithoutFinal,
+    providerAuditFailures: health.counts.providerAuditFailures,
+    providerEvents: health.counts.providerEvents,
+    providerEventsPending: health.counts.providerEventsPending,
+    providerEventsRetry: health.counts.providerEventsRetry,
+    providerEventsBlockedRecovery: health.counts.providerEventsBlockedRecovery,
+    providerEventsQuarantined: health.counts.providerEventsQuarantined,
+    providerEventConflicts: health.counts.providerEventConflicts,
+    providerEventsStale: health.counts.providerEventsStale,
+    reasonGroups: health.reasons.length,
+    truncated: health.truncated,
+  };
+}
+
+function degradedAlert(health: SmsOperationsHealth): string {
+  const counts = health.counts;
+  const countQualifier = health.truncated ? "at least " : "";
+  const truncationNotice = health.truncated
+    ? " The bounded queue is truncated; additional exceptions exist."
+    : "";
+  return [
+    `Status: ${health.status}. P0: ${countQualifier}${counts.critical}; P1: ${countQualifier}${counts.attention}.${truncationNotice}`,
+    `Carrier: ${countQualifier}${counts.carrier}; profile: ${countQualifier}${counts.profile}; send attempts: ${countQualifier}${counts.sendAttempts}; delivery events: ${countQualifier}${counts.deliveryEvents}; provider events: ${countQualifier}${counts.providerEvents} (${counts.providerEventsPending} pending, ${counts.providerEventsRetry} retry, ${counts.providerEventsBlockedRecovery} recovery-blocked, ${counts.providerEventsQuarantined} quarantined, ${counts.providerEventConflicts} identity conflicts, ${counts.providerEventsStale} stale); stale without final: ${countQualifier}${counts.staleWithoutFinal}; provider audit failures: ${countQualifier}${counts.providerAuditFailures}.`,
+    `Reason counts (bounded${health.truncated ? " lower bounds" : ""}): ${reasonSummary(health.reasons)}.`,
+    "Review the SMS operations queue. This check made no provider, launch-control, message, or evidence changes.",
+  ].join(" ");
+}
+
+function healthFingerprint(health: SmsOperationsHealth): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        status: health.status,
+        counts: health.counts,
+        reasons: health.reasons.map((reason) => ({
+          severity: reason.severity,
+          category: reason.category,
+          reason: SAFE_REASON_CODE.test(reason.reason)
+            ? reason.reason
+            : "unclassified",
+          count: reason.count,
+        })),
+        truncated: health.truncated,
+      }),
+    )
+    .digest("hex");
+}
+
+/**
+ * Frequent, read-only SMS operations monitor. Its 15-minute schedule matches
+ * the shortest unresolved-send safety threshold. It reports evidence only; it
+ * never sends/retries SMS, reconciles evidence, mutates a provider profile, or
+ * changes a launch flag or allowlist.
+ */
+export async function GET(request: Request) {
+  const authError = cronAuthError(request);
+  if (authError) return authError;
+
+  try {
+    const health = await getSmsOperationsHealth(db);
+    const degraded = health.status !== "healthy";
+
+    const fingerprint = healthFingerprint(health);
+    if (degraded) {
+      const subject =
+        health.status === "critical"
+          ? "SMS operations critical"
+          : "SMS operations attention required";
+      const detail = degradedAlert(health);
+      try {
+        await processSmsOperationsAlertState({
+          fingerprint,
+          state: "degraded",
+          deliver: () => deliverOpsAlert(subject, detail),
+        });
+      } catch {
+        // State persistence failure must not silence a new incident.
+        await alertOpsSafely(subject, detail);
+      }
+    } else {
+      try {
+        await processSmsOperationsAlertState({
+          fingerprint,
+          state: "healthy",
+        });
+      } catch {
+        // Heartbeat evidence remains authoritative if transition storage fails.
+      }
+    }
+
+    await reportHeartbeatSafely({
+      job: "sms-operations",
+      status: degraded ? "degraded" : "ok",
+      detail: degraded
+        ? `${health.truncated ? "At least " : ""}${health.counts.critical} P0 and ${health.counts.attention} P1 exception(s)${health.truncated ? "; bounded queue truncated" : ""}`
+        : "No SMS operations exceptions",
+      metrics: heartbeatMetrics(health),
+    });
+
+    return NextResponse.json({
+      ok: true,
+      status: health.status,
+      counts: health.counts,
+      reasonGroups: health.reasons.length,
+      truncated: health.truncated,
+    });
+  } catch (error) {
+    const detail = "Read-only SMS operations health computation failed";
+    const failureCode =
+      error instanceof Error &&
+      /^sms_operations_[a-z_]+_failed$/.test(error.message)
+        ? error.message
+        : "sms_operations_unclassified_failed";
+    console.error(`[sms-operations] health failure code=${failureCode}`);
+    await alertOpsSafely(
+      "SMS operations health check failed",
+      `${detail}. Review application logs; no automated action was taken.`,
+    );
+    await reportHeartbeatSafely({
+      job: "sms-operations",
+      status: "failed",
+      detail,
+    });
+    // Deliberately not a 5xx: report the failure without creating a retry loop.
+    return NextResponse.json({
+      ok: false,
+      error: "SMS operations health check failed",
+    });
+  }
+}

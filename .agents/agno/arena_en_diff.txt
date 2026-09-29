@@ -1,0 +1,2457 @@
+diff --git a/apps/web/messages/en.json b/apps/web/messages/en.json
+index a501140f..a2c275b9 100644
+--- a/apps/web/messages/en.json
++++ b/apps/web/messages/en.json
+@@ -2,8 +2,7 @@
+   "admin": {
+     "header": {
+       "title": "Platform Admin",
+-      "subtitle": "Cross-tenant operations overview",
+-      "badge": "ADMIN"
++      "subtitle": "Cross-tenant operations overview"
+     },
+     "accessDenied": {
+       "title": "Access Denied",
+@@ -29,34 +28,7 @@
+       "journeyCohorts": "Production journey cohorts (30 days)",
+       "messagingCarrier": "Messaging carrier registration",
+       "practices": "Practices",
+-      "simulation": "Clinical Simulation & Journey Discovery",
+-      "aiSwarm": "AI Swarm & AgentOS Central"
+-    },
+-    "systemHealth": {
+-      "title": "AI swarm system health",
+-      "desc": "Read-only status of the Arena agent fleet, dispatched sprints, arena sessions, and the last deployment. Full controls live in the AI Swarm hub.",
+-      "loadError": "Could not load AI swarm system health.",
+-      "loading": "Loading AI swarm system healthΓÇª",
+-      "openHub": "Open AI Swarm hub",
+-      "activeAgents": "Active agents",
+-      "sprintsDispatched": "Sprints dispatched",
+-      "arenaSessions": "Arena sessions",
+-      "lastDeploy": "Last deploy",
+-      "noDeployYet": "No merged sprints yet",
+-      "sprintsHint": "{merged} merged ┬╖ {failed} failed",
+-      "sessionsHint": "{pending} pending ┬╖ {total} total",
+-      "sprintLogTitle": "Sprint log",
+-      "sprintLogDesc": "Most recently dispatched Arena sprints and their merge state.",
+-      "sprintLogEmpty": "No sprints dispatched yet.",
+-      "sprint": "Sprint / module",
+-      "status": "Status",
+-      "progress": "Progress",
+-      "started": "Started",
+-      "merged": "Merged",
+-      "running": "Running",
+-      "failed": "Failed",
+-      "pending": "Pending",
+-      "unknown": "Unknown"
++      "simulation": "Clinical Simulation & Journey Discovery"
+     },
+     "table": {
+       "practice": "Practice",
+@@ -111,12 +83,7 @@
+       "deliveryExceptions": "Delivery exceptions",
+       "providerEvents": "Provider events",
+       "noExceptions": "No SMS operational exceptions need attention.",
+-      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue.",
+-      "priority": "Priority",
+-      "category": "Category",
+-      "age": "Age",
+-      "reason": "Reason",
+-      "clinicLocation": "Clinic / location"
++      "bounded": "Results are bounded. Resolve the oldest items, then refresh for the remaining queue."
+     },
+     "recovery": {
+       "noVerifiedContact": "No verified admin contact",
+@@ -410,137 +377,6 @@
+       "viewDocs": "Product Discovery Docs",
+       "statusActive": "Active simulation engine",
+       "lastUpdated": "Updated: 2026-09-21"
+-    },
+-    "aiSwarm": {
+-      "title": "AI Swarm & AgentOS Central",
+-      "subtitle": "Management, telemetry, and monitoring for autonomous multi-agent dev fleet, local AgentOS runtime (:7777), and direct link to Agent UI.",
+-      "badge": "SWARM",
+-      "badgeActive": "Active Fleet",
+-      "actions": {
+-        "openAgentUi": "Open Agent UI",
+-        "openAgentUiDesc": "Launch visual Agent UI on port 3007",
+-        "refresh": "Refresh Status",
+-        "refreshing": "Refreshing...",
+-        "backToAdmin": "Platform Admin",
+-        "runCliCommand": "Start AgentOS CLI",
+-        "copied": "Copied"
+-      },
+-      "runtime": {
+-        "title": "AgentOS Runtime Status",
+-        "endpoint": "Backend Endpoint",
+-        "agentUi": "Agent UI Interface",
+-        "statusOnline": "Online (Ready)",
+-        "statusOffline": "Offline (Standby)",
+-        "checking": "Checking...",
+-        "responseTime": "Response time",
+-        "models": "Configured Models",
+-        "knowledge": "Vector Knowledge Base",
+-        "offlineNotice": "AgentOS is not running on port 7777. To launch the background runtime, execute: python .agents/agno/pipeline_team_os.py in terminal."
+-      },
+-      "kpi": {
+-        "fleetAgents": "Agent Fleet",
+-        "fleetAgentsDesc": "Specialized agents",
+-        "activeSessions": "Active Sessions",
+-        "activeSessionsDesc": "Total pipeline runs",
+-        "teamsAndWorkflows": "Teams & Pipelines",
+-        "teamsAndWorkflowsDesc": "Autonomous workflows",
+-        "runtimeHealth": "AgentOS Health",
+-        "runtimeHealthDesc": "FastAPI port 7777"
+-      },
+-      "tabs": {
+-        "fleet": "Agent Fleet & Teams",
+-        "sessions": "Sessions & Tasks",
+-        "agentUi": "Live Agent UI Console",
+-        "guardrails": "Architecture & Guardrails",
+-        "approvals": "Approvals & HITL"
+-      },
+-      "agentUiView": {
+-        "title": "Live Agent UI Console (:3007)",
+-        "subtitle": "Interactive web interface for communicating with local AgentOS team and monitoring live runs.",
+-        "openExternal": "Open Full Window",
+-        "startCommand": "Command to start dev server: pnpm agent-ui",
+-        "portInfo": "Local Next.js port: 3007 ΓåÆ AgentOS REST: http://localhost:7777",
+-        "offlineTitle": "Agent UI server is not running on port 3007",
+-        "offlineDesc": "To launch the Agent UI interface, open a terminal and run: pnpm agent-ui (or pnpm --dir .agents/agno/agent-ui dev).",
+-        "iframeTitle": "Agent UI"
+-      },
+-      "toolbar": {
+-        "searchPlaceholder": "Filter agents, sessions or tasks...",
+-        "allStatuses": "All statuses",
+-        "completed": "Completed",
+-        "running": "Running",
+-        "failed": "Failed",
+-        "pending": "Pending",
+-        "allCategories": "All categories",
+-        "orchestrator": "Orchestrator",
+-        "developer": "Developer",
+-        "qa": "QA & Review",
+-        "operations": "Operations"
+-      },
+-      "table": {
+-        "name": "Agent / Team Name",
+-        "role": "Role & Function",
+-        "model": "Model & Provider",
+-        "category": "Category",
+-        "tools": "Key Tools",
+-        "status": "Status",
+-        "actions": "Actions",
+-        "chatInAgentUi": "Open in Agent UI",
+-        "health": "Health",
+-        "status_ready": "Ready",
+-        "status_busy": "Busy",
+-        "status_standby": "Standby"
+-      },
+-      "sessionsTable": {
+-        "sessionId": "Session / Task ID",
+-        "module": "Task / Module",
+-        "targetModel": "Engine / Model",
+-        "status": "Status",
+-        "created": "Created",
+-        "progress": "Progress / Output",
+-        "inspect": "Inspect Task"
+-      },
+-      "guardrails": {
+-        "title": "Clinical Safety & Architectural Invariants",
+-        "subtitle": "Autonomous agents operate strictly within legislative and architectural boundaries.",
+-        "humanInTheLoopTitle": "Human-in-the-Loop Gate (Z├íkon 39/2007 Z. z.)",
+-        "humanInTheLoopDesc": "AI outputs remain strictly in draft status until reviewed and confirmed by a licensed KVL veterinarian via ClinicalDiffConfirmModal.",
+-        "controlledSubstancesTitle": "Controlled Substances Gate (Z├íkon 139/1998 Z. z.)",
+-        "controlledSubstancesDesc": "Zero AI prefill for opiates, ketamine, propofol, butorphanol, and fentanyl. Requires manual, authenticated doctor entry.",
+-        "sympathyGateTitle": "Sympathy Outreach Gate",
+-        "sympathyGateDesc": "When a patient status is deceased or euthanized, automated SMS, review, and marketing outreach is immediately suppressed.",
+-        "zeroConflictTitle": "Zero-Conflict Upstream Sync",
+-        "zeroConflictDesc": "Vanilla upstream schemas (packages/db/schema/*.ts) are immutable. Extensions use ext_* schemas and isolated extensionsRouter."
+-      },
+-      "empty": {
+-        "noAgents": "No matching agents found.",
+-        "noSessions": "No sessions found matching your filter.",
+-        "clearFilters": "Clear filters"
+-      },
+-      "approvals": {
+-        "title": "Pending Human-in-the-Loop Approvals",
+-        "subtitle": "Operations requiring explicit administrator authorization before production execution.",
+-        "emptyTitle": "No Pending Approvals",
+-        "emptyDesc": "All autonomous operations are within safe guardrails. When an agent requests git push, merge, or deployment, it will appear here.",
+-        "tableAction": "Action / Tool",
+-        "tableAgent": "Agent & Session",
+-        "tableParameters": "Invocation Parameters",
+-        "tableTime": "Request Time",
+-        "tableActions": "Decision",
+-        "approve": "Approve",
+-        "reject": "Reject",
+-        "approving": "Processing...",
+-        "approvedSuccess": "Request successfully approved.",
+-        "rejectedSuccess": "Request rejected.",
+-        "errorResolving": "Error resolving approval.",
+-        "gateGitPush": "Git Push to origin/main",
+-        "gatePrMerge": "PR Merge to main",
+-        "gateDeploy": "Production Deployment",
+-        "gateOpl": "Clinical OPL Audit (Act 139/1998)",
+-        "required": "Required (@approval)",
+-        "auditLog": "Audit Log (@approval)",
+-        "tableId": "ID"
+-      }
+     }
+   },
+   "agent": {
+@@ -676,45 +512,6 @@
+       "today": "In clinic today",
+       "unfinishedRecords": "Unfinished records",
+       "vaccinesExpiring": "Vaccinations due or expiring"
+-    },
+-    "kpi": {
+-      "activeSessions": "Active sessions",
+-      "completedToday": "Completed today",
+-      "avgResponseTime": "Avg response time",
+-      "soapDraftsPending": "SOAP drafts pending"
+-    },
+-    "subagents": {
+-      "title": "AI Sub-Agents",
+-      "voiceTitle": "Voice Scribe",
+-      "voiceDesc": "Real-time clinical audio dictation and ambient exam transcription into structured SOAP records.",
+-      "imagingTitle": "Diagnostic Imaging",
+-      "imagingDesc": "Radiology, ultrasound, CT, and MRI multi-modal analysis with automated VHS calculation.",
+-      "dischargeTitle": "Discharge Companion",
+-      "dischargeDesc": "Automated discharge letters, home care medication schedules, and client communication.",
+-      "statusLive": "Live",
+-      "statusStandby": "Standby",
+-      "openAgent": "Open Agent"
+-    },
+-    "advisory": {
+-      "banner": "All AI agent outputs are advisory and require clinical review and confirmation by a licensed veterinarian before clinical use (Act No. 39/2007 Coll.)."
+-    },
+-    "recentSessions": {
+-      "title": "Recent AI Sessions",
+-      "colId": "Session ID",
+-      "colType": "Type",
+-      "colDuration": "Duration",
+-      "colStatus": "Status",
+-      "colTimestamp": "Created",
+-      "colAction": "Action",
+-      "statusDraft": "Draft",
+-      "statusConfirmed": "Confirmed",
+-      "statusExpired": "Expired",
+-      "emptyTitle": "No recent AI sessions",
+-      "emptyDescription": "AI agent sessions will appear here as dictations, imaging analyses, and consultations occur.",
+-      "typeVoice": "Voice Scribe",
+-      "typeImaging": "Imaging AI",
+-      "typeDischarge": "Discharge",
+-      "typeChat": "Copilot Chat"
+     }
+   },
+   "ai": {
+@@ -875,144 +672,6 @@
+       "parserActive": "active",
+       "parserPartial": "partial",
+       "parserInactive": "inactive"
+-    },
+-    "kpi": {
+-      "activeJourneys": "Active journeys",
+-      "enrolledPatients": "Enrolled patients",
+-      "sentThisWeek": "Sent this week",
+-      "suppressedSympathy": "Suppressed by sympathy gate",
+-      "sympathyHint": "Veterinary Act 39/2007 ΓÇö deceased"
+-    },
+-    "tabs": {
+-      "journeys": "CRM Journeys & Automations",
+-      "suppression": "Suppression Log & Sympathy Gate",
+-      "clinical": "Clinical Guardian",
+-      "aiAgents": "AI Agents & Workflow"
+-    },
+-    "filters": {
+-      "allTypes": "All event types",
+-      "allStatuses": "All statuses",
+-      "searchPlaceholder": "Search journeys by name or description...",
+-      "searchSuppression": "Search suppression logs...",
+-      "allReasons": "All suppression reasons"
+-    },
+-    "status": {
+-      "active": "Active",
+-      "paused": "Paused",
+-      "draft": "Draft",
+-      "completed": "Completed",
+-      "failed": "Failed"
+-    },
+-    "table": {
+-      "journeyName": "Journey Name",
+-      "trigger": "Trigger Event",
+-      "status": "Status",
+-      "enrollments": "Enrollments",
+-      "lastTriggered": "Last Triggered",
+-      "actions": "Actions",
+-      "stepsCount": "{count} steps",
+-      "frequencyCap": "Cap: {max} / {days}d",
+-      "pause": "Pause",
+-      "activate": "Activate",
+-      "edit": "Edit",
+-      "delete": "Delete",
+-      "confirmDelete": "Are you sure you want to delete this journey?",
+-      "noJourneys": "No CRM journeys configured",
+-      "noJourneysDesc": "Create your first journey or adjust your active filters.",
+-      "loading": "Loading journeys..."
+-    },
+-    "builder": {
+-      "newJourneyTitle": "New CRM Journey",
+-      "editJourneyTitle": "Edit CRM Journey",
+-      "newJourneyBtn": "New Journey",
+-      "journeyName": "Journey Name",
+-      "journeyNamePlaceholder": "e.g. Post-op follow-up sequence",
+-      "journeyKey": "Unique Key",
+-      "journeyKeyPlaceholder": "e.g. post_op_care",
+-      "description": "Description",
+-      "descriptionPlaceholder": "Describe purpose and cadence of this automated journey...",
+-      "triggerEvent": "Clinical Trigger Event",
+-      "frequencyCapWindow": "Cap Window (days)",
+-      "frequencyCapMax": "Max Messages in Window",
+-      "stepsTitle": "Step Sequence",
+-      "addStep": "Add Step",
+-      "removeStep": "Remove Step",
+-      "stepNumber": "Step {num}",
+-      "stepLabel": "Step Label",
+-      "stepLabelPlaceholder": "e.g. SMS check-in 24h post discharge",
+-      "channel": "Channel",
+-      "delayHours": "Delay (hours)",
+-      "immediate": "Immediate (0 hrs)",
+-      "legalBasis": "Legal Basis (GDPR)",
+-      "saveJourney": "Save Journey",
+-      "saving": "Saving...",
+-      "cancel": "Cancel",
+-      "journeyCreated": "CRM Journey created successfully",
+-      "journeyUpdated": "CRM Journey updated successfully"
+-    },
+-    "suppression": {
+-      "title": "Suppression Log & Sympathy Gate",
+-      "subtitle": "Ethical communication protection under Veterinary Act 39/2007 Z. z. and GDPR Art. 9.",
+-      "readOnlyNotice": "Suppression logs are strictly read-only for statutory auditing and deceased patient protection.",
+-      "colPatient": "Patient & Client",
+-      "colReason": "Suppression Reason",
+-      "colSuppressedAt": "Suppressed At",
+-      "colAction": "Blocked Action / Channel",
+-      "colStatus": "Status",
+-      "colDetail": "Audit Detail",
+-      "activeHold": "Active Hold",
+-      "cleared": "Cleared",
+-      "reasons": {
+-        "deceased_patient": "Sympathy Gate (Deceased Pet)",
+-        "quiet_hours": "Quiet Hours (8 PM - 8 AM)",
+-        "frequency_cap": "Frequency Cap Exceeded",
+-        "no_consent": "Missing Marketing Consent",
+-        "opt_out": "Client Opted Out",
+-        "recovery_hold": "Post-op Recovery Hold",
+-        "manual_block": "Manual Staff Hold",
+-        "sms_rate_limit": "SMS Rate Limit Exceeded",
+-        "cooldown": "Cooldown Period",
+-        "sensitivity_period": "Sensitivity Period",
+-        "unknown_contact": "Unknown Contact"
+-      },
+-      "emptyTitle": "No suppression records",
+-      "emptyDescription": "No suppressed communications or sympathy gate holds recorded for this filter.",
+-      "loading": "Loading audit logs..."
+-    },
+-    "triggers": {
+-      "visit_completed": "Visit Completed",
+-      "vaccine_due": "Vaccine Due",
+-      "appointment_booked": "Appointment Booked",
+-      "appointment_reminder": "Appointment Reminder",
+-      "appointment_no_show": "Appointment No-show",
+-      "surgery_completed": "Surgery Completed",
+-      "wellness_enrolled": "Wellness Enrolled",
+-      "inactive_recall": "Inactive Recall",
+-      "dental_detected": "Dental Care Indicated",
+-      "patient_deceased": "Patient Deceased (Sympathy Gate)"
+-    },
+-    "legal": {
+-      "contract": "Performance of Contract (Care)",
+-      "consent": "Explicit Consent (GDPR)",
+-      "legitimate_interest": "Legitimate Interest"
+-    },
+-    "channels": {
+-      "sms": "SMS",
+-      "email": "Email",
+-      "task": "Staff Task",
+-      "content_brief": "Content Brief"
+-    },
+-    "empty": {
+-      "title": "No CRM journeys found",
+-      "description": "Create your first customer journey to automate patient follow-ups and reminders.",
+-      "action": "New Journey"
+-    },
+-    "delete": {
+-      "title": "Delete journey?",
+-      "description": "Journey \"{name}\" will be removed. New clients will no longer enroll; in-flight runs finish against their pinned version.",
+-      "confirm": "Delete",
+-      "success": "Journey \"{name}\" was deleted.",
+-      "error": "Failed to delete the journey."
+     }
+   },
+   "auth": {
+@@ -1180,7 +839,6 @@
+       "showingPagination": "Showing {from}--{to} of {total}",
+       "previous": "Previous",
+       "next": "Next",
+-      "pageSizeLabel": "Rows per page",
+       "emptyEstimatesTitle": "No estimates yet",
+       "emptyEstimatesDesc": "Create an estimate when a client needs approval before services are performed.",
+       "emptyStatusTitle": "No invoices with this status",
+@@ -1389,74 +1047,14 @@
+       "creatingButton": "Creating...",
+       "createEstimateButton": "Create Estimate",
+       "createInvoiceButton": "Create Invoice",
+-      "cancelButton": "Cancel",
+-      "loadPatientsErrorMessage": "Unable to load client patients. {message}",
+-      "loadServicesErrorMessage": "Unable to load billing services. {message}",
+-      "removeLineItem": "Remove {description}",
+-      "noItemsAdded": "No line items added yet."
++      "cancelButton": "Cancel"
+     },
+     "pos": {
+       "discount": "Discount",
+       "subtotal": "Subtotal",
+       "totalDue": "Total due",
+       "scannerAdded": "{name} added to cart",
+-      "scannerNotFound": "Product not found for code {code}",
+-      "checkingAccess": "Checking billing access...",
+-      "backToBilling": "Back to Billing",
+-      "readOnlyTitle": "POS register is restricted",
+-      "readOnlyDesc": "Only administrators, veterinarians, and front desk staff can access the POS register.",
+-      "title": "Counter Checkout (POS)",
+-      "subtitle": "Direct counter sale of antiparasitics, feeds, and medications with automatic receipt and stock deduction",
+-      "badgeEkasa": "e-Kasa Zero-Touch",
+-      "printerLabel": "Printer:",
+-      "printerWidthAria": "Receipt printer tape width",
+-      "searchPlaceholder": "Search products (name, SKU, Bravecto, kibble...)",
+-      "customItemButton": "Custom item",
+-      "defaultItemDescription": "Counter item / Service",
+-      "categoryAll": "All products",
+-      "defaultCategory": "Inventory item",
+-      "stockCount": "Stock: {count} pcs",
+-      "lowStockCount": "Low stock: {count} pcs",
+-      "soldOut": "Sold out ({count} pcs)",
+-      "inStock": "In stock",
+-      "catalogEmpty": "No products in catalog",
+-      "catalogNoResults": "No products match the search criteria",
+-      "catalogEmptyDesc": "Add products in inventory management or use custom items.",
+-      "cartTitle": "Cart ({count})",
+-      "clearCart": "Clear",
+-      "clearCartDialogTitle": "Clear shopping cart?",
+-      "clearCartDialogDesc": "All items will be removed from the cart. This action cannot be undone.",
+-      "clearCartConfirm": "Clear cart",
+-      "clearCartCancel": "Cancel",
+-      "emptyCartTitle": "Cart is empty",
+-      "emptyCartDesc": "Select items from the catalog on the left or use a barcode scanner.",
+-      "clientSectionLabel": "Customer:",
+-      "clientSearchPlaceholder": "Counter customer (or type name to search)...",
+-      "clientSearchLabel": "Search customer",
+-      "clientSearchLoading": "Searching clients...",
+-      "clientSearchError": "Error searching clients",
+-      "clientSearchNoResults": "No clients found",
+-      "clientChangeToAnonymous": "Change to anonymous",
+-      "clientSelectedAria": "Selected client: {name}",
+-      "clientRemoveAria": "Remove client",
+-      "clientResultsListAria": "Client search results",
+-      "itemDescription": "Item description",
+-      "unitPriceLabel": "Unit price",
+-      "decreaseQuantity": "Decrease quantity of {name}",
+-      "increaseQuantity": "Increase quantity of {name}",
+-      "removeItem": "Remove {name} from cart",
+-      "vatRateLabel": "VAT rate",
+-      "vatRate_STANDARD_23": "23% (Standard)",
+-      "vatRate_REDUCED_19": "19% (Feed/food)",
+-      "vatRate_REDUCED_5": "5% (Medications)",
+-      "vatRate_ZERO": "0% (Exempt)",
+-      "invalidCartHint": "Please verify that all cart items have valid descriptions and unit prices.",
+-      "payCash": "Cash ({amount})",
+-      "payCard": "Credit Card ({amount})",
+-      "toastSuccess": "Receipt successfully issued and registered in e-Kasa",
+-      "toastEmptyCart": "Cart is empty",
+-      "toastErrorFallback": "Failed to register receipt in e-Kasa",
+-      "toastInvalidCart": "Cart contains invalid items"
++      "scannerNotFound": "Product not found for code {code}"
+     },
+     "status_all": "All",
+     "status_draft": "Draft",
+@@ -1467,13 +1065,7 @@
+     "status_estimates": "Estimates",
+     "status_estimate": "Estimate",
+     "status_partial": "Partial",
+-    "status_settled": "Settled",
+-    "servicePicker": {
+-      "placeholder": "Search services or products...",
+-      "typeServiceName": "Type a service or product name...",
+-      "searchServicesAria": "Search services and products",
+-      "noMatch": "No services match \"{query}\"."
+-    }
++    "status_settled": "Settled"
+   },
+   "canvas": {
+     "pageTitle": "AI Canvas & SOPs",
+@@ -1611,15 +1203,7 @@
+     "relativeTomorrow": "Tomorrow",
+     "relativeYesterday": "Yesterday",
+     "relativeInDays": "in {count} d.",
+-    "relativeOverdueDays": "{count} d. ago",
+-    "searchPlaceholder": "Search by patient, owner, or reminder...",
+-    "resultCount": "{count} records",
+-    "clearFilters": "Clear filters",
+-    "dueFilterAria": "Filter by due date",
+-    "emptyFilteredTitle": "No records match the current filters",
+-    "emptyFilteredDesc": "Adjust or clear the search and filters to see the rest of the queue.",
+-    "metricDueToday": "Due today",
+-    "metricOverdue": "Overdue"
++    "relativeOverdueDays": "{count} d. ago"
+   },
+   "chrome": {
+     "searchPlaceholder": "Search...",
+@@ -1629,14 +1213,7 @@
+     "newPatient": "New Patient",
+     "newAppointment": "New encounter",
+     "newInvoice": "New Invoice",
+-    "openSearch": "Open search",
+-    "fontScale": {
+-      "label": "Font size",
+-      "standard": "Standard",
+-      "large": "Large",
+-      "xl": "Extra large",
+-      "buttonAria": "Change font size"
+-    }
++    "openSearch": "Open search"
+   },
+   "clients": {
+     "title": "Clients",
+@@ -1726,38 +1303,7 @@
+       "cityPlaceholder": "City",
+       "statePlaceholder": "State / Province",
+       "zipPlaceholder": "Zip code",
+-      "phonePlaceholder": "(555) 123-4567",
+-      "createClient": "Create Client",
+-      "emailPlaceholder": "email@example.com",
+-      "sections": {
+-        "contact": {
+-          "title": "Owner & contact",
+-          "subtitle": "Name, email, and phone used for reminders and invoices."
+-        },
+-        "reminders": {
+-          "title": "Reminders & SMS consent",
+-          "subtitle": "How the practice reaches this client. Text messages need recorded consent."
+-        },
+-        "address": {
+-          "title": "Address",
+-          "subtitle": "Optional postal address."
+-        }
+-      },
+-      "phoneHint": {
+-        "format": "National numbers such as 0905 123 456 are texted as +421 905 123 456.",
+-        "smsTarget": "SMS reminders will be sent to {number}.",
+-        "smsUnavailable": "This number can't be used for SMS. Enter a mobile number such as 0905 123 456 or +421 905 123 456."
+-      },
+-      "validation": {
+-        "firstNameRequired": "Enter the client's first name.",
+-        "lastNameRequired": "Enter the client's last name.",
+-        "emailInvalid": "Enter a valid email address, for example name@example.com.",
+-        "checkRequiredFields": "Check required fields and field lengths.",
+-        "smsPhoneInvalid": "Enter a valid mobile phone number before recording SMS consent.",
+-        "smsConsentRequired": "Confirm the client's SMS consent before using text messages for reminders.",
+-        "smsConsentField": "SMS consent",
+-        "missingFields": "To create the client, complete: {fields}."
+-      }
++      "phonePlaceholder": "(555) 123-4567"
+     },
+     "detail": {
+       "contactInfo": "Contact Information",
+@@ -2364,8 +1910,7 @@
+     },
+     "tabs": {
+       "products": "Products",
+-      "suppliers": "Suppliers",
+-      "controlled": "Controlled audit trail"
++      "suppliers": "Suppliers"
+     },
+     "table": {
+       "colName": "Name",
+@@ -2507,9 +2052,7 @@
+       "linkManualEntry": "Confirm manual receipt and close review",
+       "reviewLinkError": "The entry must be your manual receipt for the same drug. Check the entry ID and drug name.",
+       "reviewLoadError": "Could not load pending reviews. Retry before recording receipts.",
+-      "activeSubstance": "Active substance (optional)",
+-      "importFailedTitle": "Import failed",
+-      "retryImport": "Retry import"
++      "activeSubstance": "Active substance (optional)"
+     },
+     "markup": {
+       "label": "Markup on cost (%)",
+@@ -2519,34 +2062,6 @@
+     },
+     "actions": {
+       "saveProduct": "Save product"
+-    },
+-    "kpi": {
+-      "totalSkus": "Total SKUs",
+-      "lowStock": "Low stock",
+-      "expiringSoon": "Expiring soon",
+-      "expiredHint": "{count} expired",
+-      "controlled": "Controlled substances",
+-      "controlledHint": "Ledger is manual only"
+-    },
+-    "expiry": {
+-      "expiredDays": "Expired {days} d ago",
+-      "expiresInDays": "Expires in {days} d"
+-    },
+-    "controlled": {
+-      "badge": "Controlled",
+-      "badgeTitle": "Controlled substance ΓÇö manual ledger only",
+-      "searchPlaceholder": "Search drug, lot or patient...",
+-      "readOnlyNotice": "Read-only view. Record movements on the controlled substances page.",
+-      "loadError": "Unable to load the controlled substance audit trail. Please retry.",
+-      "loading": "Loading...",
+-      "colPerformedAt": "Date",
+-      "colDrug": "Substance",
+-      "colAction": "Movement",
+-      "colQuantity": "Quantity",
+-      "colPerformer": "Performed by",
+-      "colWitness": "Witness",
+-      "emptyTitle": "No controlled substance movements",
+-      "emptyDesc": "Receipts, administrations, wastage and returns of narcotics appear here once they are logged with a witness."
+     }
+   },
+   "labResults": {
+@@ -2639,23 +2154,7 @@
+     "trendsTitle": "Longitudinal Trends of Key Analytes",
+     "trendsDesc": "Tracking the progression of renal, hepatic, metabolic, and hematological parameters over time (Act 39/2007 Coll.).",
+     "tabClinicalInbox": "Clinical Lab Inbox & Review",
+-    "tabAnalyzerImport": "Analyzer Import (IDEXX / Fuji / Mindray)",
+-    "searchPlaceholder": "Search patient or testΓÇª",
+-    "speciesFilterAria": "Filter by species",
+-    "speciesAll": "All species",
+-    "resultCount": "{count} results",
+-    "rangeNormal": "Normal",
+-    "rangeLow": "Low",
+-    "rangeHigh": "High",
+-    "rangePending": "Pending",
+-    "colPatient": "Patient",
+-    "colSpecies": "Species",
+-    "colTest": "Test",
+-    "colValue": "Value",
+-    "colReferenceRange": "Reference range",
+-    "colStatus": "Status",
+-    "colDate": "Date",
+-    "advisoryNote": "Reference range flags are advisory. Clinical interpretation remains with the reviewing veterinarian."
++    "tabAnalyzerImport": "Analyzer Import (IDEXX / Fuji / Mindray)"
+   },
+   "locale": {
+     "language": "Language",
+@@ -2812,15 +2311,7 @@
+       "copyInstagram": "Copy for Instagram",
+       "copyGoogle": "Copy for Google Profile",
+       "copiedToast": "Post text copied to clipboard.",
+-      "sympathyGateActive": "Sympathy Gate protocol active ΓÇö marketing is isolated from deceased patient data.",
+-      "copyGoogleCta": "Reservations and info at our clinic.",
+-      "sympathyGateShort": "Sympathy Gate active",
+-      "providerGoogle": "Google Business Profile",
+-      "providerFacebook": "Facebook Page",
+-      "providerInstagram": "Instagram Feed",
+-      "noChannelsDesc": "No publishing channel connected yet. Connect Facebook, Instagram or a Google profile to publish approved content.",
+-      "manageChannels": "Connect channels",
+-      "manageChannelsShort": "Manage"
++      "sympathyGateActive": "Sympathy Gate protocol active ΓÇö marketing is isolated from deceased patient data."
+     },
+     "briefModal": {
+       "title": "New Content Brief",
+@@ -2960,115 +2451,7 @@
+       "averageRating": "Average rating",
+       "totalReviews": "Total reviews",
+       "unansweredCount": "Awaiting response",
+-      "filterSearch": "Search reviews...",
+-      "platformInternal": "Internal",
+-      "retry": "Try again",
+-      "sentiment": {
+-        "positive": "Positive",
+-        "neutral": "Neutral",
+-        "negative": "Negative"
+-      },
+-      "severity": {
+-        "critical": "Critical severity",
+-        "high": "High severity",
+-        "medium": "Medium severity"
+-      },
+-      "sla": {
+-        "repliedInHours": "Answered in {hours} h",
+-        "replied": "Answered",
+-        "overdue": "Past due ({hours} h)",
+-        "pending": "{hours} h left to answer"
+-      },
+-      "toolbar": {
+-        "searchLabel": "Search reviews",
+-        "platformLabel": "Filter by platform",
+-        "dateFromLabel": "Date from",
+-        "dateToLabel": "Date to",
+-        "ratingLabel": "Filter by rating",
+-        "ratingAll": "All ratings",
+-        "ratingValue": "{value} Γÿà",
+-        "statusLabel": "Filter by response status",
+-        "statusAll": "All statuses",
+-        "statusUnanswered": "Awaiting response",
+-        "statusReplied": "Answered",
+-        "sentimentLabel": "Filter by sentiment",
+-        "escalationLabel": "Filter escalated reviews",
+-        "escalationAll": "No escalation filter",
+-        "sympathyOnly": "Sympathy Gate only",
+-        "sympathyOnlyHint": "Show only reviews of clients whose review requests are suppressed after a patient has passed.",
+-        "clearFilters": "Clear filters",
+-        "countOne": "{count} review",
+-        "countFew": "{count} reviews",
+-        "countOther": "{count} reviews"
+-      },
+-      "kpi": {
+-        "sympathyBlocked": "Suppressed requests (Sympathy Gate)"
+-      },
+-      "queue": {
+-        "heading": "Review queue",
+-        "loading": "Loading reviews...",
+-        "loadError": "Reviews could not be loaded.",
+-        "emptyDesc": "No review has been recorded yet from Google, Facebook or the clinic's internal form.",
+-        "emptyFilteredTitle": "No review matches the filters",
+-        "emptyFilteredDesc": "Adjust the search, platform or date range.",
+-        "colReviewer": "Reviewer",
+-        "colSentiment": "Sentiment",
+-        "colSla": "Response (SLA)",
+-        "colSympathy": "Sympathy Gate",
+-        "colActions": "Actions",
+-        "anonymous": "Anonymous",
+-        "defaultReviewer": "Client",
+-        "noText": "Review without text.",
+-        "escalated": "Escalated",
+-        "escalationReason": "Reason: {reason}",
+-        "sympathyTitle": "No marketing review requests are sent to this client after their pet has passed.",
+-        "sympathyNote": "The review request was suppressed by the Sympathy Gate ΓÇö no marketing outreach is sent to this client after the patient passed.",
+-        "editReply": "Edit reply",
+-        "expand": "Open review",
+-        "collapse": "Collapse review",
+-        "escalate": "Escalate",
+-        "escalateTitle": "Escalate review to staff (create a task)"
+-      },
+-      "toast": {
+-        "replySaved": "Reply to the review was saved.",
+-        "replyError": "Could not save the reply.",
+-        "approveError": "Could not approve the reply.",
+-        "escalateError": "Could not escalate the review.",
+-        "aiGenerated": "AI suggested a reply to the review.",
+-        "aiError": "Could not generate an AI reply.",
+-        "createSuccess": "New review was added.",
+-        "createError": "Could not add the review.",
+-        "deleteSuccess": "Review was deleted.",
+-        "deleteError": "Could not delete the review.",
+-        "copySuccess": "Reply was copied.",
+-        "copyError": "Could not copy the reply."
+-      },
+-      "dialog": {
+-        "addTitle": "Add a new review",
+-        "reviewerPlaceholder": "Client name from the review",
+-        "ratingLabel": "Rating (1 to 5 stars)",
+-        "reviewTextPlaceholder": "Paste the client's review or recommendationΓÇª",
+-        "replyOptional": "Clinic reply (optional)",
+-        "replyPlaceholder": "If the clinic already replied, enter the reply hereΓÇª",
+-        "save": "Save review",
+-        "escalateTitle": "Escalate review to staff",
+-        "escalateDescription": "Escalating creates an internal task for staff to contact the client without delay and resolve the situation.",
+-        "escalateReasonLabel": "Escalation reason (required)",
+-        "escalateReasonPlaceholder": "e.g. The client is unhappy with the waiting time and asks for a call backΓÇª",
+-        "escalateSubmit": "Confirm escalation"
+-      },
+-      "canned": {
+-        "generalLabel": "Thanks & trust (general)",
+-        "generalText": "Thank you for your kind words and for trusting our team with the care of your pet! We truly appreciate it. Kind regards, the veterinary clinic team.",
+-        "recoveryLabel": "Post-operative recovery",
+-        "recoveryText": "Thank you for your feedback. We are delighted that the treatment and the recovery went without complications and that the patient is doing great!",
+-        "emergencyLabel": "Emergency & acute case",
+-        "emergencyText": "Thank you for your understanding during a demanding treatment. A quick response and saving the animal patient's life are our priority. We wish the whole family good health!",
+-        "complaintLabel": "Constructive resolution of a complaint",
+-        "complaintText": "Thank you for your review. We are very sorry about your dissatisfaction ΓÇö every patient matters to us. Please contact the clinic management and we will personally review and resolve the situation.",
+-        "recommendationLabel": "Facebook recommendation",
+-        "recommendationText": "Thank you for the lovely recommendation on Facebook! The satisfaction of our clients and the health of your four-legged friends are the greatest reward for our team."
+-      }
++      "filterSearch": "Search reviews..."
+     },
+     "media": {
+       "editPrefix": "edit",
+@@ -3205,8 +2588,7 @@
+         "handouts": "Educational Handouts",
+         "handoutsDesc": "Publicly available medical handouts",
+         "reviews": "Verified Reviews",
+-        "reviewsDesc": "5Γÿà ratings on Google & Facebook",
+-        "sections": "Page sections"
++        "reviewsDesc": "5Γÿà ratings on Google & Facebook"
+       },
+       "inquiries": {
+         "title": "Website Inquiries & Messages",
+@@ -3234,19 +2616,7 @@
+         "statusNew": "New",
+         "statusInProgress": "In Progress",
+         "statusResolved": "Resolved",
+-        "statusArchived": "Archived",
+-        "searchLabel": "Search website inquiries",
+-        "searchPlaceholder": "Search a name, e-mail or messageΓÇª",
+-        "statusLabel": "Filter by inquiry status",
+-        "loading": "Loading inquiries...",
+-        "loadError": "Website inquiries could not be loaded.",
+-        "emptyFilteredTitle": "No inquiry matches the filters",
+-        "emptyFilteredDesc": "Adjust the search or the status filter.",
+-        "anonymous": "Anonymous visitor",
+-        "tableAria": "Website inquiries and messages",
+-        "countOne": "{count} inquiry",
+-        "countFew": "{count} inquiries",
+-        "countOther": "{count} inquiries"
++        "statusArchived": "Archived"
+       },
+       "liveStats": {
+         "source": "Data Source",
+@@ -3287,85 +2657,7 @@
+       "duplicateSectionTooltip": "Duplicate section",
+       "hideSection": "Hide section",
+       "showSection": "Show section",
+-      "deleteSectionTooltip": "Delete section",
+-      "retry": "Try again",
+-      "tabsAria": "Website management sections",
+-      "tabSections": "Page sections",
+-      "saveDraftTooltip": "Save the current draft of the page",
+-      "publishChangesTooltip": "Publish the changes to the live site",
+-      "publishWebsiteTooltip": "Publish the website online",
+-      "hideWebsiteTooltip": "Hide the website from the public",
+-      "editor": {
+-        "heading": "Clinic website editor",
+-        "viewportLabel": "Preview device",
+-        "loading": "Loading the page editor...",
+-        "loadError": "The page editor could not be loaded."
+-      },
+-      "sections": {
+-        "searchLabel": "Search page sections",
+-        "searchPlaceholder": "Search a section by name or headingΓÇª",
+-        "visibilityLabel": "Filter by visibility",
+-        "visibilityAll": "All sections",
+-        "visibilityVisible": "Shown on the site",
+-        "visibilityHidden": "Hidden",
+-        "loading": "Loading page sections...",
+-        "loadError": "Sections could not be loaded.",
+-        "emptyTitle": "The page has no sections yet",
+-        "emptyDesc": "Add the first section in the page editor ΓÇö for example a hero banner or the services overview.",
+-        "emptyFilteredTitle": "No section matches the filters",
+-        "emptyFilteredDesc": "Adjust the search or the visibility filter.",
+-        "tableAria": "Clinic website sections",
+-        "colOrder": "Order",
+-        "colSection": "Section",
+-        "colPreview": "Content preview",
+-        "colVisibility": "Visibility",
+-        "colActions": "Actions",
+-        "visible": "Visible",
+-        "hidden": "Hidden",
+-        "itemCount": "{count} items",
+-        "previewChipTitle": "Section content preview: {preview}",
+-        "openInEditor": "Open in editor",
+-        "edit": "Edit section",
+-        "duplicate": "Duplicate section",
+-        "delete": "Delete section",
+-        "countOne": "{count} section",
+-        "countFew": "{count} sections",
+-        "countOther": "{count} sections",
+-        "typeUnknown": "Unknown section",
+-        "types": {
+-          "hero": "Hero banner",
+-          "about": "About the clinic & story",
+-          "services": "Services overview",
+-          "team": "Clinic team",
+-          "reviews": "Reviews",
+-          "faq": "Frequently asked questions",
+-          "hours_location": "Opening hours & location",
+-          "booking_cta": "Booking call to action",
+-          "gallery": "Gallery",
+-          "handouts": "Educational handouts",
+-          "trust_badges": "Certificates & guarantees",
+-          "stats": "Statistics in numbers",
+-          "emergency_banner": "Emergency banner",
+-          "contact_form": "Contact form",
+-          "video_embed": "Video",
+-          "social_proof": "Social media",
+-          "custom_rich_text": "Custom text",
+-          "wellness": "Wellness programmes"
+-        }
+-      },
+-      "toast": {
+-        "sectionAdded": "Section was added to the end of the page.",
+-        "sectionUpdated": "Changes to the section were applied.",
+-        "sectionDuplicated": "Section was duplicated.",
+-        "sectionRemoved": "Section was removed from the draft.",
+-        "sectionKeptAtLeastOne": "The page must contain at least one section.",
+-        "saveError": "Could not save the section changes.",
+-        "publishError": "Could not publish the website.",
+-        "toggleError": "Could not change the publishing state of the website.",
+-        "inquiryError": "Could not update the inquiry status.",
+-        "copyLinkSuccess": "The public website link was copied to the clipboard!",
+-        "copyLinkError": "Could not copy the link."
+-      }
++      "deleteSectionTooltip": "Delete section"
+     },
+     "suppression": {
+       "title": "Suppression Center & GDPR Audit",
+@@ -3548,9 +2840,7 @@
+       "simPatientLabel": "Assign patient (optional)",
+       "simPayloadJson": "Event payload (JSON)",
+       "simProcessImmediately": "Immediately run worker and evaluate rules",
+-      "btnRunSimulation": "Run simulation",
+-      "invalidJsonPayload": "Invalid JSON payload format",
+-      "queuePending": "{count} pending"
++      "btnRunSimulation": "Run simulation"
+     },
+     "competitors": {
+       "title": "Competitor & Market Intelligence",
+@@ -3570,9 +2860,7 @@
+       "description": "Benchmarking regional veterinary practices, services, Google ratings, and market trends.",
+       "analyzeAction": "Analyze Market",
+       "emptyTitle": "Competitor monitoring is not connected",
+-      "emptyDescription": "No demo clinics. Connect a market source when it is available.",
+-      "openIntel": "Open Vet Intelligence",
+-      "summaryDesc": "Clinic reputation from your own data plus an overview of official sources."
++      "emptyDescription": "No demo clinics. Connect a market source when it is available."
+     },
+     "tabCalendar": "Content Calendar",
+     "tabQueue": "Approval Queue",
+@@ -3642,83 +2930,7 @@
+     },
+     "wellness": {
+       "title": "Wellness Plans & Programs",
+-      "subtitle": "Clinic preventive care plans and redemption tracking during patient visits.",
+-      "retry": "Retry",
+-      "toast": {
+-        "redeemSuccess": "Plan benefit redeemed successfully.",
+-        "deceasedBlocked": "Benefits can't be redeemed ΓÇô the patient is recorded as deceased.",
+-        "forbidden": "You don't have permission to redeem benefits.",
+-        "redeemError": "Could not redeem the benefit."
+-      },
+-      "validation": {
+-        "benefitRequired": "Enter the name of the redeemed benefit."
+-      },
+-      "plans": {
+-        "heading": "Active preventive care plans",
+-        "activeCount": "{active} of {total} active",
+-        "loadError": "Could not load wellness plans.",
+-        "emptyTitle": "No wellness plans yet",
+-        "emptyDesc": "No wellness plans have been created in settings yet.",
+-        "manage": "Manage plans",
+-        "active": "Active",
+-        "inactive": "Inactive",
+-        "defaultDescription": "Comprehensive annual preventive care plan.",
+-        "monthly": "Monthly",
+-        "annual": "Annually"
+-      },
+-      "toolbar": {
+-        "searchLabel": "Search wellness enrollments",
+-        "searchPlaceholder": "Search patient, owner or planΓÇª",
+-        "statusLabel": "Filter by status",
+-        "statusAll": "All statuses",
+-        "statusActive": "Active",
+-        "statusCancelled": "Cancelled",
+-        "clearFilters": "Clear filters",
+-        "countOne": "{count} enrollment",
+-        "countFew": "{count} enrollments",
+-        "countOther": "{count} enrollments"
+-      },
+-      "kpi": {
+-        "all": "All enrollments",
+-        "active": "Active enrollments",
+-        "activeShare": "{percent} of all enrollments",
+-        "cancelled": "Cancelled enrollments"
+-      },
+-      "enrollments": {
+-        "heading": "Patients enrolled in wellness plans",
+-        "loadError": "Could not load wellness enrollments.",
+-        "loading": "Loading wellness enrollments...",
+-        "emptyTitle": "No patients are enrolled in a wellness plan yet.",
+-        "emptyFilteredTitle": "No enrollments match the filters",
+-        "emptyFilteredDesc": "Adjust the search or the status filter.",
+-        "colPatient": "Patient",
+-        "colPlan": "Plan",
+-        "colStatus": "Status",
+-        "colAction": "Action",
+-        "noPatient": "No patient assigned",
+-        "owner": "Owner: {name}",
+-        "validFrom": "Valid from {date}",
+-        "statusActive": "Active enrollment",
+-        "statusCancelled": "Cancelled",
+-        "redeem": "Redeem benefit",
+-        "selected": "Selected"
+-      },
+-      "redemption": {
+-        "heading": "Benefit redemption",
+-        "benefitLabel": "Benefit name *",
+-        "benefitPlaceholder": "E.g. Free preventive check-up, Nail trim, 10% off dental cleaning",
+-        "notesLabel": "Vet / front desk note",
+-        "notesPlaceholder": "E.g. performed during the examination",
+-        "submit": "Confirm benefit redemption",
+-        "historyHeading": "Patient redemption history",
+-        "historyLoading": "Loading history...",
+-        "historyLoadError": "Could not load the redemption history.",
+-        "historyEmpty": "No benefits have been redeemed yet.",
+-        "colBenefit": "Benefit",
+-        "colRedeemedAt": "Redeemed",
+-        "noPatientSelected": "No patient selected",
+-        "selectPatientDesc": "Click a patient in the enrollment list to view their history and redeem a benefit."
+-      }
++      "subtitle": "Clinic preventive care plans and redemption tracking during patient visits."
+     },
+     "studio": {
+       "toastTvCreated": "Campaign was added to the waiting-room TV.",
+@@ -3791,14 +3003,7 @@
+       "emailSubject": "Subject:",
+       "emailFrom": "From:",
+       "emailReady": "Ready for a bulk email newsletter",
+-      "copyEmail": "Copy email",
+-      "smsHint": "You can send the SMS to selected clients from",
+-      "smsHintSection": "Care reminders",
+-      "tvSlideTitle": "Add this campaign as a waiting-room TV slide",
+-      "resetVisualTitle": "Reset visual",
+-      "downloadVideoTitle": "Download video file",
+-      "downloadImageTitle": "Download image",
+-      "fbJustNow": "Just now ΓÇó Public"
++      "copyEmail": "Copy email"
+     }
+   },
+   "nav": {
+@@ -3833,7 +3038,6 @@
+     "adminSupport": "Admin Support",
+     "collapseMenu": "Collapse menu",
+     "expandMenu": "Expand menu",
+-    "actions": "Actions",
+     "automations": "Automations",
+     "marketingMedia": "Media Library",
+     "marketingCanvas": "AI Canvas / SOPs",
+@@ -3881,10 +3085,7 @@
+     "v2Import": "V2 Migration",
+     "ekasaClosures": "Daily closures (Z-report)",
+     "imaging": "X-ray & imaging AI",
+-    "medications": "Medications & oversight",
+-    "aiSwarm": "AI Swarm & AgentOS",
+-    "interopBridge": "Interop Bridge v1 ΓåÆ v2",
+-    "schemaValidation": "Schema validation"
++    "medications": "Medications & oversight"
+   },
+   "newSoap": {
+     "loadingEditor": "Loading editor...",
+@@ -4108,36 +3309,7 @@
+       "firstClinicDayStep2": "First clinic day, step 2 of 3: add this owner's pet. Booking is next.",
+       "choosePatient": "Choose a patient from the Patients list before editing.",
+       "name": "Name",
+-      "microchipNumber": "Microchip Number",
+-      "createPatient": "Create Patient",
+-      "loadingForm": "Loading patient form...",
+-      "changeOwner": "Change owner",
+-      "clientSearchError": "Unable to search clients. Please retry.",
+-      "sections": {
+-        "owner": {
+-          "title": "Owner",
+-          "subtitle": "Every patient chart belongs to one client."
+-        },
+-        "signalment": {
+-          "title": "Patient",
+-          "subtitle": "Name, species, and signalment."
+-        },
+-        "identification": {
+-          "title": "Identification",
+-          "subtitle": "A microchip number helps prevent duplicate charts."
+-        }
+-      },
+-      "microchipHint": {
+-        "help": "Scan or type the chip number. Spaces and dashes are removed from 15-digit ISO numbers.",
+-        "iso": "ISO 11784/11785 format ┬╖ 15 digits",
+-        "length": "ISO 11784/11785 chips have 15 digits; this number has {count}. Check the scan, or keep it for an older non-ISO chip."
+-      },
+-      "validation": {
+-        "ownerRequired": "Search for the owner and select them from the results.",
+-        "nameRequired": "Enter the patient's name.",
+-        "checkRequiredFields": "Check required fields and field lengths.",
+-        "missingFields": "To create the patient, complete: {fields}."
+-      }
++      "microchipNumber": "Microchip Number"
+     },
+     "profile": {
+       "age": "Age",
+@@ -4384,18 +3556,7 @@
+       "uploadFailed": "Upload failed. Please try again.",
+       "uploadUnconfirmed": "The upload could not be confirmed. Retry to safely check and finish the same upload.",
+       "labReportAttached": "Lab report attached",
+-      "documentUploaded": "Document uploaded",
+-      "filterImaging": "Imaging",
+-      "imagingTitle": "Imaging studies",
+-      "imagingStudy": "Imaging study",
+-      "imagingUploaded": "Imaging study attached",
+-      "uploadImaging": "Upload imaging study",
+-      "uploadImagingDesc": "Attach a diagnostic study (RTG, USG, CT, endoscopy). Studies are stored under the imaging category and never replace the patient profile photo.",
+-      "modalityLabel": "Diagnostic modality",
+-      "modalityPlaceholder": "Select modality...",
+-      "imagingModalityRequired": "Select the diagnostic modality (RTG, USG, CT, or endoscopy) before uploading.",
+-      "imagingUploadValidation": "Choose a JPG, PNG, or WebP image up to 4 MB.",
+-      "imagingNotice": "The study is filed under the imaging category and tagged with its modality for the clinical whiteboard."
++      "documentUploaded": "Document uploaded"
+     },
+     "appointmentsTab": {
+       "title": "Appointments & Visits",
+@@ -4451,78 +3612,7 @@
+       "mergeAllowed": "The retiring chart has no retained history. Any explicitly listed prospective work will move atomically; an immutable identity event will preserve who merged it, when, and why.",
+       "canonicalChartOpened": "Opened the canonical chart for a merged patient identity",
+       "mergedIntoNotice": "{name} was merged into this chart by {performedBy} on {date}.",
+-      "reasonPrefix": "Reason: {reason}",
+-      "adminOnlyTitle": "Duplicate review is admin-only",
+-      "adminOnlyDesc": "Only practice administrators can review or merge duplicate patient identities.",
+-      "adminOnlyBadge": "Admin-only",
+-      "scopeNote": "OpenVPM only suggests same-owner matches. A merge is permitted only when the retiring chart has no clinical, medication, controlled-substance, financial, or other retained history.",
+-      "loadError": "Unable to load duplicate candidates.",
+-      "previewError": "Unable to preview this merge.",
+-      "previewLoading": "Checking both charts and their retained history...",
+-      "prospectiveWork": "Prospective work",
+-      "keepAsCanonical": "Keep as canonical",
+-      "retireAsDuplicate": "Retire as duplicate",
+-      "roleKeep": "Keep",
+-      "roleRetire": "Retire",
+-      "historyCount": "Charts with retained history: {count}",
+-      "summary": "Owners: {groups} ┬╖ Charts to review: {charts}",
+-      "searchLabel": "Filter duplicate candidates",
+-      "searchPlaceholder": "Filter by owner, patient, or microchip...",
+-      "noMatchesTitle": "No duplicate groups match this filter",
+-      "noMatchesDesc": "Clear the filter to see every same-owner candidate.",
+-      "checksAllClear": "All {count} retained-history checks are clear.",
+-      "checksClearToggle": "Show clear checks ({count})",
+-      "reasonMinimum": "At least {min} characters",
+-      "reasonRemaining": "Characters still needed: {count}",
+-      "confirmationMismatch": "Type MERGE exactly, in capital letters.",
+-      "redirectNotice": "{mergeName} will redirect permanently to the canonical {keepName} chart.",
+-      "merging": "Merging charts...",
+-      "closeLocked": "The merge is running. This window closes when it finishes.",
+-      "table": {
+-        "caption": "Candidate charts for {owner}",
+-        "patient": "Patient",
+-        "signalment": "Species ┬╖ Breed",
+-        "created": "Created"
+-      },
+-      "mismatch": {
+-        "title": "These charts differ in: {fields}",
+-        "desc": "Confirm both charts describe the same animal before merging."
+-      },
+-      "counts": {
+-        "differentClient": "Different owner",
+-        "sourceHasIncomingAliases": "Charts already merged into the retiring chart",
+-        "sourceWasPreviouslyMerged": "Retiring chart was already merged",
+-        "targetWasPreviouslyMerged": "Canonical chart is itself an alias",
+-        "appointmentHistory": "Past or non-movable appointments",
+-        "appointmentCollisions": "Colliding future appointments",
+-        "waitlistHistory": "Resolved or deleted waitlist records",
+-        "waitlistCollisions": "Duplicate waiting-list entries",
+-        "weights": "Weights",
+-        "allergies": "Allergies",
+-        "soapNotes": "SOAP notes",
+-        "vaccinations": "Vaccinations",
+-        "labResults": "Lab results",
+-        "procedures": "Procedures",
+-        "clinicalNotes": "Clinical notes",
+-        "problemList": "Problem list entries",
+-        "vitalSigns": "Vital signs",
+-        "cases": "Cases",
+-        "treatmentPlans": "Treatment plans",
+-        "prescriptions": "Prescriptions",
+-        "prescriptionEvents": "Prescription events",
+-        "controlledSubstanceEntries": "Controlled-substance log entries",
+-        "clinicalCorrections": "Clinical record corrections",
+-        "dispenseCharges": "Dispense charges",
+-        "consentRequests": "Consent requests",
+-        "captureSessions": "Capture sessions",
+-        "patientFiles": "Patient files",
+-        "invoices": "Invoices",
+-        "insurancePolicies": "Insurance policies",
+-        "wellnessEnrollments": "Wellness plan enrollments",
+-        "futureAppointments": "Future appointments",
+-        "waitingListEntries": "Waiting-list entries"
+-      },
+-      "clearFilter": "Clear filter"
++      "reasonPrefix": "Reason: {reason}"
+     },
+     "historySearch": {
+       "findTitle": "Find in patient history",
+@@ -4752,7 +3842,7 @@
+       "qrAlt": "QR code for the consent signing link",
+       "waitingForSignature": "Waiting for a signatureΓÇª"
+     },
+-    "title": "Clinical records",
++    "title": "Clinical Record",
+     "subtitle": "Clinical documentation. Identity and owner stay on the patient card.",
+     "new_record": "New Record",
+     "search_placeholder": "Search records...",
+@@ -5141,37 +4231,6 @@
+       "openCard": "Card",
+       "newSoap": "New SOAP",
+       "backToRegister": "Card list"
+-    },
+-    "hub": {
+-      "sectionsAria": "Clinical record sections",
+-      "recordTypesAria": "Clinical record types",
+-      "patientCount": "{count} patients",
+-      "speciesFilterAria": "Filter by species",
+-      "selectedPatientAria": "Selected patient"
+-    },
+-    "sections": {
+-      "soap": "SOAP",
+-      "records": "Records",
+-      "history": "History",
+-      "attachments": "Attachments"
+-    },
+-    "kpi": {
+-      "totalVisits": "Total visits",
+-      "avgDuration": "Avg. visit duration",
+-      "avgDurationValue": "{minutes} min",
+-      "openDiagnoses": "Open diagnoses"
+-    },
+-    "history": {
+-      "colDate": "Date",
+-      "colType": "Type",
+-      "colRecord": "Record",
+-      "colAuthor": "Author",
+-      "colStatus": "Status",
+-      "open": "Open record",
+-      "emptyTitle": "No clinical history yet",
+-      "emptyDescription": "SOAP notes, vaccinations, prescriptions, problems, lab results and procedures will appear here in chronological order.",
+-      "loadError": "Some clinical records could not be loaded. The history may be incomplete.",
+-      "current": "Current"
+     }
+   },
+   "reports": {
+@@ -5183,8 +4242,7 @@
+       "revenue": "Revenue",
+       "appointments": "Appointments",
+       "services": "Services",
+-      "inventory": "Inventory",
+-      "label": "Report sections"
++      "inventory": "Inventory"
+     },
+     "exportCsv": "Export CSV",
+     "exportPdf": "Export PDF",
+@@ -5202,17 +4260,7 @@
+       "last30": "Last 30 Days",
+       "monthToDate": "Month to Date",
+       "lastMonth": "Last Month",
+-      "yearToDate": "Year to Date",
+-      "presets": "Quick date ranges",
+-      "errors": {
+-        "startRequired": "Enter a start date.",
+-        "endRequired": "Enter an end date.",
+-        "startInvalid": "The start date is not a valid date.",
+-        "endInvalid": "The end date is not a valid date.",
+-        "startAfterEnd": "The start date must be on or before the end date.",
+-        "tooLong": "The report range can span at most {days} days.",
+-        "invalid": "Invalid report date range."
+-      }
++      "yearToDate": "Year to Date"
+     },
+     "invalidDateRange": {
+       "title": "Choose a valid report date range"
+@@ -5242,8 +4290,7 @@
+       "emptyTitle": "No doctor breakdown available",
+       "emptyDesc": "Appointments will be grouped by assigned doctor for the selected date range.",
+       "pdfTitle": "Appointments Report",
+-      "pdfEmpty": "No appointment data for this period.",
+-      "unassigned": "Unassigned"
++      "pdfEmpty": "No appointment data for this period."
+     },
+     "services": {
+       "emptyTitle": "No service data available",
+@@ -5275,8 +4322,7 @@
+       "restrictedTitle": "Reports are restricted",
+       "restrictedDesc": "Only administrators and veterinarians can view practice reports.",
+       "backToDashboard": "Back to dashboard"
+-    },
+-    "loading": "Loading reportΓÇª"
++    }
+   },
+   "roles": {
+     "admin": "Admin",
+@@ -5405,7 +4451,6 @@
+     "viewDay": "Day",
+     "viewWeek": "Week",
+     "viewMonth": "Month",
+-    "viewList": "List",
+     "firstVisitStep": "First clinic day ┬╖ Step 3 of 3",
+     "firstVisitTitle": "Book the pet's first real appointment.",
+     "firstVisitDesc": "Choose the pet, time, location, and visit type. Your current PIMS can stay in place while the team validates this visit end to end.",
+@@ -5424,19 +4469,6 @@
+     "noAppointmentsWeekDesc": "The selected schedule is clear for this week.",
+     "noAppointmentsMonthTitle": "No appointments in this month",
+     "noAppointmentsMonthDesc": "The selected schedule is clear for this month.",
+-    "rangeStart": "From",
+-    "rangeEnd": "To",
+-    "filterDoctorAria": "Filter schedule by doctor",
+-    "noAppointmentsListTitle": "No appointments in list",
+-    "noAppointmentsListDesc": "No appointments found for the selected period and filters.",
+-    "listColTime": "Time",
+-    "listColPatient": "Patient",
+-    "listColClient": "Client",
+-    "listColType": "Type",
+-    "listColDoctor": "Doctor",
+-    "listColLocation": "Room / Location",
+-    "listColStatus": "Status",
+-    "listColActions": "Actions",
+     "calendarSubscribe": {
+       "button": "Add to your calendar",
+       "title": "Your schedule, in your calendar",
+@@ -5619,118 +4651,6 @@
+         "reset": "Reset to Defaults"
+       }
+     },
+-    "ekasa": {
+-      "title": "e-Kasa Settings",
+-      "subtitle": "Configure the electronic cash register (Act No. 289/2008 Coll.).",
+-      "back": "Back to settings",
+-      "loading": "Loading e-Kasa settings...",
+-      "loadError": {
+-        "title": "Could not load e-Kasa settings",
+-        "description": "Retry loading the saved cash-register configuration before making changes.",
+-        "retry": "Retry"
+-      },
+-      "compliance": {
+-        "title": "Fiscal configuration check",
+-        "complete": "All required statutory details are complete.",
+-        "incomplete": "Complete the required fiscal details before recording receipts.",
+-        "completeBadge": "Ready",
+-        "incompleteBadge": "Needs attention",
+-        "status": {
+-          "configured": "Configured",
+-          "required": "Required",
+-          "optional": "Optional"
+-        },
+-        "items": {
+-          "dic": {
+-            "label": "Tax ID configured",
+-            "description": "Business tax identification number (required)"
+-          },
+-          "pokladnicaId": {
+-            "label": "Cash register ID configured",
+-            "description": "Identifier assigned by the Financial Administration SR during e-Kasa registration (required)"
+-          },
+-          "apiUrl": {
+-            "label": "API URL configured",
+-            "description": "Financial Administration SR endpoint used to submit receipts (required)"
+-          },
+-          "certUploaded": {
+-            "label": "Client certificate configured",
+-            "description": "PKCS#12 certificate for PKP signing (optional for CLOUD type)"
+-          },
+-          "dphConfig": {
+-            "label": "VAT ID (where applicable)",
+-            "description": "Enter a VAT identification number only when the practice is VAT registered"
+-          }
+-        }
+-      },
+-      "form": {
+-        "title": "Cash register configuration",
+-        "description": "Add the practice fiscal identifiers and receipt-transmission options."
+-      },
+-      "fields": {
+-        "dic": {
+-          "label": "Tax ID",
+-          "placeholder": "1234567890"
+-        },
+-        "icDph": {
+-          "label": "VAT ID",
+-          "placeholder": "SK1234567890 (VAT registered practices only)"
+-        },
+-        "pokladnicaId": {
+-          "label": "Cash register ID",
+-          "placeholder": "e.g. 88812345678"
+-        },
+-        "pokladnicaType": {
+-          "label": "Cash register type",
+-          "tooltipLabel": "Cash register type help"
+-        },
+-        "apiUrl": {
+-          "label": "e-Kasa API URL",
+-          "portal": "Financial Administration SR portal"
+-        }
+-      },
+-      "registerTypes": {
+-        "cloud": {
+-          "label": "CLOUD (API)",
+-          "tooltip": "API-based e-Kasa integration; a PKCS#12 certificate may be required depending on the service setup."
+-        },
+-        "orp": {
+-          "label": "ORP ΓÇö Online cash register",
+-          "tooltip": "Online cash register registered with the Financial Administration SR."
+-        },
+-        "vrp": {
+-          "label": "VRP ΓÇö Virtual cash register",
+-          "tooltip": "Virtual cash register used through the Financial Administration SR service."
+-        }
+-      },
+-      "options": {
+-        "title": "Options",
+-        "offline": {
+-          "label": "Offline mode",
+-          "description": "Receipts are stored locally and submitted after the connection is restored."
+-        },
+-        "cashless": {
+-          "label": "Enable cashless payments",
+-          "description": "Card and bank-transfer payments require terminal configuration."
+-        }
+-      },
+-      "certificate": {
+-        "title": "PKP signing certificate",
+-        "configured": "Configured",
+-        "notConfigured": "Not configured",
+-        "description": "For production, provide the PKCS#12 certificate issued by the Financial Administration SR through the approved administrator workflow. This form displays only the certificate status."
+-      },
+-      "save": {
+-        "action": "Save e-Kasa settings",
+-        "saving": "Saving settings...",
+-        "success": "e-Kasa settings saved.",
+-        "error": "Could not save e-Kasa settings."
+-      },
+-      "legal": {
+-        "title": "Legal notice",
+-        "description": "The e-Kasa system is governed by Act No. 289/2008 Coll. on the use of electronic cash registers and Act No. 384/2025 Coll. Every receipt must contain an OKP and PKP code. The system generates OKP (SHA-1) and PKP (RSA-SHA256) after certificate configuration."
+-      }
+-    },
+     "booking": {
+       "title": "Online appointment requests",
+       "subtitle": "Give new and existing clients a simple way to request a preferred appointment time. Every request lands on your schedule for your team to review, assign, and confirm. Share the link, print the QR code, or add the button to your website.",
+@@ -5977,12 +4897,6 @@
+         "visitId": "Visit ID",
+         "date": "Date",
+         "doctor": "Doctor"
+-      },
+-      "csv": {
+-        "title": "CSV Import ΓÇö Encoding Safe (UTF-8 / Windows-1250)",
+-        "description": "Upload a legacy CSV export. The parser detects Windows-1250 vs UTF-8 and never crashes on invalid bytes ΓÇö it falls back safely.",
+-        "chooseFile": "Choose CSV file",
+-        "searchPlaceholder": "Search preview records"
+       }
+     },
+     "locations": {
+@@ -6056,10 +4970,7 @@
+           "few": "{count} legacy practice-wide working windows",
+           "other": "{count} legacy practice-wide working windows"
+         }
+-      },
+-      "retired": "Location retired",
+-      "noPhone": "No phone",
+-      "primaryBadge": "Primary"
++      }
+     },
+     "billing": {
+       "checkoutUnavailable": "Billing checkout is unavailable. Please try again.",
+@@ -6091,9 +5002,8 @@
+       "requirementsDue_few": "{count} items due",
+       "requirementsDue_other": "{count} items due",
+       "servicePicker": {
+-        "placeholder": "Search services or products...",
+-        "typeServiceName": "Type a service or product name...",
+-        "searchServicesAria": "Search services and products",
++        "typeServiceName": "Type a service name...",
++        "searchServicesAria": "Search services",
+         "noMatch": "No services match \"{query}\"."
+       },
+       "checkoutCanceled": "Checkout was canceled",
+@@ -6150,10 +5060,7 @@
+       "featureIntegrations": "Supported integrations",
+       "currentPlan": "Current plan",
+       "choosePlan": "Choose {name}",
+-      "contactSales": "Contact sales",
+-      "checkoutCanceledDetail": "Nothing changed. Choose a schedule whenever you are ready.",
+-      "continueToCheckout": "Continue to secure checkout",
+-      "pastDueNotice": "Stripe is retrying this payment. Your clinic remains writable during the retry window; review billing to avoid an unpaid, read-only account."
++      "contactSales": "Contact sales"
+     },
+     "staff": {
+       "updated": "Staff member updated",
+@@ -6185,15 +5092,7 @@
+       "roleViewer": "Viewer (read-only)",
+       "roleTechnician": "Technician",
+       "roleVeterinarian": "Veterinarian",
+-      "roleAdmin": "Admin",
+-      "title": "Staff & working hours",
+-      "description": "Invite teammates, set their roles and manage provider working hours.",
+-      "memberAdded": "Staff member added",
+-      "memberDeactivated": "Staff member deactivated",
+-      "inviteSent": "Invite sent",
+-      "inviteDescription": "They'll get an email to set their own password and activate their account.",
+-      "inviteLinkHint": "Invite link (shown in dev/preview so you can test the flow):",
+-      "providerLabel": "Veterinarian"
++      "roleAdmin": "Admin"
+     },
+     "appointmentTypes": {
+       "created": "Appointment type created",
+@@ -6212,9 +5111,7 @@
+       "colRoomType": "Room Type",
+       "colActions": "Actions",
+       "emptyTitle": "No appointment types configured",
+-      "emptyDescription": "Add appointment types so scheduling can use default durations, colors, and room types.",
+-      "title": "Appointment types",
+-      "description": "Default duration, colour and room type used when scheduling appointments."
++      "emptyDescription": "Add appointment types so scheduling can use default durations, colors, and room types."
+     },
+     "rooms": {
+       "created": "Room created",
+@@ -6234,11 +5131,7 @@
+       "typeTreatment": "Treatment",
+       "typeBoarding": "Boarding",
+       "colLocation": "Location",
+-      "colActions": "Actions",
+-      "title": "Rooms",
+-      "description": "Exam rooms, theatres and boarding spaces that appointments can book.",
+-      "unassigned": "Unassigned",
+-      "deleted": "Room deleted"
++      "colActions": "Actions"
+     },
+     "wellness": {
+       "created": "Wellness plan created",
+@@ -6267,9 +5160,7 @@
+       "invoiceSchedule": "Invoice schedule",
+       "active": "Active",
+       "deactivate": "Deactivate",
+-      "reactivate": "Reactivate",
+-      "reactivated": "Wellness plan reactivated",
+-      "deactivated": "Wellness plan deactivated"
++      "reactivate": "Reactivate"
+     },
+     "templates": {
+       "created": "Template created",
+@@ -6316,18 +5207,7 @@
+       "searchFailed": "Catalog search failed. Edit the query to retry.",
+       "noActiveServicesMatch": "No active services match \"{query}\".",
+       "noActiveProductsMatch": "No active products match \"{query}\".",
+-      "noCodeOrCategory": "No code or category",
+-      "title": "Treatment templates",
+-      "description": "Reusable bundles of services and products for common procedures.",
+-      "itemQuantityPlaceholder": "Qty",
+-      "categories": {
+-        "surgery": "Surgery",
+-        "wellness": "Wellness",
+-        "dental": "Dental",
+-        "preventive": "Preventive care",
+-        "emergency": "Emergency",
+-        "other": "Other"
+-      }
++      "noCodeOrCategory": "No code or category"
+     },
+     "data": {
+       "backupMissingSections": "Backup is missing required sections",
+@@ -6412,17 +5292,7 @@
+       "step_clients": "Clients (pet owners)",
+       "step_patients": "Patients (pets)",
+       "step_vaccinations": "Vaccine history",
+-      "step_soapNotes": "Medical history (visit notes)",
+-      "checkAgain": "Check again",
+-      "expectedColumns": "Expected columns:",
+-      "selectedFile": "Selected file:",
+-      "deletionContactEmailPlaceholder": "owner@example.com",
+-      "backupInvalidRestoreData": "Backup has invalid restore data",
+-      "backupVerified": "Backup verified",
+-      "vaccinationCsvChecked": "Vaccination CSV checked",
+-      "deletionRequestSent": "Account deletion request sent",
+-      "sampleDataRemoved": "Sample data removed",
+-      "sampleDataAdded": "Sample data added"
++      "step_soapNotes": "Medical history (visit notes)"
+     },
+     "simulation": {
+       "title": "Clinical Simulation & Journey Discovery",
+@@ -6500,8 +5370,7 @@
+       "uploadFailed": "Upload failed",
+       "tryAgain": "Try again",
+       "accentColor": "Accent color",
+-      "updated": "Branding updated",
+-      "logoAlt": "Practice logo"
++      "updated": "Branding updated"
+     },
+     "emails": {
+       "title": "Emails from OpenVPM",
+@@ -6732,49 +5601,6 @@
+       "live": "Live",
+       "lastSynced": "Last synced: {time}",
+       "refreshNow": "Refresh now"
+-    },
+-    "activeCount": "{count} active",
+-    "date": {
+-      "previous": "Previous day",
+-      "next": "Next day",
+-      "today": "Today",
+-      "jumpAria": "Board date"
+-    },
+-    "toolbar": {
+-      "searchPlaceholder": "Search patient, owner, doctor, or room",
+-      "departmentFilter": "Department",
+-      "allDepartments": "All departments",
+-      "visibleCount": "{visible} of {total} patients"
+-    },
+-    "departments": {
+-      "ambulancia": "Outpatient clinic",
+-      "chirurgia": "Surgery",
+-      "hospitalizacia": "Hospitalisation"
+-    },
+-    "conditions": {
+-      "critical": "Critical",
+-      "postOp": "Post-operative",
+-      "awaitingDischarge": "Awaiting discharge",
+-      "stable": "Stabilised"
+-    },
+-    "times": {
+-      "checkIn": "Check-in",
+-      "scheduled": "Scheduled",
+-      "waiting": "Waiting",
+-      "fasting": "Fasting",
+-      "fastingStartsIn": "starts in {duration}",
+-      "procedure": "Procedure",
+-      "imaging": "Imaging today"
+-    },
+-    "noMatches": {
+-      "title": "No patients match",
+-      "description": "Adjust the search or the department filter to see the rest of the board.",
+-      "action": "Clear filters"
+-    },
+-    "otherDate": {
+-      "emptyTitle": "No patients on this date",
+-      "emptyDescription": "Use the date navigation to move to another day of the board.",
+-      "backToToday": "Back to today"
+     }
+   },
+   "activation": {
+@@ -7431,7 +6257,7 @@
+       "hintSelectPatient": "Select a patient above first to enable recording.",
+       "playerTitle": "Dictation recording ({seconds} seconds)",
+       "recordAgain": "Record again",
+-      "process": "Process with AI",
++      "process": "Process with Gemini AI",
+       "processing": "AI is analysing and structuring the veterinary dictation...",
+       "processingHint": "Converting audio to text and categorising it into the SOAP structure.",
+       "micPermissionDenied": "Microphone access was denied. If you just allowed it, reload the page (F5 / Reload), or check microphone permissions in Windows Settings.",
+@@ -7439,11 +6265,7 @@
+       "micNotFound": "No microphone found. Check your microphone connection and try again.",
+       "micBusy": "Microphone is busy with another application.",
+       "micGenericError": "Could not access microphone. Check browser permissions.",
+-      "dictatePrompt": "Dictate clinical findings...",
+-      "hintLive": "Start the ambient consult recording and speak naturally ΓÇö AI structures the speech into a SOAP note.",
+-      "hintUpload": "Choose an audio file with the dictation and then process it the same way as a live recording.",
+-      "retentionNote": "The raw audio recording is automatically deleted from the server within 24 hours under GDPR rules; only the clinical text remains in the patient chart.",
+-      "recordingFailed": "Recording failed while capturing. The partial recording was discarded ΓÇö please dictate again."
++      "dictatePrompt": "Dictate clinical findings..."
+     },
+     "transcript": {
+       "title": "Raw dictation transcript",
+@@ -7454,10 +6276,7 @@
+     "soapCard": {
+       "title": "Clinical SOAP record",
+       "empty": "No generated SOAP record",
+-      "emptyHint": "Select a patient, record audio or choose a clinical template from the menu on the left.",
+-      "draftBadge": "Draft ΓÇö awaiting veterinarian signature",
+-      "finalizedBadge": "Finalized by a veterinarian",
+-      "draftStatutoryNote": "Under Act No. 39/2007 Coll., the AI proposal remains a draft until it is reviewed and signed by a veterinarian in the chart."
++      "emptyHint": "Select a patient, record audio or choose a clinical template from the menu on the left."
+     },
+     "save": {
+       "confirmAria": "I confirm that I have reviewed the AI transcript and am finalizing the record",
+@@ -7505,46 +6324,6 @@
+       "timeout": "The AI provider did not answer in time. The transcript is kept below ΓÇö try reformatting again or finish the SOAP manually.",
+       "openSettings": "Open Settings ΓåÆ AI",
+       "providerError": "The AI provider returned an error. The transcript is saved below ΓÇö try formatting again or complete the SOAP note manually."
+-    },
+-    "status": {
+-      "idle": "Ready",
+-      "recording": "RecordingΓÇª",
+-      "processing": "ProcessingΓÇª",
+-      "done": "Processed",
+-      "saved": "Saved",
+-      "error": "Processing error"
+-    },
+-    "modes": {
+-      "label": "Recording mode",
+-      "live": "Live ambient scribe",
+-      "dictation": "Note dictation",
+-      "upload": "Upload audio file"
+-    },
+-    "micError": {
+-      "title": "Microphone unavailable",
+-      "instructions": "Allow the microphone using the lock icon next to the browser address bar (Permissions ΓåÆ Microphone), then reload the page. On Windows check Settings ΓåÆ Privacy ΓåÆ Microphone.",
+-      "retry": "Try the microphone again",
+-      "dismiss": "Dismiss warning"
+-    },
+-    "processError": {
+-      "title": "Dictation processing failed",
+-      "preservedNote": "The recording was preserved ΓÇö nothing was lost. Check your internet connection and try processing again.",
+-      "retry": "Retry processing"
+-    },
+-    "kpi": {
+-      "total": "Total dictations",
+-      "processed": "Processed",
+-      "savedInChart": "Saved in chart",
+-      "drafts": "Drafts awaiting signature"
+-    },
+-    "controlled": {
+-      "title": "Narcotic / psychotropic substance detected (Act No. 139/1998 Coll.)",
+-      "description": "Dosages, unit prices and billing items for these substances are never auto-prefilled. Enter them manually and record them in the controlled substances register (OPL)."
+-    },
+-    "upload": {
+-      "invalidType": "The selected file is not an audio recording. Choose an audio file (mp3, webm, m4a...).",
+-      "hint": "Choose a dictation audio recording (mp3, webm, m4a, wav). The file stays in your browser until it is sent for processing.",
+-      "button": "Choose audio file"
+     }
+   },
+   "imaging": {
+@@ -7718,15 +6497,6 @@
+       "colActions": "Actions",
+       "unknownPatient": "Unknown",
+       "revision": "rev. {count}"
+-    },
+-    "modality": {
+-      "rtg": "X-ray",
+-      "usg": "Ultrasound",
+-      "ct": "CT",
+-      "endoscopy": "Endoscopy",
+-      "lab": "Lab",
+-      "mri": "MRI",
+-      "photo": "Clinical photo"
+     }
+   },
+   "discharge": {
+@@ -7834,11 +6604,7 @@
+     "marketingSuccess": "Post successfully drafted and added to content plan!",
+     "page": {
+       "loading": "Loading discharge summary..."
+-    },
+-    "sympathySuppressionNote": "Automated reminders, marketing and check-ins are suppressed (ext_automation_suppression_log).",
+-    "approvalRequiredNote": "AI output must be reviewed by the attending veterinarian before printing or sending to the owner.",
+-    "signatureBlock": "Attending veterinarian signature / stamp",
+-    "footerNote": "If you have any questions, contact the clinic. Document reviewed by clinician."
++    }
+   },
+   "vetIntel": {
+     "badge": "AI Market & Legislation",
+@@ -7990,71 +6756,6 @@
+         "title": "SAVLMZ geriatric protocol ΓÇö semi-annual check-up",
+         "desc": "Education on preventive geriatric care for dogs and cats over 7 years"
+       }
+-    },
+-    "pageTitle": "Vet Intelligence",
+-    "tabs": {
+-      "overview": "Overview",
+-      "reputation": "Reputation",
+-      "official": "Official sources"
+-    },
+-    "kpi": {
+-      "avgRating": "Average rating",
+-      "totalReviews": "Total reviews",
+-      "unanswered": "Unanswered",
+-      "pendingBriefs": "Awaiting approval"
+-    },
+-    "table": {
+-      "reviewer": "Author",
+-      "platform": "Platform",
+-      "rating": "Rating",
+-      "sentiment": "Sentiment",
+-      "received": "Received",
+-      "reply": "Reply",
+-      "platformInternal": "Internal",
+-      "anonymous": "Anonymous"
+-    },
+-    "sentiment": {
+-      "positive": "Positive",
+-      "neutral": "Neutral",
+-      "negative": "Negative",
+-      "mixed": "Mixed",
+-      "unknown": "Unclassified"
+-    },
+-    "overview": {
+-      "openReviews": "Open reviews",
+-      "replyDone": "Replied",
+-      "replyMissing": "No reply",
+-      "emptyTitle": "No reviews yet",
+-      "emptyDesc": "Reviews from Google and Facebook will appear here after the first import or sync."
+-    },
+-    "ops": {
+-      "briefs": "Briefs awaiting vet review",
+-      "openQueue": "Open approval",
+-      "channels": "Connected channels",
+-      "manageChannels": "Manage channels",
+-      "journeys": "Active journeys",
+-      "openAutomations": "Open automations"
+-    },
+-    "reputation": {
+-      "title": "Sentiment by platform",
+-      "desc": "Breakdown of the last 100 reviews by sentiment and source.",
+-      "empty": "All reviews have a reply."
+-    },
+-    "official": {
+-      "title": "Official sources & registers",
+-      "desc": "Direct links to state and chamber portals. Automatic gazette monitoring is on the roadmap ΓÇö open sources manually for now.",
+-      "svpsName": "┼áVPS SR",
+-      "svpsDesc": "State Veterinary and Food Administration ΓÇö gazettes, disease situation, registrations.",
+-      "kvlName": "KVL SR",
+-      "kvlDesc": "Chamber of Veterinary Surgeons ΓÇö chamber rules, SVL register, CRSZ.",
+-      "slovlexName": "Slov-Lex",
+-      "slovlexDesc": "Collection of Laws of the SR ΓÇö full wording of legislation.",
+-      "internalTitle": "Internal registers",
+-      "statutory": "Statutory registers",
+-      "statutoryDesc": "Rabies, treatments, withdrawal periods, controlled substances and protocols.",
+-      "kvepis": "KVEPIS submissions",
+-      "kvepisDesc": "Reports and submissions to ┼áVPS via KVEPIS.",
+-      "openInternal": "Open"
+     }
+   },
+   "migrationArchive": {
+@@ -8136,9 +6837,7 @@
+       "viewDetails": "View details",
+       "showing": "Showing {from}ΓÇô{to} of {total}",
+       "previous": "Previous",
+-      "next": "Next",
+-      "emptyGuidance": "This means no legacy data of that type was found in the imported archive. If you expected records here, verify your migration source or contact support.",
+-      "invalidDocumentUrl": "Invalid document URL blocked for safety"
++      "next": "Next"
+     },
+     "sections": {
+       "contacts": "Co-owners",
+@@ -8264,13 +6963,6 @@
+       "conflict": "SOAP changed in another session. Refresh before saving again.",
+       "alreadyFinalized": "SOAP was already finalized in another session.",
+       "finalized": "SOAP note finalized"
+-    },
+-    "vitals": {
+-      "temperature": "Temp",
+-      "heartRate": "Heart Rate",
+-      "respiratoryRate": "Resp. Rate",
+-      "weight": "Weight",
+-      "bodyCondition": "BCS Score"
+     }
+   },
+   "copilot": {
+@@ -8321,9 +7013,6 @@
+     "newInvoice": "New Invoice",
+     "issueReceipt": "Issue Receipt",
+     "openEkasa": "Open e-Kasa",
+-    "openPos": "POS Register",
+-    "goodsReceipt": "Goods Receipt",
+-    "newProduct": "New Product",
+     "headingAppearance": "Appearance & Theme",
+     "lightTheme": "Switch to Light Theme",
+     "darkTheme": "Switch to Dark Theme",
+@@ -8338,7 +7027,6 @@
+     "navSchedule": "Schedule",
+     "navWhiteboard": "Whiteboard",
+     "navRecords": "Clinical Record",
+-    "navPrescriptions": "Medications & Oversight",
+     "navLabInbox": "Lab Inbox",
+     "navBilling": "Billing",
+     "navInventory": "Inventory",
+@@ -8891,17 +7579,7 @@
+       "validationOk": "The submission is valid and ready for signature.",
+       "validationFailed": "The submission contains errors that prevent submission:",
+       "receiptInvalidJson": "The receipt must be a valid JSON file from ├ÜPVS.",
+-      "xmlUnavailable": "The XML form is not available.",
+-      "listCount": "{count} submissions",
+-      "chipLength": "The transponder must be exactly 15 digits (ISO 11784).",
+-      "chipLuhn": "Luhn checksum does not match ΓÇô verify the transponder number.",
+-      "chipOk": "Valid 15-digit ISO 11784 transponder.",
+-      "chipSlovakPrefix": "Slovak national code prefix 703.",
+-      "errorTitle": "Transmission failed",
+-      "failureCode": "Failure code: {code}",
+-      "retryHint": "Correct the flagged items, re-validate, sign the submission and submit it to ├ÜPVS again.",
+-      "icoLabel": "I─îO {ico}",
+-      "expandDetail": "Details"
++      "xmlUnavailable": "The XML form is not available."
+     },
+     "title": "Statutory Registers",
+     "subtitle": "Veterinary compliance records in accordance with Law 39/2007 Z. z. and Law 139/1998 Z. z.",
+@@ -8951,9 +7629,7 @@
+       "noRecords": "No records in the euthanasia register.",
+       "printInspection": "Print official report",
+       "emptyDesc": "The euthanasia and carcass disposal register is filled from closed patient cases.",
+-      "emptyCta": "Go to patients",
+-      "subRegister": "Animal euthanasia register (┬º 22(5))",
+-      "subCarcass": "Carcass register & rendering plant (┬º 29)"
++      "emptyCta": "Go to patients"
+     },
+     "narcotics": {
+       "title": "Controlled substances",
+@@ -8993,8 +7669,7 @@
+       "printProtocol": "Print blank protocol",
+       "noForms": "No forms available.",
+       "templateId": "Template ID: {slug}",
+-      "emptyDesc": "Statutory forms load once the protocols module is enabled for your clinic.",
+-      "slugLabel": "Slug"
++      "emptyDesc": "Statutory forms load once the protocols module is enabled for your clinic."
+     },
+     "dateRangeTo": "to"
+   },
+@@ -9516,18 +8191,17 @@
+       "unassignedVisit": "Unassigned visit",
+       "vaccination": "Vaccination",
+       "visitNoteLabel": "Visit note:",
+-      "writeSoapNote": "Write SOAP note",
+-      "openDischargeAgent": "Open discharge summary (AI Agent)"
++      "writeSoapNote": "Write SOAP note"
+     },
+     "hub": {
+-      "title": "Encounters",
+-      "subtitle": "Encounters, patient intake, and follow-up care",
+-      "tabToday": "Today's encounters",
+-      "tabActive": "In clinic & waiting",
++      "title": "Encounters & Clinical Visits",
++      "subtitle": "Clinical examinations, patient intake, and follow-up care",
++      "tabToday": "Today's Visits",
++      "tabActive": "In Exam & Waiting",
+       "tabFollowUps": "Pending Follow-Ups",
+-      "tabAll": "All encounters",
++      "tabAll": "All Visits",
+       "kpiToday": "Today Total",
+-      "kpiInClinic": "In clinic / waiting",
++      "kpiInClinic": "In Exam / Waiting",
+       "kpiFollowUps": "Pending Follow-Ups",
+       "kpiCompleted": "Completed Today",
+       "newAppointment": "Book Encounter",
+@@ -9540,7 +8214,7 @@
+       "tableTime": "Time",
+       "tablePatient": "Patient",
+       "tableClient": "Client",
+-      "tableType": "Encounter type",
++      "tableType": "Visit Type",
+       "tableDoctor": "Doctor",
+       "tableLocation": "Room / Location",
+       "tableStatus": "Status",
+@@ -9553,66 +8227,12 @@
+       "allStatuses": "All statuses",
+       "allDoctors": "All doctors",
+       "emptyTitle": "No encounters found",
+-      "emptyDescription": "No encounters in this view. Create a new encounter from the schedule.",
++      "emptyDescription": "No clinical visits or appointments found for the selected filters.",
+       "emptyFollowUpsTitle": "No pending follow-ups",
+       "emptyFollowUpsDescription": "All post-op checks and follow-up commitments are currently up to date.",
+       "error": "Failed to load encounters. Please retry.",
+       "until": "until {time}",
+-      "examRoomFallback": "Clinic room",
+-      "clearFilters": "Clear filters",
+-      "resultCount": "{count} results",
+-      "newEncounter": "New encounter",
+-      "emptyFilteredTitle": "No results match the current filters",
+-      "emptyFilteredDesc": "Adjust or clear the filters to see more encounters.",
+-      "dueToday": "Due today",
+-      "overdue": "Overdue"
+-    },
+-    "tabs": {
+-      "soap": "SOAP",
+-      "vitals": "Vitals",
+-      "medications": "Medications",
+-      "attachments": "Attachments",
+-      "discharge": "Discharge"
+-    },
+-    "banner": {
+-      "lastVisit": "Last visit",
+-      "noChip": "No microchip",
+-      "chipLabel": "Chip:",
+-      "attachPatient": "Attach patient",
+-      "unassigned": "Unassigned patient",
+-      "title": "Patient Information"
+-    },
+-    "aiDraft": {
+-      "title": "AI Clinical Assistant (SOAP Draft)",
+-      "advisoryBadge": "Advisory only ΓÇö Act 39/2007 Coll.",
+-      "statutoryNote": "AI clinical outputs are strictly advisory. Every entry requires review and authorization by the attending veterinarian via ClinicalDiffConfirmModal.",
+-      "generateButton": "Draft SOAP with AI",
+-      "generating": "Drafting with AI...",
+-      "reviewDiffButton": "Review & Authorize (Diff)",
+-      "draftBadge": "AI Draft",
+-      "confirmedBadge": "Confirmed & signed by clinician (Act 39/2007 Coll.)",
+-      "sourceTitle": "Encounter Clinical Assistant (AI SOAP)",
+-      "confirmedSuccessToast": "AI clinical draft confirmed and signed by veterinarian (Act 39/2007 Coll.)",
+-      "controlledWarning": "WARNING: Controlled substance detected in plan (Act 139/1998 Coll.). Zero AI prefill enforced for dosing; manual clinician entry required.",
+-      "draftSuccess": "AI SOAP draft generated. Review and authorize diff.",
+-      "draftError": "Failed to generate AI SOAP draft."
+-    },
+-    "medicationPlan": {
+-      "title": "Medication Plan & Prescriptions",
+-      "controlledWarningTitle": "WARNING: Controlled Substances (Act 139/1998 Coll.)",
+-      "controlledWarningDescription": "For controlled narcotic and psychotropic substances (opiates, sedatives, ketamine, etc.), automatic AI prefilling of dosages is strictly prohibited. The attending veterinarian must manually specify dosage, route, and administration.",
+-      "prescribeButton": "Prescribe medication",
+-      "noMedications": "No medications recorded for this visit.",
+-      "controlledBadge": "Controlled substance (139/1998)",
+-      "dosage": "Dosage",
+-      "frequency": "Frequency",
+-      "status": "Status",
+-      "description": "List of medications and prescriptions bound to this encounter."
+-    },
+-    "discharge": {
+-      "title": "Visit Closeout & Discharge",
+-      "agentLink": "Open discharge summary (AI Agent)",
+-      "agentDesc": "Generate client-friendly discharge summary, home care instructions, and follow-up guidance in AI Agent."
++      "examRoomFallback": "Exam room"
+     }
+   },
+   "records.labResults.actorUnavailableLegacy": "actor unavailable (legacy)",
+@@ -10264,13 +8884,6 @@
+       "refresh": "Refresh",
+       "newVisit": "New farm visit"
+     },
+-    "mic": {
+-      "unsupported": "Speech recognition is not available in this browser",
+-      "permissionDenied": "Microphone access was denied",
+-      "listening": "Stop recording",
+-      "processing": "Starting microphoneΓÇª",
+-      "dictate": "Dictate speech (Slovak)"
+-    },
+     "earTagSearch": {
+       "title": "Quick ear tag search (CEHZ)",
+       "placeholder": "SK 000801452101, 000801452101 or animal nameΓÇª",
+@@ -10308,16 +8921,7 @@
+       "blockedMilk": "Milk supply for human consumption is banned.",
+       "blockedMeat": "Slaughter and meat supply for human consumption are banned.",
+       "blockedUntil": "Safe only after {date}.",
+-      "allowed": "No active withdrawal period ΓÇö the action may proceed.",
+-      "colAnimal": "Animal (ear tag)",
+-      "colFarm": "Farm",
+-      "colAdministered": "Administered",
+-      "colMilk": "Milk",
+-      "colMeat": "Meat",
+-      "colStatus": "Period status",
+-      "activeChip": "Active until {date}",
+-      "expiredChip": "Period expired",
+-      "expiredNote": "Withdrawal period has expired ΓÇö the animal is safe again for milk supply and slaughter."
++      "allowed": "No active withdrawal period ΓÇö the action may proceed."
+     },
+     "tabs": {
+       "farms": "Farms & Invoicing",
+@@ -10339,8 +8943,6 @@
+       "colStatus": "Status",
+       "inWithdrawal": "Under withdrawal",
+       "statusActive": "Active",
+-      "colActions": "Actions",
+-      "rowNewVisit": "Visit",
+       "openInvoice": "Open cumulative invoice ({period})",
+       "invoiceTotal": "{amount} Γé¼ incl. VAT",
+       "invoiceBreakdown": "Subtotal: {subtotal} Γé¼ ΓÇó VAT 23%: {tax} Γé¼",
+@@ -10354,15 +8956,9 @@
+       "title": "Field treatment book for livestock",
+       "description": "Records of procedures, administered medicines, milk and meat withdrawal periods and KVEPIS submission status.",
+       "empty": "No field treatments in the book yet.",
+-      "emptyTitle": "Treatment book is empty",
+       "cowBadge": "{name} ΓÇö {tag}",
+       "kvepisReceipt": "KVEPIS receipt",
+-      "billedRetainer": "Billed to retainer",
+-      "colDate": "Date",
+-      "colFarm": "Farm (CEHZ)",
+-      "colAnimal": "Animal",
+-      "colNotes": "Notes",
+-      "colEvidence": "Compliance"
++      "billedRetainer": "Billed to retainer"
+     },
+     "stock": {
+       "title": "Emergency field medicine stock for livestock",
+@@ -10373,9 +8969,7 @@
+       "colLot": "Batch (Lot)",
+       "colExpiry": "Expiry",
+       "colStock": "Stock",
+-      "colPrice": "Price excl. VAT",
+-      "emptyTitle": "Medicine stock is empty",
+-      "emptyDesc": "Add emergency livestock medicines to the inventory to use them on field visits."
++      "colPrice": "Price excl. VAT"
+     },
+     "voice": {
+       "title": "Dictate your visit by voice",
+@@ -10411,7 +9005,6 @@
+       "servicePlaceholder": "-- Select a procedure --",
+       "product": "Administered / dispensed medicine",
+       "productPlaceholder": "-- No medicine / own supply --",
+-      "controlledBanner": "Controlled substance '{name}' ΓÇö administration on a field visit is blocked (Act No. 139/1998 Z. z.). Create the record manually in the Controlled substances section.",
+       "meatWithdrawal": "Withdrawal period ΓÇö meat (days)",
+       "milkWithdrawal": "Withdrawal period ΓÇö milk (days)",
+       "withdrawalHint": "Recorded under Law 39/2007 ΓÇö up to {max} days. Until the period ends, milk supply / slaughter for human consumption is banned.",
+@@ -10512,345 +9105,47 @@
+     "guardianBadge": "{count}├ù guardian",
+     "interactionBadge": "{count}├ù interaction",
+     "openCard": "Card",
+-    "openVisit": "Visit"
+-  },
+-  "prescriptions": {
+-    "title": "Medication Oversight",
+-    "subtitle": "Prescription register and clinical oversight of administered medications",
+-    "actions": {
+-      "new": "New prescription",
+-      "ledger": "Controlled Substances Ledger",
+-      "view": "Prescription details",
+-      "stop": "Stop prescription"
+-    },
+-    "kpi": {
+-      "active": "Active prescriptions",
+-      "ending": "Ending within {days} days",
+-      "overdue": "Overdue",
+-      "guardian": "Medication Guardian",
+-      "guardianCritical": "{count} critical alerts"
+-    },
+-    "tabs": {
+-      "ariaLabel": "Prescription list scope",
+-      "active": "Active",
+-      "ending": "Ending soon",
+-      "overdue": "Overdue",
+-      "controlled": "Controlled (OPL)",
+-      "alerts": "Alerts",
+-      "all": "All"
+-    },
+-    "search": {
+-      "placeholder": "Search medication, patient, owner or Rx noΓÇª",
+-      "clear": "Clear filter"
+-    },
+-    "results": "Results: {count}",
+-    "table": {
+-      "medication": "Medication",
+-      "rx": "Rx No.",
+-      "dosage": "Dosage",
+-      "frequency": "Frequency",
+-      "withdrawal": "Withdrawal period",
+-      "period": "Period",
+-      "status": "Status",
+-      "actions": "Actions"
+-    },
+-    "status": {
+-      "active": "Active",
+-      "ending": "Ending soon",
+-      "overdue": "Overdue",
+-      "completed": "Completed",
+-      "cancelled": "Cancelled"
+-    },
+-    "opl": {
+-      "badge": "OPL",
+-      "tooltip": "Controlled substance under Act No. 139/1998 Coll. ΓÇö recorded in the Controlled Substances Ledger"
+-    },
+-    "alert": {
+-      "critical": "critical alert",
+-      "warning": "warning"
+-    },
+-    "withdrawal": {
+-      "none": "ΓÇö",
+-      "value": "{days} days"
+-    },
+-    "empty": {
+-      "title": "No prescriptions",
+-      "description": "There are no prescriptions in this scope yet.",
+-      "search": {
+-        "title": "No search results",
+-        "description": "No prescription found for ΓÇ£{query}ΓÇ¥."
+-      }
+-    },
+-    "legal": {
+-      "note": "Narcotic and psychotropic substances are recorded in the Controlled Substances Ledger under Act No. 139/1998 Coll."
+-    }
+-  },
+-  "vpmContext": {
+-    "title": "VPM clinical context",
+-    "gates": {
+-      "clinicianConfirmationRequired": "A veterinarian must confirm AI content before it becomes part of the medical record.",
+-      "aiRemainsDraft": "AI suggestion stays in draft until signed by a veterinarian.",
+-      "controlledSubstanceZeroPrefill": "Controlled substance detected ΓÇö AI prefill is blocked. Enter manually (ShieldAlert).",
+-      "sympathyOutreachSuppressed": "Patient is deceased ΓÇö automated reminders and marketing are suppressed.",
+-      "manualEntryRequired": "Manual entry required",
+-      "draftBadge": "AI draft",
+-      "awaitingSignature": "Awaiting veterinarian signature"
+-    },
+-    "sympathy": {
+-      "bannerTitle": "Sympathy gate active",
+-      "bannerBody": "Automated outreach is paused for this patient out of respect for the owner."
+-    },
+-    "controlled": {
+-      "shieldTitle": "Controlled substance",
+-      "shieldBody": "Ketamine, opioids, and propofol cannot be prefilled by AI. Record them manually with a witness when required."
+-    }
+-  },
+-  "schemaValidation": {
+-    "title": "Input schema validation",
+-    "subtitle": "JSON Schema layer for VPM input contracts (Ajv, openvpm/schemas registry) with clinical guardrails.",
+-    "refresh": "Refresh",
+-    "registrySource": "Registry source",
+-    "registrySourceValue": "openvpm/schemas@master",
+-    "kpi": {
+-      "total": "Validations (30 days)",
+-      "passRate": "Pass rate",
+-      "rejected": "Rejected inputs",
+-      "guardrailBlocks": "Clinical guardrail blocks"
+-    },
+-    "contracts": {
+-      "search": "Search contractsΓÇª",
+-      "count": "{count} contracts",
+-      "colContract": "Contract",
+-      "colVersion": "Version",
+-      "colRisk": "Risk",
+-      "colGuardrails": "Guardrails",
+-      "colSchemaBytes": "Schema size",
+-      "emptyTitle": "No contracts",
+-      "emptyDesc": "The registry contains no input contracts for this filter.",
+-      "risk": {
+-        "low": "low",
+-        "medium": "medium",
+-        "high": "high"
+-      }
+-    },
+-    "events": {
+-      "title": "Validation audit",
+-      "filterLabel": "Result filter",
+-      "filterAll": "All results",
+-      "filterPassed": "Passed",
+-      "filterRejected": "Rejected",
+-      "guardrailOnly": "Guardrail blocks only",
+-      "emptyTitle": "No validations yet",
+-      "emptyDesc": "Once the middleware evaluates input contracts, the verdicts will appear here.",
+-      "colTime": "Time",
+-      "colContract": "Contract",
+-      "colResult": "Result",
+-      "colGuardrail": "Guardrail",
+-      "colIssues": "Issues",
+-      "colOrigin": "Origin",
+-      "colActor": "User",
+-      "resultPassed": "passed",
+-      "resultRejected": "rejected",
+-      "origin": {
+-        "api": "API",
+-        "playground": "Playground"
+-      }
+-    },
+-    "playground": {
+-      "title": "Validation dry run",
+-      "description": "Check any JSON payload against a contract without writing to the database. Useful for integration debugging and training.",
+-      "contract": "Contract",
+-      "payload": "JSON payload",
+-      "run": "Validate",
+-      "running": "ValidatingΓÇª",
+-      "resultPassed": "Payload passed validation",
+-      "resultRejected": "Payload was rejected",
+-      "invalidJson": "Invalid JSON ΓÇö check the payload syntax",
+-      "loadError": "Validation could not be executed: {message}",
+-      "colField": "Field",
+-      "colCode": "Code",
+-      "colMessage": "Message"
+-    },
+-    "guardrails": {
+-      "ai-draft-only": "AI draft only",
+-      "narcotic-zero-ai-prefill": "No AI for narcotics",
+-      "sympathy-gate": "Sympathy gate"
+-    },
+-    "error": {
+-      "required": "Required field {field} is missing",
+-      "type": "Field has the wrong type (expected {expected})",
+-      "enum": "Value is not allowed (allowed: {allowed})",
+-      "format": "Value does not match the {format} format",
+-      "pattern": "Value does not match the required pattern",
+-      "minLength": "Value is too short (minimum {limit})",
+-      "maxLength": "Value is too long (maximum {limit})",
+-      "minimum": "Value is below the minimum {limit}",
+-      "maximum": "Value is above the maximum {limit}",
+-      "exclusiveMinimum": "Value must be greater than {limit}",
+-      "exclusiveMaximum": "Value must be less than {limit}",
+-      "minItems": "The list must contain at least {limit} items",
+-      "maxItems": "The list may contain at most {limit} items",
+-      "additionalProperties": "Unknown field {property} is not allowed",
+-      "const": "Value must equal the fixed constant",
+-      "invalid": "Invalid value",
+-      "aiDraftOnly": "AI content must stay in draft state until a veterinarian signs it (Act 39/2007 Coll.)",
+-      "narcoticAiPrefill": "AI prefill is forbidden for narcotic substances: {substances} (Act 139/1998 Coll.). Manual entry only.",
+-      "sympathyGate": "Sympathy gate: automated reminders are suppressed for a deceased patient"
+-    }
+-  },
+-  "interopBridge": {
+-    "title": "Secure Interop Bridge v1 ΓåÆ v2",
+-    "subtitle": "Encrypted, schema-validated message exchange between the VPM v1 and v2 runtimes.",
+-    "actions": {
+-      "refresh": "Refresh",
+-      "selfTest": "Verify round trip"
+-    },
+-    "gates": {
+-      "clinicalDraft": "AI drafts stay in draft until a veterinarian signs them (Act No. 39/2007 Coll.).",
+-      "controlledSubstances": "Controlled substances (ketamine, opioids, propofol) never arrive with an AI prefill ΓÇö manual entry with the ShieldAlert gate only (Act No. 139/1998 Coll.).",
+-      "sympathyGate": "Sympathy Gate: automated reminders are suppressed immediately for deceased patients."
+-    },
+-    "selfTest": {
+-      "refused": "The bridge refused to seal the test message",
+-      "result": "Self-test result",
+-      "failed": "Bridge self-test failed"
+-    },
+-    "kpi": {
+-      "endpoints": "Peer endpoints",
+-      "endpointsHint": "{count} registered",
+-      "traffic": "Messages (24 h)",
+-      "trafficHint": "in {inbound} / out {outbound}",
+-      "validated": "Validated share",
+-      "validatedHint": "{count} accepted",
+-      "attention": "Quarantined / rejected",
+-      "rotationDue": "Key rotation is due",
+-      "rotationOk": "Keys are current"
+-    },
+-    "tabs": {
+-      "endpoints": "Endpoints",
+-      "messages": "Messages",
+-      "contracts": "Contracts",
+-      "keys": "Keys",
+-      "events": "Events",
+-      "ariaLabel": "Bridge surfaces"
+-    },
+-    "search": {
+-      "placeholder": "Search messages or peers",
+-      "statusFilter": "Status filter",
+-      "allStatuses": "All statuses"
+-    },
+-    "results": "Results: {count}",
+-    "empty": {
+-      "title": "Nothing to show yet",
+-      "description": "Register the peer runtime and its key ΓÇö every bridged message will be listed here."
+-    },
+-    "endpoints": {
+-      "name": "Endpoint",
+-      "runtime": "Runtime",
+-      "direction": "Direction",
+-      "baseUrl": "Base URL",
+-      "key": "Active key",
+-      "status": "Status",
+-      "lastSeen": "Last seen"
+-    },
+-    "runtime": {
+-      "v1": "VPM v1",
+-      "v2": "VPM v2"
+-    },
+-    "direction": {
+-      "v1_to_v2": "v1 ΓåÆ v2",
+-      "v2_to_v1": "v2 ΓåÆ v1"
+-    },
+-    "endpointStatus": {
+-      "active": "Active",
+-      "paused": "Paused",
+-      "revoked": "Revoked"
+-    },
+-    "messages": {
+-      "created": "Received",
+-      "type": "Message type",
+-      "direction": "Direction",
+-      "externalId": "Source record",
+-      "status": "Status",
+-      "gates": "Clinical gates",
+-      "size": "Size",
+-      "bytes": "{count} B"
+-    },
+-    "status": {
+-      "validated": "Validated",
+-      "processed": "Dispatched",
+-      "quarantined": "Quarantined",
+-      "rejected": "Rejected",
+-      "acknowledged": "Acknowledged",
+-      "received": "Received",
+-      "failed": "Failed"
+-    },
+-    "badge": {
+-      "draft": "Draft ΓÇö vet signs",
+-      "controlled": "OPL ΓÇö manual entry",
+-      "sympathy": "Outreach suppressed"
+-    },
+-    "reason": {
+-      "malformed_envelope": "Malformed envelope",
+-      "unsupported_schema_version": "Unsupported schema version",
+-      "unsupported_algorithm": "Unsupported algorithm",
+-      "payload_too_large": "Payload too large",
+-      "direction_not_allowed": "Direction not allowed",
+-      "message_type_not_allowed": "Message type not allowed",
+-      "stale_timestamp": "Stale timestamp (possible replay)",
+-      "replay_detected": "Replay detected",
+-      "unknown_key_id": "Unknown key",
+-      "payload_hash_mismatch": "Payload hash mismatch",
+-      "signature_invalid": "Invalid signature",
+-      "decryption_failed": "Decryption failed",
+-      "payload_invalid": "Payload violates its contract",
+-      "safety_gate_blocked": "Blocked by a clinical gate"
+-    },
+-    "contracts": {
+-      "type": "Message type",
+-      "direction": "Direction",
+-      "schema": "Schema",
+-      "strict": "Strictness",
+-      "strictYes": "Unknown fields rejected",
+-      "strictNo": "Unknown fields allowed",
+-      "status": "Status",
+-      "approved": "Approved",
+-      "default": "Catalogue default"
+-    },
+-    "contractStatus": {
+-      "active": "Active",
+-      "disabled": "Disabled"
+-    },
+-    "keys": {
+-      "runtime": "Runtime",
+-      "keyId": "Key id",
+-      "fingerprint": "Fingerprint",
+-      "age": "Age",
+-      "ageDays": "{days} d",
+-      "status": "Status",
+-      "rotation": "Rotation",
+-      "rotationDue": "Rotation due",
+-      "rotationOk": "Within policy"
+-    },
+-    "keyStatus": {
+-      "active": "Active",
+-      "rotated": "Rotated",
+-      "revoked": "Revoked"
+-    },
+-    "events": {
+-      "at": "When",
+-      "type": "Event",
+-      "severity": "Severity",
+-      "actor": "Actor",
+-      "detail": "Detail"
+-    },
+-    "severity": {
+-      "info": "Info",
+-      "warning": "Warning",
+-      "critical": "Critical"
+-    },
+-    "legal": {
+-      "note": "Every payload is sealed with AES-256-GCM, signed with HMAC-SHA256 and validated against a strict schema before it reaches clinical data. Bridge secrets live only in the deployment secret store ΓÇö the database keeps fingerprints."
+-    }
++    "openVisit": "Visit",
++    "newPrescription": "+ New Prescription",
++    "scopeDispensed": "Dispensed",
++    "scopeCancelled": "Cancelled",
++    "scopeExpired": "Expired",
++    "statusDispensed": "Dispensed",
++    "statusCancelled": "Cancelled",
++    "statusExpired": "Expired",
++    "colRxNumber": "Rx #",
++    "colDosage": "Dosage",
++    "colDates": "Validity",
++    "colStatus": "Status",
++    "statutoryControlledSubstances": "Controlled Substances (Act 139/1998 Coll. & Act 39/2007 Coll.) require manual entry, zero AI prefill, and attending veterinarian signature confirmation.",
++    "veterinarianSignatureRequired": "Veterinarian signature check is mandatory before dispensing.",
++    "signPrescription": "Sign & Authorize",
++    "signingPrescription": "Signing...",
++    "signedSuccess": "Prescription authorized and signed",
++    "signedBy": "Signed by {name}",
++    "unsignedWarning": "Unsigned (Verification required)",
++    "dispense": "Dispense",
++    "dispensedSuccess": "Prescription dispensed",
++    "dispensingFailedUnsigned": "Prescription cannot be dispensed without licensed veterinarian signature check.",
++    "controlledNotice": "Controlled substance: manual confirmation required (Z├íkon 139/1998 Z. z.)",
++    "newPrescriptionModalTitle": "New Prescription",
++    "newPrescriptionModalDesc": "Create a verified veterinary prescription with clinical safety safeguards.",
++    "fieldPatient": "Patient *",
++    "selectPatientPlaceholder": "Select a patient...",
++    "fieldMedicationName": "Medication name *",
++    "fieldDosageUnit": "Dosage unit & strength *",
++    "fieldFrequency": "Frequency *",
++    "fieldQuantity": "Quantity *",
++    "fieldStartDate": "Valid from *",
++    "fieldEndDate": "Valid until",
++    "fieldInstructions": "Instructions for administration",
++    "controlledSubstanceDetected": "Controlled substance detected (Act 139/1998 Coll.). Automated prefill blocked; explicit manual entry and attending veterinarian confirmation required.",
++    "confirmControlledSubstance": "I confirm clinical indication and responsibility for this controlled substance under Act 139/1998 Coll. & Act 39/2007 Coll.",
++    "btnCreate": "Create Prescription",
++    "creating": "Creating...",
++    "createdSuccess": "Prescription successfully created",
++    "kpiDispensed": "Dispensed",
++    "kpiControlled": "Controlled (OPL)",
++    "statutorySigned": "Authorized (Act 39/2007)"
+   }
+ }

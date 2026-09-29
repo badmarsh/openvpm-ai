@@ -1,0 +1,44 @@
+{
+  "drillRunId": "7d439912f94007ab8b845dee5762ce8dd2b0f4b3",
+  "executedAt": "2026-09-05T15:03:14.261Z",
+  "completedAt": "2026-09-05T15:03:14.331Z",
+  "status": "PASSED",
+  "targetPractice": {
+    "id": "b66bd29b-adcf-484b-920f-2b9e87b89ff5",
+    "name": "Neighborhood Veterinary"
+  },
+  "integrity": {
+    "sha256": "557e1d3b017d1f745840594f9244238da4248d317d01ece751445f8ff3ef23f3",
+    "byteLength": 445,
+    "formatVersion": 9
+  },
+  "checks": [
+    {
+      "name": "Backup Format Version >= 9",
+      "pass": true
+    },
+    {
+      "name": "Checksum calculation consistent",
+      "pass": true
+    },
+    {
+      "name": "Payload within 50 MB threshold",
+      "pass": true
+    },
+    {
+      "name": "Clinical & Statutory sections mapped",
+      "pass": true
+    },
+    {
+      "name": "Database RLS role isolated",
+      "pass": true
+    }
+  ],
+  "metrics": {
+    "patients": 40,
+    "clients": 25,
+    "vaccinations": 75,
+    "invoices": 14
+  },
+  "evidenceNote": "Automated Disaster Recovery verification drill passed for Slovak Veterinary PIMS compliance."
+}

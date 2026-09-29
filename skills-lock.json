@@ -97,6 +97,12 @@
       "skillPath": ".agents/skills/heuristic/SKILL.md",
       "computedHash": "2c09f913be12e444e68b8ed2f1dad9488f89be125dea8d88728346042904d081"
     },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "d55800186ff7651be356015b103047b9dd84f83172cc257042a322491df3502e"
+    },
     "polish": {
       "source": "educlopez/ui-craft",
       "sourceType": "github",
@@ -186,6 +192,12 @@
       "sourceType": "github",
       "skillPath": "skills/perception/visual-audit/SKILL.md",
       "computedHash": "3f11199ce457992fa4ef1ed40a7322847bc4d1f2da816893363d30d6efe9c100"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "d8e7d3afe37dcc8a97b99ffb5afdb4d0919ae0092ea8b68f44eb201f035e33ac"
     }
   }
 }

@@ -1,0 +1,593 @@
+import { z } from "zod";
+import { eq, and, isNull, desc, ilike, sql, inArray } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { createRouter, protectedProcedure, requireRole } from "../../trpc";
+import {
+  microchipRegistrations,
+  petPassports,
+  kvlCrPassports,
+  patients,
+  clients,
+  practices,
+  users,
+} from "@openpims/db";
+import {
+  validateMicrochipNumber,
+  calculateTravelEligibility,
+  generateMicrochipCertificateHtml,
+  exportKvlSrBatchCsv,
+  exportKvlSrBatchXml,
+  lookupCrszOnline,
+  type KvlSrExportItem,
+} from "@/lib/crsz/microchip";
+import { validateKvlCrPassportNumber } from "@/lib/crsz/kvl-cr";
+
+const vetProcedure = protectedProcedure.use(
+  requireRole("admin", "veterinarian", "technician", "front_desk")
+);
+
+export const crszRouter = createRouter({
+  /** Overí formát 15-miestneho mikročipu podľa ISO 11784/11785 */
+  validateChip: vetProcedure
+    .input(z.object({ microchipNumber: z.string().min(1) }))
+    .query(({ input }) => {
+      return validateMicrochipNumber(input.microchipNumber);
+    }),
+
+  /** Zaregistruje aplikáciu mikročipu zvieraťu a vygeneruje potvrdenie */
+  registerMicrochip: vetProcedure
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        clientId: z.string().uuid().optional(),
+        microchipNumber: z.string().min(1),
+        location: z
+          .enum(["LEFT_NECK", "INTERSCAPULAR", "RIGHT_NECK", "OTHER"])
+          .default("LEFT_NECK"),
+        customLocation: z.string().optional(),
+        implantedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        verifiedBeforeImplant: z.enum(["YES", "NO"]).default("YES"),
+        verifiedAfterImplant: z.enum(["YES", "NO"]).default("YES"),
+        vetKvlNumber: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Validuj číslo čipu
+      const validation = validateMicrochipNumber(input.microchipNumber);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid microchip number. Must contain 15 digits (ISO 11784/11785)",
+        });
+      }
+
+      // Over pacienta a zisti clientId
+      const patient = await ctx.db.query.patients.findFirst({
+        where: and(
+          eq(patients.id, input.patientId),
+          eq(patients.practiceId, ctx.practiceId)
+        ),
+      });
+      if (!patient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patient not found",
+        });
+      }
+      const clientId = input.clientId || patient.clientId;
+
+      // 2. Vlož záznam o čipovaní
+      const [registration] = await ctx.db
+        .insert(microchipRegistrations)
+        .values({
+          practiceId: ctx.practiceId,
+          patientId: input.patientId,
+          clientId,
+          veterinarianId: ctx.user.id,
+          microchipNumber: validation.code,
+          location: input.location,
+          customLocation: input.customLocation ?? null,
+          implantedAt: input.implantedAt,
+          verifiedBeforeImplant: input.verifiedBeforeImplant,
+          verifiedAfterImplant: input.verifiedAfterImplant,
+          vetKvlNumber: input.vetKvlNumber ?? null,
+          crszStatus: "PENDING_SUBMISSION",
+          notes: input.notes ?? null,
+        })
+        .returning();
+
+      // 3. Aktualizuj kartu pacienta s novým číslom čipu
+      await ctx.db
+        .update(patients)
+        .set({
+          microchipNumber: validation.code,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(patients.id, input.patientId),
+            eq(patients.practiceId, ctx.practiceId)
+          )
+        );
+
+      // 4. Načítaj údaje pre certifikát
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+      const client = await ctx.db.query.clients.findFirst({
+        where: eq(clients.id, clientId),
+      });
+
+      const certificateHtml = generateMicrochipCertificateHtml({
+        clinicName: practice?.name ?? "Veterinárna ambulancia",
+        clinicAddress: practice?.address ?? null,
+        clinicPhone: practice?.phone ?? null,
+        vetName: ctx.user.name ?? "Veterinárny lekár",
+        vetKvlNumber: input.vetKvlNumber ?? null,
+        patientName: patient?.name ?? "Pacient",
+        species: patient?.species ?? "Zviera",
+        breed: patient?.breed ?? null,
+        sex: patient?.sex ?? null,
+        dob: patient?.dob ?? null,
+        color: (patient as any)?.color ?? null,
+        ownerName: `${client?.firstName ?? ""} ${client?.lastName ?? ""}`.trim(),
+        ownerAddress: client?.address ?? null,
+        ownerPhone: client?.phone ?? null,
+        microchipNumber: validation.code,
+        implantedAt: input.implantedAt,
+        location: input.location,
+        verifiedBefore: input.verifiedBeforeImplant === "YES" ? "Áno (funkčný)" : "Nie",
+        verifiedAfter: input.verifiedAfterImplant === "YES" ? "Áno (funkčný)" : "Nie",
+      });
+
+      return {
+        registration,
+        certificateHtml,
+      };
+    }),
+
+  /** Zoznam registrácií čipov */
+  listMicrochips: vetProcedure
+    .input(
+      z
+        .object({
+          patientId: z.string().uuid().optional(),
+          search: z.string().optional(),
+          status: z.enum(["NOT_REGISTERED", "PENDING_SUBMISSION", "REGISTERED", "REJECTED"]).optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [
+        eq(microchipRegistrations.practiceId, ctx.practiceId),
+        isNull(microchipRegistrations.deletedAt),
+      ];
+
+      if (input?.patientId) {
+        conditions.push(eq(microchipRegistrations.patientId, input.patientId));
+      }
+      if (input?.status) {
+        conditions.push(eq(microchipRegistrations.crszStatus, input.status));
+      }
+      if (input?.search) {
+        const escaped = input.search.replace(/[%_]/g, "\\$&");
+        conditions.push(
+          ilike(microchipRegistrations.microchipNumber, `%${escaped}%`)
+        );
+      }
+
+      const items = await ctx.db.query.microchipRegistrations.findMany({
+        where: and(...conditions),
+        orderBy: [desc(microchipRegistrations.createdAt)],
+        limit: input?.limit ?? 50,
+        offset: input?.offset ?? 0,
+        with: {
+          patient: true,
+          client: true,
+          veterinarian: true,
+        },
+      });
+
+      return items;
+    }),
+
+  /** Vystavenie pasu spoločenského zvieraťa (PetPass EÚ) */
+  issuePetPassport: vetProcedure
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        clientId: z.string().uuid().optional(),
+        passportNumber: z.string().min(1, "Číslo pasu je povinné"),
+        issuedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        issuingVetName: z.string().optional(),
+        issuingVetKvl: z.string().optional(),
+        rabiesVaccineName: z.string().optional(),
+        rabiesBatchNumber: z.string().optional(),
+        rabiesAdministeredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        rabiesValidUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        isRevaccination: z.boolean().default(false),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const patient = await ctx.db.query.patients.findFirst({
+        where: and(
+          eq(patients.id, input.patientId),
+          eq(patients.practiceId, ctx.practiceId)
+        ),
+      });
+
+      if (!patient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Patient not found",
+        });
+      }
+
+      const clientId = input.clientId || patient.clientId;
+
+      // Vypočítaj spôsobilosť na cestovanie
+      let travelEligibleFrom: string | null = null;
+      let travelInfo: any = null;
+
+      if (input.rabiesAdministeredAt) {
+        // For EU pet travel rules, the "microchip date" is the date the chip
+        // was implanted (from the most recent microchip registration), NOT
+        // patient.createdAt.
+        const latestChip = await ctx.db.query.microchipRegistrations.findFirst({
+          where: and(
+            eq(microchipRegistrations.patientId, input.patientId),
+            eq(microchipRegistrations.practiceId, ctx.practiceId),
+            isNull(microchipRegistrations.deletedAt),
+          ),
+          orderBy: [desc(microchipRegistrations.createdAt)],
+        });
+        const microchipDate = latestChip?.implantedAt ?? input.issuedAt;
+        travelInfo = calculateTravelEligibility({
+          microchipDate,
+          rabiesDate: input.rabiesAdministeredAt,
+          isRevaccination: input.isRevaccination,
+        });
+        travelEligibleFrom = travelInfo.eligibleFrom;
+      }
+
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+
+      const [passport] = await ctx.db
+        .insert(petPassports)
+        .values({
+          practiceId: ctx.practiceId,
+          patientId: input.patientId,
+          clientId,
+          issuedBy: ctx.user.id,
+          passportNumber: input.passportNumber.trim(),
+          issuedAt: input.issuedAt,
+          issuingClinicName: practice?.name ?? "Veterinárna ambulancia",
+          issuingVetName: input.issuingVetName ?? ctx.user.name ?? "Veterinárny lekár",
+          issuingVetKvl: input.issuingVetKvl ?? null,
+          rabiesVaccineName: input.rabiesVaccineName ?? null,
+          rabiesBatchNumber: input.rabiesBatchNumber ?? null,
+          rabiesAdministeredAt: input.rabiesAdministeredAt ?? null,
+          rabiesValidUntil: input.rabiesValidUntil ?? null,
+          travelEligibleFrom,
+          notes: input.notes ?? null,
+        })
+        .returning();
+
+      return {
+        passport,
+        travelInfo,
+      };
+    }),
+
+  /** Zoznam vystavených pasov */
+  listPassports: vetProcedure
+    .input(
+      z
+        .object({
+          patientId: z.string().uuid().optional(),
+          search: z.string().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [
+        eq(petPassports.practiceId, ctx.practiceId),
+        isNull(petPassports.deletedAt),
+      ];
+
+      if (input?.patientId) {
+        conditions.push(eq(petPassports.patientId, input.patientId));
+      }
+      if (input?.search) {
+        const escaped = input.search.replace(/[%_]/g, "\\$&");
+        conditions.push(
+          ilike(petPassports.passportNumber, `%${escaped}%`)
+        );
+      }
+
+      const items = await ctx.db.query.petPassports.findMany({
+        where: and(...conditions),
+        orderBy: [desc(petPassports.createdAt)],
+        limit: input?.limit ?? 50,
+        offset: input?.offset ?? 0,
+        with: {
+          patient: true,
+          client: true,
+          issuer: true,
+        },
+      });
+
+      return items;
+    }),
+
+  /** Získanie HTML certifikátu pre opätovnú tlač */
+  getCertificateHtml: vetProcedure
+    .input(z.object({ registrationId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const reg = await ctx.db.query.microchipRegistrations.findFirst({
+        where: and(
+          eq(microchipRegistrations.id, input.registrationId),
+          eq(microchipRegistrations.practiceId, ctx.practiceId)
+        ),
+        with: {
+          patient: true,
+          client: true,
+          veterinarian: true,
+        },
+      });
+
+      if (!reg) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Microchip registration not found",
+        });
+      }
+
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+
+      return generateMicrochipCertificateHtml({
+        clinicName: practice?.name ?? "Veterinárna ambulancia",
+        clinicAddress: practice?.address ?? null,
+        clinicPhone: practice?.phone ?? null,
+        vetName: reg.veterinarian?.name ?? "Veterinárny lekár",
+        vetKvlNumber: reg.vetKvlNumber,
+        patientName: reg.patient?.name ?? "Pacient",
+        species: reg.patient?.species ?? "Zviera",
+        breed: reg.patient?.breed ?? null,
+        sex: reg.patient?.sex ?? null,
+        dob: reg.patient?.dob ?? null,
+        color: (reg.patient as any)?.color ?? null,
+        ownerName: `${reg.client?.firstName ?? ""} ${reg.client?.lastName ?? ""}`.trim(),
+        ownerAddress: reg.client?.address ?? null,
+        ownerPhone: reg.client?.phone ?? null,
+        microchipNumber: reg.microchipNumber,
+        implantedAt: reg.implantedAt,
+        location: reg.location,
+        verifiedBefore: reg.verifiedBeforeImplant === "YES" ? "Áno" : "Nie",
+        verifiedAfter: reg.verifiedAfterImplant === "YES" ? "Áno" : "Nie",
+        crszRecordId: reg.crszRecordId,
+      });
+    }),
+
+  /** Online overenie čipu v CRSZ / medzinárodnom registri */
+  lookupChip: vetProcedure
+    .input(z.object({ microchipNumber: z.string().min(1) }))
+    .query(async ({ input }) => {
+      return lookupCrszOnline(input.microchipNumber);
+    }),
+
+  /** Hromadný export dávky pre portál KVL SR (XML / CSV) */
+  exportKvlSrBatch: vetProcedure
+    .input(
+      z.object({
+        format: z.enum(["xml", "csv"]).default("xml"),
+        registrationIds: z.array(z.string().uuid()).optional(),
+        onlyPending: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const conditions = [
+        eq(microchipRegistrations.practiceId, ctx.practiceId),
+        isNull(microchipRegistrations.deletedAt),
+      ];
+      if (input.onlyPending) {
+        conditions.push(eq(microchipRegistrations.crszStatus, "PENDING_SUBMISSION"));
+      }
+      if (input.registrationIds && input.registrationIds.length > 0) {
+        conditions.push(inArray(microchipRegistrations.id, input.registrationIds));
+      }
+
+      const rows = await ctx.db.query.microchipRegistrations.findMany({
+        where: and(...conditions),
+        with: {
+          patient: true,
+          client: true,
+          veterinarian: true,
+        },
+        orderBy: [desc(microchipRegistrations.createdAt)],
+      });
+
+      const exportItems: KvlSrExportItem[] = rows.map((r) => ({
+        microchipNumber: r.microchipNumber,
+        patientName: r.patient?.name ?? "Neznáme",
+        species: r.patient?.species ?? "canine",
+        breed: r.patient?.breed ?? null,
+        sex: r.patient?.sex ?? null,
+        dob: r.patient?.dob ?? null,
+        color: (r.patient as any)?.color ?? null,
+        implantedAt: r.implantedAt,
+        location: r.location,
+        vetName: r.veterinarian?.name ?? "Veterinárny lekár",
+        vetKvlNumber: r.vetKvlNumber ?? null,
+        ownerFirstName: r.client?.firstName ?? "",
+        ownerLastName: r.client?.lastName ?? "",
+        ownerAddress: r.client?.address ?? null,
+        ownerCity: (r.client as any)?.city ?? null,
+        ownerPostalCode: (r.client as any)?.postalCode ?? null,
+        ownerPhone: r.client?.phone ?? null,
+        ownerEmail: r.client?.email ?? null,
+      }));
+
+      const content =
+        input.format === "csv"
+          ? exportKvlSrBatchCsv(exportItems)
+          : exportKvlSrBatchXml(exportItems);
+
+      const filename = `kvl_sr_davka_${new Date().toISOString().slice(0, 10)}.${input.format}`;
+
+      return {
+        filename,
+        content,
+        count: exportItems.length,
+        format: input.format,
+      };
+    }),
+
+  /** Vystavenie pasu KVL ČR (Komora veterinárních lékařů ČR) */
+  issueKvlCrPassport: vetProcedure
+    .input(
+      z.object({
+        patientId: z.string().uuid(),
+        clientId: z.string().uuid().optional(),
+        passportNumber: z.string().min(1, "Číslo pasu je povinné"),
+        issuedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        issuingVetName: z.string().optional(),
+        issuingVetKvlCr: z.string().optional(),
+        microchipNumber: z.string().optional(),
+        rabiesVaccineName: z.string().optional(),
+        rabiesBatchNumber: z.string().optional(),
+        rabiesAdministeredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        rabiesValidUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        isRevaccination: z.boolean().default(false),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const patient = await ctx.db.query.patients.findFirst({
+        where: and(
+          eq(patients.id, input.patientId),
+          eq(patients.practiceId, ctx.practiceId)
+        ),
+      });
+      if (!patient) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Patient not found" });
+      }
+      const clientId = input.clientId || patient.clientId;
+
+      // Validuj a normalizuj číslo pasu KVL ČR
+      const passportValidation = validateKvlCrPassportNumber(
+        input.passportNumber
+      );
+      if (!passportValidation.valid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: passportValidation.error ?? "Invalid KVL ČR passport number",
+        });
+      }
+
+      // Cestovná spôsobilosť (21-dňová lehota po primovakcinácii, EÚ pravidlá)
+      let travelEligibleFrom: string | null = null;
+      if (input.rabiesAdministeredAt) {
+        // Pre EÚ pravidlá cestovania je "dátum čipu" dátum implantácie čipu
+        // (z najnovšej registrácie mikročipu), nie patient.createdAt.
+        const latestChip = await ctx.db.query.microchipRegistrations.findFirst({
+          where: and(
+            eq(microchipRegistrations.patientId, input.patientId),
+            eq(microchipRegistrations.practiceId, ctx.practiceId),
+            isNull(microchipRegistrations.deletedAt),
+          ),
+          orderBy: [desc(microchipRegistrations.createdAt)],
+        });
+        const microchipDate = latestChip?.implantedAt ?? input.issuedAt;
+        const travelInfo = calculateTravelEligibility({
+          microchipDate,
+          rabiesDate: input.rabiesAdministeredAt,
+          isRevaccination: input.isRevaccination,
+        });
+        travelEligibleFrom = travelInfo.eligibleFrom;
+      }
+
+      const practice = await ctx.db.query.practices.findFirst({
+        where: eq(practices.id, ctx.practiceId),
+      });
+
+      const [passport] = await ctx.db
+        .insert(kvlCrPassports)
+        .values({
+          practiceId: ctx.practiceId,
+          patientId: input.patientId,
+          clientId,
+          issuedBy: ctx.user.id,
+          passportNumber:
+            passportValidation.normalized ?? input.passportNumber.trim(),
+          issuedAt: input.issuedAt,
+          issuingClinicName: practice?.name ?? "Veterinárna ambulancia",
+          issuingVetName:
+            input.issuingVetName ?? ctx.user.name ?? "Veterinárny lekár",
+          issuingVetKvlCr: input.issuingVetKvlCr ?? null,
+          microchipNumber: input.microchipNumber ?? null,
+          rabiesVaccineName: input.rabiesVaccineName ?? null,
+          rabiesBatchNumber: input.rabiesBatchNumber ?? null,
+          rabiesAdministeredAt: input.rabiesAdministeredAt ?? null,
+          rabiesValidUntil: input.rabiesValidUntil ?? null,
+          travelEligibleFrom,
+          notes: input.notes ?? null,
+        })
+        .returning();
+
+      return { passport };
+    }),
+
+  /** Zoznam vystavených pasov KVL ČR */
+  listKvlCrPassports: vetProcedure
+    .input(
+      z
+        .object({
+          patientId: z.string().uuid().optional(),
+          search: z.string().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          offset: z.number().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions = [
+        eq(kvlCrPassports.practiceId, ctx.practiceId),
+        isNull(kvlCrPassports.deletedAt),
+      ];
+
+      if (input?.patientId) {
+        conditions.push(eq(kvlCrPassports.patientId, input.patientId));
+      }
+      if (input?.search) {
+        const escaped = input.search.replace(/[%_]/g, "\\$&");
+        conditions.push(
+          ilike(kvlCrPassports.passportNumber, `%${escaped}%`)
+        );
+      }
+
+      const items = await ctx.db.query.kvlCrPassports.findMany({
+        where: and(...conditions),
+        orderBy: [desc(kvlCrPassports.createdAt)],
+        limit: input?.limit ?? 50,
+        offset: input?.offset ?? 0,
+        with: {
+          patient: true,
+          client: true,
+          issuer: true,
+        },
+      });
+
+      return items;
+    }),
+});

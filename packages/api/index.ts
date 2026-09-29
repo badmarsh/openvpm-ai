@@ -1,2 +1,2 @@
 // API types and validators barrel export
-export {};
+export * from './router';
