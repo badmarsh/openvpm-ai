@@ -69,6 +69,7 @@ import {
 } from "@/components/records/prescription-inventory-product-picker";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   PATIENT_SEARCH_MAX_LENGTH,
@@ -3098,58 +3099,57 @@ function RecordsPageContent() {
                             </td>
                             <td className={cn(tableCellClass, "space-y-2 text-right align-top")}>
                               <div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title={
-                                    rx.effectiveStatus === "active"
+                                <TooltipHint content={rx.effectiveStatus === "active"
                                       ? t("records.prescriptions.printLabel", "Print Label")
-                                      : t("records.prescriptions.printLabelDisabledTooltip", "Only active prescriptions can print a dispensing label")
-                                  }
-                                  disabled={rx.effectiveStatus !== "active"}
-                                  onClick={async () => {
-                                  const clientName = [
-                                    selectedPatient?.clientFirstName,
-                                    selectedPatient?.clientLastName,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ");
-                                  const { generatePrescriptionLabelPdf } =
-                                    await import("@/lib/pdf");
-                                  generatePrescriptionLabelPdf({
-                                    practiceName: recordsPracticeName,
-                                    practicePhone:
-                                      recordsPracticePhone ?? undefined,
-                                    patientName: selectedPatient?.name ?? "",
-                                    clientName,
-                                    species: selectedPatient?.species ?? "",
-                                    medicationName: rx.medicationName,
-                                    dosage: rx.dosage ?? "",
-                                    frequency: rx.frequency ?? "",
-                                    instructions: rx.instructions ?? undefined,
-                                    prescribedBy: rx.prescriberName ?? "",
-                                    startDate: rx.startDate
-                                      ? formatClinicalDate(
-                                          rx.startDate,
-                                          recordsTimeZone
-                                        )
-                                      : formatClinicalDate(
-                                          dateInputValue(
-                                            new Date(),
+                                      : t("records.prescriptions.printLabelDisabledTooltip", "Only active prescriptions can print a dispensing label")}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={rx.effectiveStatus !== "active"}
+                                    onClick={async () => {
+                                    const clientName = [
+                                      selectedPatient?.clientFirstName,
+                                      selectedPatient?.clientLastName,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ");
+                                    const { generatePrescriptionLabelPdf } =
+                                      await import("@/lib/pdf");
+                                    generatePrescriptionLabelPdf({
+                                      practiceName: recordsPracticeName,
+                                      practicePhone:
+                                        recordsPracticePhone ?? undefined,
+                                      patientName: selectedPatient?.name ?? "",
+                                      clientName,
+                                      species: selectedPatient?.species ?? "",
+                                      medicationName: rx.medicationName,
+                                      dosage: rx.dosage ?? "",
+                                      frequency: rx.frequency ?? "",
+                                      instructions: rx.instructions ?? undefined,
+                                      prescribedBy: rx.prescriberName ?? "",
+                                      startDate: rx.startDate
+                                        ? formatClinicalDate(
+                                            rx.startDate,
+                                            recordsTimeZone
+                                          )
+                                        : formatClinicalDate(
+                                            dateInputValue(
+                                              new Date(),
+                                              recordsTimeZone
+                                            ),
                                             recordsTimeZone
                                           ),
-                                          recordsTimeZone
-                                        ),
-                                    quantity: rx.quantity != null ? String(rx.quantity) : undefined,
-                                    refillsRemaining: rx.refillsRemaining ?? undefined,
-                                  }).save(
-                                    `label-${rx.medicationName.replace(/\s+/g, "-").toLowerCase()}.pdf`
-                                  );
-                                  }}
-                                >
-                                  <Tag className="mr-1 h-3.5 w-3.5" />
-                                  {t("records.prescriptions.printLabel", "Print Label")}
-                                </Button>
+                                      quantity: rx.quantity != null ? String(rx.quantity) : undefined,
+                                      refillsRemaining: rx.refillsRemaining ?? undefined,
+                                    }).save(
+                                      `label-${rx.medicationName.replace(/\s+/g, "-").toLowerCase()}.pdf`
+                                    );
+                                    }}
+                                  >
+                                    <Tag className="mr-1 h-3.5 w-3.5" />
+                                    {t("records.prescriptions.printLabel", "Print Label")}
+                                  </Button>
+                                </TooltipHint>
                               </div>
                               <PrescriptionLifecycleControl
                                 prescription={{

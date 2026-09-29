@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -230,15 +231,17 @@ export function AiFlyerGenerator({
           </Button>
 
           {(prompt || result) && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleReset}
-              className="h-11 w-11 rounded-xl"
-              title="Vyčistiť"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
+            <TooltipHint content="Vyčistiť">
+              <Button
+                aria-label="Vyčistiť"
+                variant="outline"
+                size="icon"
+                onClick={handleReset}
+                className="h-11 w-11 rounded-xl"
+              >
+                <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              </Button>
+            </TooltipHint>
           )}
         </div>
       </div>

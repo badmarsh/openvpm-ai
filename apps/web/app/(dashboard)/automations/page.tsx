@@ -59,6 +59,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { toast } from "sonner";
 import { formatDateTimeToDisplay } from "@/lib/date-display";
@@ -687,30 +688,34 @@ function AutomationsContent() {
                               )}
                             </Button>
 
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() => openEditModal(journey)}
-                              title={t("automations.table.edit", "Upraviť")}
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <TooltipHint content={t("automations.table.edit", "Upraviť")}>
+                              <Button
+                                aria-label={t("automations.table.edit", "Upraviť")}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => openEditModal(journey)}
+                              >
+                                <Edit2 aria-hidden="true" className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipHint>
 
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={() =>
-                                setDeleteTarget({
-                                  id: journey.id,
-                                  name: journey.name,
-                                })
-                              }
-                              title={t("automations.table.delete", "Odstrániť")}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <TooltipHint content={t("automations.table.delete", "Odstrániť")}>
+                              <Button
+                                aria-label={t("automations.table.delete", "Odstrániť")}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: journey.id,
+                                    name: journey.name,
+                                  })
+                                }
+                              >
+                                <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipHint>
                           </div>
                         </td>
                       </tr>

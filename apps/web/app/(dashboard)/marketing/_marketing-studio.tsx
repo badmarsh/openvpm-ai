@@ -35,6 +35,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -775,37 +776,40 @@ export function MarketingStudioContent() {
                     <span>{t("marketing.studio.generateVideo", "Video")}</span>
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-2xs gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
-                    onClick={handleSendToTv}
-                    disabled={createTvSlideMutation.isPending}
-                    title={t("marketing.studio.tvSlideTitle", "Pridať túto kampaň ako slajd na TV do čakárne")}
-                  >
-                    {createTvSlideMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
-                    ) : (
-                      <Tv className="h-3 w-3 text-sky-500" />
-                    )}
-                    <span>{t("marketing.studio.sendToTv", "Na TV")}</span>
-                  </Button>
-
-                  {(generatedImageUrl || generatedVideoUrl) && (
+                  <TooltipHint content={t("marketing.studio.tvSlideTitle", "Pridať túto kampaň ako slajd na TV do čakárne")}>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => {
-                        setGeneratedImageUrl(null);
-                        setGeneratedVideoUrl(null);
-                      }}
-                      title={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}
+                      className="h-7 text-2xs gap-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 border-sky-200 dark:border-sky-900/50"
+                      onClick={handleSendToTv}
+                      disabled={createTvSlideMutation.isPending}
                     >
-                      <RefreshCw className="h-3 w-3" />
+                      {createTvSlideMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-sky-500" />
+                      ) : (
+                        <Tv className="h-3 w-3 text-sky-500" />
+                      )}
+                      <span>{t("marketing.studio.sendToTv", "Na TV")}</span>
                     </Button>
+                  </TooltipHint>
+
+                  {(generatedImageUrl || generatedVideoUrl) && (
+                    <TooltipHint content={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}>
+                      <Button
+                        aria-label={t("marketing.studio.resetVisualTitle", "Resetovať vizuál")}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setGeneratedImageUrl(null);
+                          setGeneratedVideoUrl(null);
+                        }}
+                      >
+                        <RefreshCw aria-hidden="true" className="h-3 w-3" />
+                      </Button>
+                    </TooltipHint>
                   )}
                 </div>
               </div>

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { SECTION_COMPONENTS } from "./website-sections";
 import { useI18n } from "@/lib/i18n";
 import type {
@@ -127,39 +128,44 @@ function SortableSectionCard({
             {t("common.edit", "Upraviť")}
           </Button>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onDuplicate(section.id)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-            title={t("marketing.website.duplicateSectionTooltip", "Duplikovať sekciu")}
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
+          <TooltipHint content={t("marketing.website.duplicateSectionTooltip", "Duplikovať sekciu")}>
+            <Button
+              aria-label={t("marketing.website.duplicateSectionTooltip", "Duplikovať sekciu")}
+              size="icon"
+              variant="ghost"
+              onClick={() => onDuplicate(section.id)}
+              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <Copy aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onToggleVisibility(section.id)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-            title={section.visible ? t("marketing.website.hideSection", "Skryť sekciu") : t("marketing.website.showSection", "Zobraziť sekciu")}
-          >
-            {section.visible ? (
-              <Eye className="h-3.5 w-3.5" />
-            ) : (
-              <EyeOff className="h-3.5 w-3.5 text-amber-500" />
-            )}
-          </Button>
+          <TooltipHint content={section.visible ? t("marketing.website.hideSection", "Skryť sekciu") : t("marketing.website.showSection", "Zobraziť sekciu")}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => onToggleVisibility(section.id)}
+              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              {section.visible ? (
+                <Eye className="h-3.5 w-3.5" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+              )}
+            </Button>
+          </TooltipHint>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onDelete(section.id)}
-            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            title={t("marketing.website.deleteSectionTooltip", "Odstrániť sekciu")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <TooltipHint content={t("marketing.website.deleteSectionTooltip", "Odstrániť sekciu")}>
+            <Button
+              aria-label={t("marketing.website.deleteSectionTooltip", "Odstrániť sekciu")}
+              size="icon"
+              variant="ghost"
+              onClick={() => onDelete(section.id)}
+              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
         </div>
       </div>
 

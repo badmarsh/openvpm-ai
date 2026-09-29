@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   type DicomMetadata,
   DICOM_WINDOW_PRESETS,
@@ -217,51 +218,60 @@ export function DicomViewer({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setInverted(!inverted)}
-            className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
-            title="Invertovať čiernu a bielu"
-          >
-            Invert
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setRotation((r) => (r + 90) % 360)}
-            className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
-            title="Otočiť o 90°"
-          >
-            <RotateCw className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
-            className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
-            title="Priblížiť"
-          >
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-            className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
-            title="Oddialiť"
-          >
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetView}
-            className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
-            title="Resetovať zobrazenie"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </Button>
+          <TooltipHint content="Invertovať čiernu a bielu">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setInverted(!inverted)}
+              className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              Invert
+            </Button>
+          </TooltipHint>
+          <TooltipHint content="Otočiť o 90°">
+            <Button
+              aria-label="Otočiť o 90°"
+              variant="ghost"
+              size="sm"
+              onClick={() => setRotation((r) => (r + 90) % 360)}
+              className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              <RotateCw aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content="Priblížiť">
+            <Button
+              aria-label="Priblížiť"
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
+              className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              <ZoomIn aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content="Oddialiť">
+            <Button
+              aria-label="Oddialiť"
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
+              className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              <ZoomOut aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content="Resetovať zobrazenie">
+            <Button
+              aria-label="Resetovať zobrazenie"
+              variant="ghost"
+              size="sm"
+              onClick={resetView}
+              className="h-7 px-2 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipHint>
         </div>
       </div>
 

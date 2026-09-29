@@ -24,6 +24,8 @@ import { EmptyState } from "@/components/common/empty-state";
 import { CapturePhotos } from "@/components/records/capture-photos";
 import { AiSoapFinalizeDialog } from "@/components/records/ai-soap-finalize-dialog";
 import { ClinicalGuardianConfirmDialog } from "@/components/clinical/clinical-guardian-confirm-dialog";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import type { EvaluatedSafetyAlert } from "@/lib/ai/clinical-guardian";
 import type { SoapSectionProvenance } from "@/lib/records/soap-ai-provenance";
 
@@ -152,6 +154,7 @@ async function copyTextToClipboard(text: string): Promise<void> {
 
 export default function NewSoapNotePage() {
   const { t } = useI18n();
+  const { confirm, dialogProps } = useConfirmDialog();
   const params = useParams<{ patientId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -536,7 +539,7 @@ export default function NewSoapNotePage() {
     onError: (err) => toast.error(err.message),
   });
 
-  function handleDraftWithAi() {
+  async function handleDraftWithAi() {
     if (
       finalizedElsewhereRef.current ||
       !params.patientId ||
@@ -545,7 +548,21 @@ export default function NewSoapNotePage() {
       return;
     if (
       canSave &&
-      !window.confirm(t("records.newSoap.confirmReplaceWithAi", "Replace what you typed with the AI draft?"))
+      !(await confirm({
+        title: t(
+          "records.newSoap.confirmReplaceWithAiTitle",
+          "Replace with AI draft?",
+        ),
+        description: t(
+          "records.newSoap.confirmReplaceWithAi",
+          "Replace what you typed with the AI draft?",
+        ),
+        confirmLabel: t(
+          "records.newSoap.replaceExistingContent",
+          "Replace existing content",
+        ),
+        confirmVariant: "destructive",
+      }))
     ) {
       return;
     }
@@ -747,15 +764,23 @@ export default function NewSoapNotePage() {
     }
 
     // The AI confirmation dialog already is an explicit final click; manual
-    // notes keep their window.confirm exactly as before.
+    // entry gets the equivalent themed confirmation below.
     if (
       !clinicianConfirmed &&
-      !window.confirm(
-        t(
+      !(await confirm({
+        title: t(
+          "records.newSoap.confirmFinalizeTitle",
+          "Finalize SOAP note?",
+        ),
+        description: t(
           "records.newSoap.confirmFinalize",
           "Finalize this SOAP note? The signed note cannot be edited; later clarification must be an attributed addendum.",
         ),
-      )
+        confirmLabel: t(
+          "records.newSoap.finalizeSoapNote",
+          "Finalize SOAP note",
+        ),
+      }))
     ) {
       return;
     }
@@ -788,9 +813,21 @@ export default function NewSoapNotePage() {
   async function overwriteServerDraft() {
     if (finalizedElsewhereRef.current || !conflictDraft) return;
     if (
-      !window.confirm(
-        t("records.newSoap.confirmOverwriteServer", "Replace the newer server draft with the version in this editor?"),
-      )
+      !(await confirm({
+        title: t(
+          "records.newSoap.confirmOverwriteServerTitle",
+          "Replace the server draft?",
+        ),
+        description: t(
+          "records.newSoap.confirmOverwriteServer",
+          "Replace the newer server draft with the version in this editor?",
+        ),
+        confirmLabel: t(
+          "records.newSoap.overwriteWithMyVersion",
+          "Overwrite with my version",
+        ),
+        confirmVariant: "destructive",
+      }))
     )
       return;
     draftIdRef.current = conflictDraft.id;
@@ -811,9 +848,15 @@ export default function NewSoapNotePage() {
     if (finalizedElsewhereRef.current || !appointmentId || !draftIdRef.current)
       return;
     if (
-      !window.confirm(
-        t("records.newSoap.confirmDiscard", "Discard this unfinished SOAP draft? This cannot be undone."),
-      )
+      !(await confirm({
+        title: t("records.newSoap.confirmDiscardTitle", "Discard SOAP draft?"),
+        description: t(
+          "records.newSoap.confirmDiscard",
+          "Discard this unfinished SOAP draft? This cannot be undone.",
+        ),
+        confirmLabel: t("records.newSoap.discardDraft", "Discard draft"),
+        confirmVariant: "destructive",
+      }))
     )
       return;
     try {
@@ -888,19 +931,25 @@ export default function NewSoapNotePage() {
         }),
         persistDraft,
         confirmFinalizedLocalTextLeave: () =>
-          window.confirm(
-            t(
+          confirm({
+            title: t("records.newSoap.confirmLeaveTitle", "Leave the editor?"),
+            description: t(
               "records.newSoap.confirmLeaveUncopied",
               "Your local SOAP text was not included in the finalized note and has not been copied. Leave anyway?",
             ),
-          ),
+            confirmLabel: t("records.newSoap.confirmLeaveAction", "Leave anyway"),
+            confirmVariant: "destructive",
+          }),
         confirmUnsavedLeave: () =>
-          window.confirm(
-            t(
+          confirm({
+            title: t("records.newSoap.confirmLeaveTitle", "Leave the editor?"),
+            description: t(
               "records.newSoap.confirmLeaveUnsaved",
               "The latest draft changes could not be saved. Leave the editor anyway?",
             ),
-          ),
+            confirmLabel: t("records.newSoap.confirmLeaveAction", "Leave anyway"),
+            confirmVariant: "destructive",
+          }),
         navigate: () => router.push(destination),
       });
 
@@ -912,7 +961,7 @@ export default function NewSoapNotePage() {
       });
       return attempt;
     },
-    [editorNeedsLeaveGuard, persistDraft, router, t],
+    [editorNeedsLeaveGuard, persistDraft, confirm, router, t],
   );
 
   const copyLocalSoapText = useCallback(async () => {
@@ -1578,6 +1627,7 @@ export default function NewSoapNotePage() {
         }}
         pending={finalizeMutation.isPending || prepareFinalizationMutation.isPending}
       />
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

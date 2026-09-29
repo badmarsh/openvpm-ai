@@ -5,6 +5,7 @@ import { Copy, Check, LayoutGrid, Rows3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -234,25 +235,26 @@ export function SoapPreview({
             </div>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCopyFullSoap}
-            className="h-7 px-2.5 text-xs gap-1.5"
-            title={t("voice.soap.copyFullTitle", "Kopírovať celý SOAP záznam")}
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-            <span>
-              {copied
-                ? t("voice.soap.copied", "Skopírované")
-                : t("voice.soap.copy", "Kopírovať")}
-            </span>
-          </Button>
+          <TooltipHint content={t("voice.soap.copyFullTitle", "Kopírovať celý SOAP záznam")}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyFullSoap}
+              className="h-7 px-2.5 text-xs gap-1.5"
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              <span>
+                {copied
+                  ? t("voice.soap.copied", "Skopírované")
+                  : t("voice.soap.copy", "Kopírovať")}
+              </span>
+            </Button>
+          </TooltipHint>
         </div>
       </div>
 

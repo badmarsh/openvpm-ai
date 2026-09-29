@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   PRESCRIPTION_LIFECYCLE_REASON_MAX_LENGTH,
   isPrescriptionLifecycleReasonValid,
@@ -147,25 +148,24 @@ export function PrescriptionLifecycleControl({
         </Button>
         {canManage && isActive ? (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canRefill || isPending}
-              title={
-                canRefill
+            <TooltipHint content={canRefill
                   ? isExternalPrescription
                     ? "Authorize one external-pharmacy refill"
                     : "Dispense one clinic-stock refill"
                   : hasInvalidInventoryLink
                     ? "The linked inventory prescription is missing a positive dispensing quantity"
-                    : "This prescription has no remaining refills"
-              }
-              onClick={() => openAction("refill")}
-            >
-              <RotateCcw className="mr-1 h-3.5 w-3.5" />
-              {isExternalPrescription ? "Authorize refill" : "Refill"}
-            </Button>
+                    : "This prescription has no remaining refills"}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canRefill || isPending}
+                onClick={() => openAction("refill")}
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                {isExternalPrescription ? "Authorize refill" : "Refill"}
+              </Button>
+            </TooltipHint>
             <Button
               type="button"
               variant="outline"

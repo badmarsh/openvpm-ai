@@ -65,6 +65,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ClinicalStatusBadge } from "@/components/clinical/clinical-status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 // react-markdown + remark-gfm are heavy; the preview only exists after the
 // first AI result, so the renderer loads lazily and never blocks page paint.
@@ -1196,16 +1197,17 @@ function DischargeContent() {
                           <Printer className="h-3.5 w-3.5" />
                           {t("discharge.print", "Print / PDF")}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleExportPdf}
-                          className="h-8 px-2.5 text-xs gap-1"
-                          title="Export PDF via dynamic import"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          PDF
-                        </Button>
+                        <TooltipHint content="Export PDF via dynamic import">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleExportPdf}
+                            className="h-8 px-2.5 text-xs gap-1"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </Button>
+                        </TooltipHint>
                         <Button
                           variant="default"
                           size="sm"

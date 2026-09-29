@@ -46,6 +46,7 @@ import { formatDateInputForTimeZone } from "@/lib/date-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { cn } from "@/lib/utils";
 import {
@@ -281,23 +282,24 @@ function MessageContentBubble({
                 {communicationId &&
                 invoiceImportEnabled &&
                 att.filename?.toLowerCase().endsWith(".pdf") ? (
-                  <button
-                    type="button"
-                    title={t("inbox.importInvoiceTitle", "Import invoice to stock")}
-                    disabled={importingAttId === att.id || parseAttachmentMutation.isPending}
-                    onClick={() => {
-                      setImportingAttId(att.id);
-                      parseAttachmentMutation.mutate({ communicationId, attachmentId: att.id });
-                    }}
-                    className="shrink-0 flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2 py-1.5 text-2xs font-medium text-amber-800 transition-colors disabled:opacity-50"
-                  >
-                    {importingAttId === att.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Package className="h-3.5 w-3.5" />
-                    )}
-                    <span className="hidden sm:inline">{t("inbox.btnImportToStock", "Stock")}</span>
-                  </button>
+                  <TooltipHint content={t("inbox.importInvoiceTitle", "Import invoice to stock")}>
+                    <button
+                      type="button"
+                      disabled={importingAttId === att.id || parseAttachmentMutation.isPending}
+                      onClick={() => {
+                        setImportingAttId(att.id);
+                        parseAttachmentMutation.mutate({ communicationId, attachmentId: att.id });
+                      }}
+                      className="shrink-0 flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2 py-1.5 text-2xs font-medium text-amber-800 transition-colors disabled:opacity-50"
+                    >
+                      {importingAttId === att.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Package className="h-3.5 w-3.5" />
+                      )}
+                      <span className="hidden sm:inline">{t("inbox.btnImportToStock", "Stock")}</span>
+                    </button>
+                  </TooltipHint>
                 ) : null}
               </div>
             ))}
@@ -1756,13 +1758,14 @@ export function InboxView() {
                   </button>
                   <div className="min-w-0">
                     <h3 className="truncate font-medium text-sm">
-                      <Link
-                        href={`/clients/${selectedClientId}`}
-                        className="hover:text-primary hover:underline"
-                        title={t("inbox.openClientCard", "Open client card")}
-                      >
-                        {selectedClientName}
-                      </Link>
+                      <TooltipHint content={t("inbox.openClientCard", "Open client card")}>
+                        <Link
+                          href={`/clients/${selectedClientId}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {selectedClientName}
+                        </Link>
+                      </TooltipHint>
                     </h3>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <Badge
@@ -1777,19 +1780,22 @@ export function InboxView() {
                         </span>
                       ) : null}
                       {(selectedClientDetail?.patients ?? []).slice(0, 4).map((patient) => (
-                        <Link
+                        <TooltipHint
                           key={patient.id}
-                          href={`/patients/${patient.id}`}
-                          title={t("inbox.openPatientCard", "Open patient card")}
-                          className={cn(
-                            "inline-flex items-center rounded-full border px-2 py-px text-3xs font-medium transition-colors",
-                            patient.status === "deceased"
-                              ? "border-stone-300 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-300"
-                              : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                          )}
+                          content={t("inbox.openPatientCard", "Open patient card")}
                         >
-                          {patient.name} ({speciesLabel(patient.species, t)})
-                        </Link>
+                          <Link
+                            href={`/patients/${patient.id}`}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2 py-px text-3xs font-medium transition-colors",
+                              patient.status === "deceased"
+                                ? "border-stone-300 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-300"
+                                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                            )}
+                          >
+                            {patient.name} ({speciesLabel(patient.species, t)})
+                          </Link>
+                        </TooltipHint>
                       ))}
                     </div>
                   </div>

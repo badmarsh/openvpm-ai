@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader, PageSectionHeader } from "@/components/layout/page-header";
 import {
@@ -475,13 +476,14 @@ export default function VaccinationsPage() {
                       </td>
                       <td className={cn(tableCellClass, "text-right")}>
                         <Button asChild variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <Link
-                            href={`/records?patientId=${r.patientId}&tab=vaccinations`}
-                            aria-label={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
-                            title={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Link>
+                          <TooltipHint content={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}>
+                            <Link
+                              href={`/records?patientId=${r.patientId}&tab=vaccinations`}
+                              aria-label={t("vaccinations.openRecordAria", "Otvoriť záznam očkovania")}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </TooltipHint>
                         </Button>
                       </td>
                     </tr>

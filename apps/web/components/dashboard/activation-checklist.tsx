@@ -17,6 +17,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { useTour } from "@/components/tour/tour-provider";
 import { useOnboardingJourney } from "@/components/onboarding/journey-overlay";
 import { useI18n } from "@/lib/i18n";
@@ -404,15 +405,16 @@ export function ActivationChecklist() {
   return (
     <div className="relative z-20 w-full sm:fixed sm:bottom-4 sm:right-4 sm:z-[70] sm:w-[340px]">
       <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-zinc-50 shadow-2xl shadow-black/30">
-        <button
-          type="button"
-          onClick={snooze}
-          aria-label={t("activation.hideForNow", "Hide for now")}
-          title={t("activation.hideForNow", "Hide for now")}
-          className="absolute right-3 top-3 rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <TooltipHint content={t("activation.hideForNow", "Hide for now")}>
+          <button
+            type="button"
+            onClick={snooze}
+            aria-label={t("activation.hideForNow", "Hide for now")}
+            className="absolute right-3 top-3 rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </TooltipHint>
 
         <div className="flex items-center gap-2.5 pr-6">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useConfirmDialog } from "@/lib/hooks/use-confirm-dialog";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   MessagingWizard,
   type MessagingSetupLocation,
@@ -44,19 +46,6 @@ const REGISTRATION_BADGE: Record<
 const EMPTY_MESSAGING_LOCATIONS: MessagingSetupLocation[] = [];
 const APPOINTMENT_REMINDER_LEAD_OPTIONS = [24, 48, 72] as const;
 
-function confirmReminderCatchUp(
-  action: "enable" | "expand",
-  leadHours: (typeof APPOINTMENT_REMINDER_LEAD_OPTIONS)[number],
-) {
-  const actionLabel =
-    action === "enable"
-      ? "Enabling automatic reminders"
-      : `Increasing the reminder window to ${leadHours} hours`;
-  return window.confirm(
-    `${actionLabel} may send reminders for existing eligible confirmed appointments on the next hourly run. Continue?`,
-  );
-}
-
 function hasConfiguredSender(
   messaging: NonNullable<MessagingSetupLocation["messaging"]>,
 ) {
@@ -71,6 +60,16 @@ export function MessagingTab() {
   const { data, isLoading, error, refetch } =
     trpc.messaging.getStatus.useQuery();
   const utils = trpc.useUtils();
+  const { confirm, dialogProps } = useConfirmDialog();
+
+  // One shared, themed confirmation for the catch-up warning — previously a
+  // native window.confirm, which is unthemed, unlocalised and thread-blocking.
+  const confirmReminderCatchUp = (description: string) =>
+    confirm({
+      title: t("settings.messaging.catchUpTitle", "Send catch-up reminders?"),
+      description,
+      confirmLabel: t("settings.messaging.catchUpConfirm", "Continue"),
+    });
   const updateReminderSettings =
     trpc.messaging.setAppointmentReminderSettings.useMutation({
       onSuccess: async (_result, variables) => {
@@ -185,14 +184,16 @@ export function MessagingTab() {
             aria-label="Enable automatic appointment reminders"
             checked={reminderSettings.enabled}
             disabled={updateReminderSettings.isPending}
-            onChange={(event) => {
+            onChange={async (event) => {
               const enabled = event.target.checked;
               if (
                 enabled &&
-                !confirmReminderCatchUp(
-                  "enable",
-                  reminderSettings.leadHours as 24 | 48 | 72,
-                )
+                !(await confirmReminderCatchUp(
+                  t(
+                    "settings.messaging.catchUpEnableDesc",
+                    "Enabling automatic reminders may send reminders for existing eligible confirmed appointments on the next hourly run.",
+                  ),
+                ))
               ) {
                 return;
               }
@@ -212,12 +213,18 @@ export function MessagingTab() {
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             value={reminderSettings.leadHours}
             disabled={updateReminderSettings.isPending}
-            onChange={(event) => {
+            onChange={async (event) => {
               const leadHours = Number(event.target.value) as 24 | 48 | 72;
               if (
                 reminderSettings.enabled &&
                 leadHours > reminderSettings.leadHours &&
-                !confirmReminderCatchUp("expand", leadHours)
+                !(await confirmReminderCatchUp(
+                  t(
+                    "settings.messaging.catchUpExpandDesc",
+                    `Increasing the reminder window to ${leadHours} hours may send reminders for existing eligible confirmed appointments on the next hourly run.`,
+                    { hours: leadHours },
+                  ),
+                ))
               ) {
                 return;
               }
@@ -318,6 +325,8 @@ export function MessagingTab() {
           onChanged={() => utils.messaging.getStatus.invalidate()}
         />
       ) : null}
+
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

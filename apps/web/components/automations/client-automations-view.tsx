@@ -54,6 +54,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 function MarketingAutomationsContent() {
@@ -389,21 +390,22 @@ function MarketingAutomationsContent() {
                             {rule.description}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          disabled={isToggling}
-                          onClick={() => toggleRuleMutation.mutate({ id: rule.id, enabled: !rule.enabled })}
-                          title={rule.enabled ? "Pozastaviť pravidlo" : "Zapnúť pravidlo"}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            rule.enabled ? "bg-primary" : "bg-muted-foreground/30"
-                          } ${isToggling ? "opacity-50 cursor-wait" : ""}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              rule.enabled ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
+                        <TooltipHint content={rule.enabled ? "Pozastaviť pravidlo" : "Zapnúť pravidlo"}>
+                          <button
+                            type="button"
+                            disabled={isToggling}
+                            onClick={() => toggleRuleMutation.mutate({ id: rule.id, enabled: !rule.enabled })}
+                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              rule.enabled ? "bg-primary" : "bg-muted-foreground/30"
+                            } ${isToggling ? "opacity-50 cursor-wait" : ""}`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                rule.enabled ? "translate-x-5" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+                        </TooltipHint>
                       </div>
                       <div className="pt-2 border-t border-border/60 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5">
@@ -497,19 +499,20 @@ function MarketingAutomationsContent() {
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <button
-                          type="button"
-                          className="text-left min-w-0"
-                          onClick={() => openSegmentDrilldown(seg.segmentKey, displayName)}
-                          title={t("marketing.automations.viewSegmentMembers", "Zobraziť klientov v segmente")}
-                        >
-                          <h3 className="font-bold text-sm text-foreground hover:text-primary transition-colors">
-                            {displayName}
-                          </h3>
-                          <span className="font-mono text-3xs text-muted-foreground block mt-0.5">
-                            {seg.segmentKey}
-                          </span>
-                        </button>
+                        <TooltipHint content={t("marketing.automations.viewSegmentMembers", "Zobraziť klientov v segmente")}>
+                          <button
+                            type="button"
+                            className="text-left min-w-0"
+                            onClick={() => openSegmentDrilldown(seg.segmentKey, displayName)}
+                          >
+                            <h3 className="font-bold text-sm text-foreground hover:text-primary transition-colors">
+                              {displayName}
+                            </h3>
+                            <span className="font-mono text-3xs text-muted-foreground block mt-0.5">
+                              {seg.segmentKey}
+                            </span>
+                          </button>
+                        </TooltipHint>
                         <Badge variant="outline" className="text-3xs uppercase shrink-0">
                           {seg.refreshStrategy}
                         </Badge>
@@ -670,35 +673,38 @@ function MarketingAutomationsContent() {
                         </Button>
 
                         {(ch.provider === "google_business" || ch.provider === "facebook") && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="h-7 text-xs px-2.5"
-                            disabled={isReviewSyncing}
-                            onClick={() =>
-                              syncReviewsMutation.mutate({
-                                platform: ch.provider === "google_business" ? "google" : "facebook",
-                                simulateNewReviews: true,
-                              })
-                            }
-                            title={t("marketing.automations.syncReviews", "Synchronizovať recenzie")}
-                          >
-                            <RefreshCw className={`w-3 h-3 mr-1 ${isReviewSyncing ? "animate-spin" : ""}`} />
-                            {t("marketing.automations.syncReviewsShort", "Sync")}
-                          </Button>
+                          <TooltipHint content={t("marketing.automations.syncReviews", "Synchronizovať recenzie")}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-7 text-xs px-2.5"
+                              disabled={isReviewSyncing}
+                              onClick={() =>
+                                syncReviewsMutation.mutate({
+                                  platform: ch.provider === "google_business" ? "google" : "facebook",
+                                  simulateNewReviews: true,
+                                })
+                              }
+                            >
+                              <RefreshCw className={`w-3 h-3 mr-1 ${isReviewSyncing ? "animate-spin" : ""}`} />
+                              {t("marketing.automations.syncReviewsShort", "Sync")}
+                            </Button>
+                          </TooltipHint>
                         )}
 
                         {ch.status === "connected" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs px-2 text-destructive hover:text-destructive"
-                            disabled={isDisconnecting}
-                            onClick={() => disconnectChannelMutation.mutate({ id: ch.id })}
-                            title={t("marketing.automations.disconnectChannel", "Odpojiť")}
-                          >
-                            <Unlink className="w-3 h-3" />
-                          </Button>
+                          <TooltipHint content={t("marketing.automations.disconnectChannel", "Odpojiť")}>
+                            <Button
+                              aria-label={t("marketing.automations.disconnectChannel", "Odpojiť")}
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs px-2 text-destructive hover:text-destructive"
+                              disabled={isDisconnecting}
+                              onClick={() => disconnectChannelMutation.mutate({ id: ch.id })}
+                            >
+                              <Unlink aria-hidden="true" className="w-3 h-3" />
+                            </Button>
+                          </TooltipHint>
                         )}
                       </div>
                     </div>
@@ -823,25 +829,26 @@ function MarketingAutomationsContent() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => processQueueMutation.mutate()}
-                disabled={processQueueMutation.isPending}
-                className="gap-1.5 text-xs shadow-sm bg-primary text-primary-foreground"
-                title={t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}
-              >
-                {processQueueMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                )}
-                <span>
-                  {processQueueMutation.isPending
-                    ? t("marketing.automations.processingQueue", "Spracovávam frontu…")
-                    : t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}
-                </span>
-              </Button>
+              <TooltipHint content={t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => processQueueMutation.mutate()}
+                  disabled={processQueueMutation.isPending}
+                  className="gap-1.5 text-xs shadow-sm bg-primary text-primary-foreground"
+                >
+                  {processQueueMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                  )}
+                  <span>
+                    {processQueueMutation.isPending
+                      ? t("marketing.automations.processingQueue", "Spracovávam frontu…")
+                      : t("marketing.automations.btnProcessQueueNow", "Spracovať frontu teraz")}
+                  </span>
+                </Button>
+              </TooltipHint>
 
               <Button
                 size="sm"
@@ -856,23 +863,25 @@ function MarketingAutomationsContent() {
                 <span>{t("marketing.automations.btnSimulateEvent", "Simulovať udalosť")}</span>
               </Button>
 
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  eventsQuery.refetch();
-                  queueMetricsQuery.refetch();
-                }}
-                disabled={eventsQuery.isFetching || queueMetricsQuery.isFetching}
-                className="text-xs"
-                title={t("common.refresh", "Obnoviť")}
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 ${
-                    eventsQuery.isFetching || queueMetricsQuery.isFetching ? "animate-spin" : ""
-                  }`}
-                />
-              </Button>
+              <TooltipHint content={t("common.refresh", "Obnoviť")}>
+                <Button
+                  aria-label={t("common.refresh", "Obnoviť")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    eventsQuery.refetch();
+                    queueMetricsQuery.refetch();
+                  }}
+                  disabled={eventsQuery.isFetching || queueMetricsQuery.isFetching}
+                  className="text-xs"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${
+                      eventsQuery.isFetching || queueMetricsQuery.isFetching ? "animate-spin" : ""
+                    }`}
+                  />
+                </Button>
+              </TooltipHint>
             </div>
           </div>
 
@@ -961,16 +970,17 @@ function MarketingAutomationsContent() {
                           {evt.dedupeKey || "—"}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
-                            onClick={() => setSelectedEventForPayload(evt)}
-                            title={t("marketing.automations.inspectPayload", "Zobraziť detail a payload")}
-                          >
-                            <Eye className="w-3.5 h-3.5 text-primary" />
-                            <span>Detail</span>
-                          </Button>
+                          <TooltipHint content={t("marketing.automations.inspectPayload", "Zobraziť detail a payload")}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => setSelectedEventForPayload(evt)}
+                            >
+                              <Eye className="w-3.5 h-3.5 text-primary" />
+                              <span>Detail</span>
+                            </Button>
+                          </TooltipHint>
                         </td>
                       </tr>
                     ))}

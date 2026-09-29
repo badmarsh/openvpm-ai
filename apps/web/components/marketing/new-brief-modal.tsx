@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   Plus,
   Trash2,
@@ -386,19 +387,24 @@ export function NewBriefModal({
                           required
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveClaim(idx)}
-                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
-                        title={t(
+                      <TooltipHint content={t(
+                          "marketing.briefModal.removeClaimButton",
+                          "Odstrániť tvrdenie"
+                        )}>
+                        <Button
+                          aria-label={t(
                           "marketing.briefModal.removeClaimButton",
                           "Odstrániť tvrdenie"
                         )}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveClaim(idx)}
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                        >
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipHint>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

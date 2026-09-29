@@ -4,6 +4,7 @@ import { useLayoutEffect, useState } from "react";
 import { Check, Type } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import {
   Popover,
   PopoverContent,
@@ -48,16 +49,17 @@ export function FontScaleSwitcher({ className }: { className?: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn("h-9 w-9", className)}
-          aria-label={t("chrome.fontScale.buttonAria", "Zmeniť veľkosť písma")}
-          title={t("chrome.fontScale.label", "Veľkosť písma")}
-        >
-          <Type className="h-4 w-4" />
-        </Button>
+        <TooltipHint content={t("chrome.fontScale.label", "Veľkosť písma")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn("h-9 w-9", className)}
+            aria-label={t("chrome.fontScale.buttonAria", "Zmeniť veľkosť písma")}
+          >
+            <Type className="h-4 w-4" />
+          </Button>
+        </TooltipHint>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
         <p className="px-2 py-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">

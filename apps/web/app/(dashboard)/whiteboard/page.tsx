@@ -38,6 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ModalityBadgeRow } from "@/components/imaging/modality-badge";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDoctorName } from "@/lib/locale/format";
 import { useI18n } from "@/lib/i18n";
@@ -331,21 +332,22 @@ function SyncStatusIndicator({
           ? t("whiteboard.sync.live", "Live")
           : t("whiteboard.sync.interval", "Auto-refreshes every 30s")}
       </span>
-      <button
-        type="button"
-        onClick={onRefresh}
-        disabled={isFetching}
-        aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
-        title={tooltipText}
-        className="rounded-full p-0.5 transition-colors hover:text-foreground cursor-pointer disabled:opacity-50"
-      >
-        <RotateCw
-          className={cn(
-            "h-3 w-3 transition-transform",
-            isFetching && "animate-spin text-primary"
-          )}
-        />
-      </button>
+      <TooltipHint content={tooltipText}>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isFetching}
+          aria-label={t("whiteboard.sync.refreshNow", "Refresh now")}
+          className="rounded-full p-0.5 transition-colors hover:text-foreground cursor-pointer disabled:opacity-50"
+        >
+          <RotateCw
+            className={cn(
+              "h-3 w-3 transition-transform",
+              isFetching && "animate-spin text-primary"
+            )}
+          />
+        </button>
+      </TooltipHint>
     </div>
   );
 }
@@ -898,42 +900,43 @@ function AppointmentDetailModal({
                         </option>
                       ))}
                     </select>
-                    <Button
-                      size="sm"
-                      variant={action.variant}
-                      disabled={isUpdating || !inlineDoctorId}
-                      title={!inlineDoctorId ? t("whiteboard.selectDoctorPrompt", "Select doctor") : undefined}
-                      onClick={() => onStatusChange(appointment.id, action.status, inlineDoctorId)}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                      ) : null}
-                      {t("whiteboard.actions.assignAndCheckIn", "Assign & Check In")}
-                    </Button>
+                    <TooltipHint content={!inlineDoctorId ? t("whiteboard.selectDoctorPrompt", "Select doctor") : undefined}>
+                      <Button
+                        size="sm"
+                        variant={action.variant}
+                        disabled={isUpdating || !inlineDoctorId}
+                        onClick={() => onStatusChange(appointment.id, action.status, inlineDoctorId)}
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        ) : null}
+                        {t("whiteboard.actions.assignAndCheckIn", "Assign & Check In")}
+                      </Button>
+                    </TooltipHint>
                   </div>
                 );
               }
               return (
-                <Button
+                <TooltipHint
                   key={action.status}
-                  size="sm"
-                  variant={action.variant}
-                  disabled={
-                    isUpdating ||
-                    (action.status === "in_exam" && missingClinicalTarget)
-                  }
-                  title={
-                    action.status === "in_exam" && missingClinicalTarget
+                  content={action.status === "in_exam" && missingClinicalTarget
                       ? t("whiteboard.attachPatientWarning", "Open the visit and attach an active patient before starting the exam.")
-                      : undefined
-                  }
-                  onClick={() => onStatusChange(appointment.id, action.status)}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                  ) : null}
-                  {action.label}
-                </Button>
+                      : undefined}>
+                  <Button
+                    size="sm"
+                    variant={action.variant}
+                    disabled={
+                      isUpdating ||
+                      (action.status === "in_exam" && missingClinicalTarget)
+                    }
+                    onClick={() => onStatusChange(appointment.id, action.status)}
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : null}
+                    {action.label}
+                  </Button>
+                </TooltipHint>
               );
             })}
           </div>

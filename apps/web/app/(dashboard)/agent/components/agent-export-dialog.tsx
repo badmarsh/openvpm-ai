@@ -3,6 +3,7 @@
 import { Download, Printer, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import type { PersistedChatMessage } from "./agent-chat-history";
@@ -70,37 +71,41 @@ export function AgentExportButtons({
 
   return (
     <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleCopyMarkdown}
-        title={t("agent.export.copyTitle", "Kopírovať ako Markdown")}
-        className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-      >
-          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-        <span className="hidden sm:inline">{t("agent.export.copy", "Kopírovať")}</span>
-      </Button>
+      <TooltipHint content={t("agent.export.copyTitle", "Kopírovať ako Markdown")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopyMarkdown}
+          className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+        >
+            {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">{t("agent.export.copy", "Kopírovať")}</span>
+        </Button>
+      </TooltipHint>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleDownloadMarkdown}
-        title={t("agent.export.downloadTitle", "Stiahnuť .md súbor")}
-        className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-      >
-        <Download className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{t("agent.export.download", "Stiahnuť")}</span>
-      </Button>
+      <TooltipHint content={t("agent.export.downloadTitle", "Stiahnuť .md súbor")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleDownloadMarkdown}
+          className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{t("agent.export.download", "Stiahnuť")}</span>
+        </Button>
+      </TooltipHint>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handlePrint}
-        title={t("agent.export.printTitle", "Tlačiť")}
-        className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-      >
-        <Printer className="h-3.5 w-3.5" />
-      </Button>
+      <TooltipHint content={t("agent.export.printTitle", "Tlačiť")}>
+        <Button
+          aria-label={t("agent.export.printTitle", "Tlačiť")}
+          variant="ghost"
+          size="sm"
+          onClick={handlePrint}
+          className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <Printer aria-hidden="true" className="h-3.5 w-3.5" />
+        </Button>
+      </TooltipHint>
     </div>
   );
 }

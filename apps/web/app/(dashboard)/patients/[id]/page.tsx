@@ -184,6 +184,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 
 
@@ -1309,19 +1310,20 @@ export default function PatientDetailPage() {
                 )}
                 {canManagePatientDetail && (
                   <>
-                    <button
-                      type="button"
-                      disabled={uploadingPhoto}
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-wait"
-                      title={t("patients.profile.uploadPhoto", "Upload photo")}
-                    >
-                      {uploadingPhoto ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-white" />
-                      ) : (
-                        <Camera className="h-5 w-5 text-white" />
-                      )}
-                    </button>
+                    <TooltipHint content={t("patients.profile.uploadPhoto", "Upload photo")}>
+                      <button
+                        type="button"
+                        disabled={uploadingPhoto}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-wait"
+                      >
+                        {uploadingPhoto ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-white" />
+                        ) : (
+                          <Camera className="h-5 w-5 text-white" />
+                        )}
+                      </button>
+                    </TooltipHint>
                     <input
                       ref={fileInputRef}
                       type="file"

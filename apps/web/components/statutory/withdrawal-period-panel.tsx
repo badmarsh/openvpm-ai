@@ -13,14 +13,21 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  X,
   Building2,
   FileCheck,
   Filter,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import {
@@ -577,16 +584,17 @@ export function WithdrawalPeriodPanel() {
                         )}
                       </td>
                       <td className="p-3 text-right whitespace-nowrap">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePrintCertificate(item)}
-                          title={t("statutory.withdrawal.btnCertificate", "Certificate")}
-                          className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 px-2"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          <span>{t("statutory.withdrawal.forFarmer", "For farmer")}</span>
-                        </Button>
+                        <TooltipHint content={t("statutory.withdrawal.btnCertificate", "Certificate")}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePrintCertificate(item)}
+                            className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 px-2"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>{t("statutory.withdrawal.forFarmer", "For farmer")}</span>
+                          </Button>
+                        </TooltipHint>
                       </td>
                     </tr>
                   );
@@ -598,27 +606,19 @@ export function WithdrawalPeriodPanel() {
       </div>
 
       {/* Modal: Zaevidovať ochrannú lehotu */}
-      {isNewDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="relative w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setIsNewDialogOpen(false)}
-              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="mb-5">
-              <h2 className="text-base font-bold text-foreground">
+      <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
+        <DialogContent className="w-full max-w-xl gap-4 bg-card p-6 max-h-[90vh] overflow-y-auto overscroll-contain">
+            <DialogHeader className="text-left pr-8">
+              <DialogTitle className="text-base font-bold text-foreground">
                 {t("statutory.withdrawal.modalTitle", "Record Veterinary Drug Administration")}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
                 {t(
                   "statutory.withdrawal.subtitle",
                   "Statutory tracking of drug withdrawal periods for food-producing and livestock animals."
                 )}
-              </p>
-            </div>
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="space-y-4 text-xs">
               {/* Patient search / selection */}
@@ -836,9 +836,8 @@ export function WithdrawalPeriodPanel() {
                 <span>{t("statutory.withdrawal.btnSavePeriod", "Save and set period")}</span>
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

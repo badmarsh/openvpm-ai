@@ -20,10 +20,12 @@ const soapEditor = read("components/SoapNoteEditor.tsx");
 const pageKit = read("components/layout/page-kit.tsx");
 
 describe("icon-only controls have an accessible name", () => {
-  it("MicButton pairs its tooltip with an aria-label", () => {
+  it("MicButton names itself and uses the shared tooltip instead of native title", () => {
     expect(micButton).toContain("aria-label={label}");
-    // title alone is not announced reliably by screen readers.
-    expect(micButton).toContain("title={label}");
+    // A native title is not announced reliably by screen readers and never
+    // shows on touch; the 2026-09-29 A3 pass replaced title= with ui/tooltip.
+    expect(micButton).toContain("<TooltipHint content={label}>");
+    expect(micButton).not.toContain("title={label}");
   });
 
   it("every SOAP toolbar button is labelled and exposes its pressed state", () => {
@@ -102,6 +104,34 @@ describe("modals", () => {
   it("keep the consent modal on the Radix primitive with contained scrolling", () => {
     expect(consentSign).toContain('from "@radix-ui/react-dialog"');
     expect(consentSign).toContain("overscroll-contain");
+  });
+
+  it("build every statutory panel modal on the shared ui/dialog (A1 — P1-1)", () => {
+    // Statutory register modals carried by hand-rolled `fixed inset-0` overlays
+    // with no role/aria-modal/Escape/focus management; all of them now reuse
+    // the shared Radix dialog, exactly like the clinical diff modal.
+    for (const panel of [
+      "components/statutory/crsz-panel.tsx",
+      "components/statutory/rabies-observation-panel.tsx",
+      "components/statutory/carcass-disposal-panel.tsx",
+      "components/statutory/withdrawal-period-panel.tsx",
+    ]) {
+      const source = read(panel);
+      expect(source, panel).toContain('from "@/components/ui/dialog"');
+      expect(source, panel).toContain("<DialogTitle");
+      expect(source, panel).toContain("overscroll-contain");
+      expect(source, panel).not.toMatch(/className="fixed inset-0/);
+    }
+    // crsz-panel migrates all three register modals (microchip, passport,
+    // KVL/CR passport) — each renders its own Dialog with a controlled close.
+    const crsz = read("components/statutory/crsz-panel.tsx");
+    expect(crsz.match(/<Dialog open/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(crsz).toContain("if (!nextOpen) onClose()");
+    // rabies panel: both the new-case modal and the checkpoint modal keep a
+    // controlled close path (Escape / X / overlay) via onOpenChange.
+    const rabies = read("components/statutory/rabies-observation-panel.tsx");
+    expect(rabies.match(/<Dialog\b/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(rabies.match(/onOpenChange=/g)?.length).toBeGreaterThanOrEqual(2);
   });
 });
 

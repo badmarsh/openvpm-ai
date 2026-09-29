@@ -50,6 +50,7 @@ import { formatDateTime, localeTagForLanguage } from "@/lib/locale/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { WebsiteEditorPalette } from "@/components/marketing/website-editor-palette";
 import { WebsiteEditorCanvas } from "@/components/marketing/website-editor-canvas";
 import { WebsiteEditorSheet } from "@/components/marketing/website-editor-sheet";
@@ -582,52 +583,52 @@ export default function MarketingWebsitePage() {
     );
 
   const saveDraftButton = (className?: string) => (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={saveMutation.isPending || configQuery.isLoading}
-      onClick={handleManualSave}
-      className={cn("gap-1.5", className)}
-      title={t("marketing.website.saveDraftTooltip", "Uložiť aktuálny koncept stránky")}
-    >
-      {saveMutation.isPending ? (
-        <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden="true" />
-      ) : (
-        <Save className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-      )}
-      {t("marketing.website.saveDraft", "Uložiť koncept")}
-    </Button>
+    <TooltipHint content={t("marketing.website.saveDraftTooltip", "Uložiť aktuálny koncept stránky")}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={saveMutation.isPending || configQuery.isLoading}
+        onClick={handleManualSave}
+        className={cn("gap-1.5", className)}
+      >
+        {saveMutation.isPending ? (
+          <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden="true" />
+        ) : (
+          <Save className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        )}
+        {t("marketing.website.saveDraft", "Uložiť koncept")}
+      </Button>
+    </TooltipHint>
   );
 
   const publishButton = (className?: string) => (
-    <Button
-      type="button"
-      size="sm"
-      disabled={
-        (config?.published && saveMutation.isPending) ||
-        publishMutation.isPending ||
-        configQuery.isLoading
-      }
-      onClick={handlePublish}
-      className={cn("gap-1.5 font-semibold", className)}
-      title={
-        config?.published
+    <TooltipHint content={config?.published
           ? t("marketing.website.publishChangesTooltip", "Publikovať zmeny na live web")
-          : t("marketing.website.publishWebsiteTooltip", "Publikovať webstránku online")
-      }
-    >
-      {publishMutation.isPending ? (
-        <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-      ) : config?.published ? (
-        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-      ) : (
-        <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-      )}
-      {config?.published
-        ? t("marketing.website.publishChanges", "Publikovať zmeny na web")
-        : t("marketing.website.publishWebsite", "Publikovať webstránku")}
-    </Button>
+          : t("marketing.website.publishWebsiteTooltip", "Publikovať webstránku online")}>
+      <Button
+        type="button"
+        size="sm"
+        disabled={
+          (config?.published && saveMutation.isPending) ||
+          publishMutation.isPending ||
+          configQuery.isLoading
+        }
+        onClick={handlePublish}
+        className={cn("gap-1.5 font-semibold", className)}
+      >
+        {publishMutation.isPending ? (
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : config?.published ? (
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+        ) : (
+          <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        {config?.published
+          ? t("marketing.website.publishChanges", "Publikovať zmeny na web")
+          : t("marketing.website.publishWebsite", "Publikovať webstránku")}
+      </Button>
+    </TooltipHint>
   );
 
   return (
@@ -670,23 +671,24 @@ export default function MarketingWebsitePage() {
             {saveDraftButton()}
             {publishButton()}
             {config?.published ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={toggleMutation.isPending}
-                onClick={handleUnpublish}
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                title={t(
+              <TooltipHint content={t(
                   "marketing.website.hideWebsiteTooltip",
                   "Skryť webstránku pred verejnosťou",
-                )}
-              >
-                {toggleMutation.isPending ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                ) : null}
-                {t("marketing.website.hideWebsite", "Skryť webstránku")}
-              </Button>
+                )}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={toggleMutation.isPending}
+                  onClick={handleUnpublish}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  {toggleMutation.isPending ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {t("marketing.website.hideWebsite", "Skryť webstránku")}
+                </Button>
+              </TooltipHint>
             ) : null}
           </>
         }
@@ -1060,40 +1062,42 @@ export default function MarketingWebsitePage() {
                               <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                               {t("marketing.website.sections.openInEditor", "Otvoriť v editore")}
                             </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              aria-label={t("marketing.website.moveSection", "Presunúť")}
-                              title={t(
+                            <TooltipHint content={t(
                                 "marketing.website.moveSectionTooltip",
                                 "Kliknite a potiahnite pre presun sekcie",
-                              )}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setActiveTab("builder");
-                              }}
-                            >
-                              <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              aria-label={t("marketing.website.sections.duplicate", "Duplikovať sekciu")}
-                              title={t(
+                              )}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                aria-label={t("marketing.website.moveSection", "Presunúť")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveTab("builder");
+                                }}
+                              >
+                                <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipHint>
+                            <TooltipHint content={t(
                                 "marketing.website.duplicateSectionTooltip",
                                 "Duplikovať sekciu",
-                              )}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleDuplicateSection(section.id);
-                              }}
-                            >
-                              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                            </Button>
+                              )}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                aria-label={t("marketing.website.sections.duplicate", "Duplikovať sekciu")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDuplicateSection(section.id);
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipHint>
                             <Button
                               type="button"
                               variant="ghost"
@@ -1115,37 +1119,39 @@ export default function MarketingWebsitePage() {
                                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                               )}
                             </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              aria-label={t("marketing.website.sections.edit", "Upraviť sekciu")}
-                              title={t("marketing.website.sections.edit", "Upraviť sekciu")}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleEditSection(section);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                              aria-label={t("marketing.website.sections.delete", "Odstrániť sekciu")}
-                              title={t(
+                            <TooltipHint content={t("marketing.website.sections.edit", "Upraviť sekciu")}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                aria-label={t("marketing.website.sections.edit", "Upraviť sekciu")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleEditSection(section);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipHint>
+                            <TooltipHint content={t(
                                 "marketing.website.deleteSectionTooltip",
                                 "Odstrániť sekciu",
-                              )}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleDeleteSection(section.id);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            </Button>
+                              )}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                aria-label={t("marketing.website.sections.delete", "Odstrániť sekciu")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDeleteSection(section.id);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipHint>
                           </div>
                         </td>
                       </tr>

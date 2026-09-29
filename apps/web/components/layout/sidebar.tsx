@@ -41,6 +41,7 @@ import {
   type NavSectionId,
 } from "@/config/custom-nav";
 import { useI18n } from "@/lib/i18n";
+import { TooltipHint } from "@/components/ui/tooltip";
 
 type UserRole =
   | "admin"
@@ -360,38 +361,39 @@ export function Sidebar({
     >
       {/* Brand Header */}
       <div className="flex h-14 items-center border-b border-border px-4 justify-between">
-        <Link
-          href="/"
-          prefetch={false}
-          className="flex items-center gap-2.5 min-w-0"
-          title={branding?.name ? `${branding.name} - ${t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}` : t("common.defaultClinicName", "MVDr. Martin Sýkora - Súkromná veterinárna ambulancia")}
-        >
-          {branding?.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={branding.logoUrl}
-              alt={branding.name ?? "MVDr. Martin Sýkora"}
-              className="h-8 w-8 rounded-lg object-cover shrink-0"
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shrink-0 shadow-xs">
-              <PawMark className="h-4 w-4 text-primary-foreground" />
-            </div>
-          )}
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <span className="font-heading text-sm font-bold tracking-tight block truncate leading-tight text-foreground">
-                {branding?.name ?? t("common.defaultClinicNameShort", "MVDr. Martin Sýkora")}
-              </span>
-              <span
-                className="text-3xs text-muted-foreground block font-medium truncate leading-tight mt-0.5"
-                title={t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
-              >
-                {t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
-              </span>
-            </div>
-          )}
-        </Link>
+        <TooltipHint content={branding?.name ? `${branding.name} - ${t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}` : t("common.defaultClinicName", "MVDr. Martin Sýkora - Súkromná veterinárna ambulancia")}>
+          <Link
+            href="/"
+            prefetch={false}
+            className="flex items-center gap-2.5 min-w-0"
+          >
+            {branding?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={branding.logoUrl}
+                alt={branding.name ?? "MVDr. Martin Sýkora"}
+                className="h-8 w-8 rounded-lg object-cover shrink-0"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shrink-0 shadow-xs">
+                <PawMark className="h-4 w-4 text-primary-foreground" />
+              </div>
+            )}
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <span className="font-heading text-sm font-bold tracking-tight block truncate leading-tight text-foreground">
+                  {branding?.name ?? t("common.defaultClinicNameShort", "MVDr. Martin Sýkora")}
+                </span>
+                <span
+                  className="text-3xs text-muted-foreground block font-medium truncate leading-tight mt-0.5"
+                  title={t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
+                >
+                  {t("common.clinicSubtitle", "Súkromná veterinárna ambulancia")}
+                </span>
+              </div>
+            )}
+          </Link>
+        </TooltipHint>
       </div>
 
       {/* Navigation Sections */}
@@ -546,69 +548,74 @@ export function Sidebar({
       <div className="border-t border-border p-2 space-y-1">
         {session?.user && !isCollapsed && (
           <div className="flex items-center gap-3 rounded-lg bg-accent/40 px-3 py-2 border border-border/50">
-            <Link
-              href="/settings?tab=security"
-              className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-85 transition-opacity"
-              title={t("settings.security.myAccount", "Môj profil & zmena hesla")}
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+            <TooltipHint content={t("settings.security.myAccount", "Môj profil & zmena hesla")}>
+              <Link
+                href="/settings?tab=security"
+                className="flex items-center gap-3 min-w-0 flex-1 group hover:opacity-85 transition-opacity"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0 group-hover:bg-primary/20 transition-colors">
+                  {session.user.name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)}
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-2xs text-muted-foreground capitalize font-medium">
+                    {session.user.role
+                      ? t(
+                          `roles.${session.user.role}`,
+                          session.user.role.replace("_", " "),
+                        )
+                      : ""}
+                  </p>
+                </div>
+              </Link>
+            </TooltipHint>
+            <TooltipHint content={t("settings.tabs.security", "Zabezpečenie & Heslo")}>
+              <Link
+                href="/settings?tab=security"
+                aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+              >
+                <KeyRound className="h-4 w-4" />
+              </Link>
+            </TooltipHint>
+            <TooltipHint content={t("common.signOut", "Odhlásiť sa")}>
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                aria-label={t("common.signOut", "Odhlásiť sa")}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </TooltipHint>
+          </div>
+        )}
+        {session?.user && isCollapsed && (
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <TooltipHint content={t("settings.tabs.security", "Zabezpečenie & Heslo")}>
+              <Link
+                href="/settings?tab=security"
+                aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+              >
                 {session.user.name
                   ?.split(" ")
                   .map((n) => n[0])
                   .join("")
                   .slice(0, 2)}
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-2xs text-muted-foreground capitalize font-medium">
-                  {session.user.role
-                    ? t(
-                        `roles.${session.user.role}`,
-                        session.user.role.replace("_", " "),
-                      )
-                    : ""}
-                </p>
-              </div>
-            </Link>
-            <Link
-              href="/settings?tab=security"
-              aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
-              title={t("settings.tabs.security", "Zabezpečenie & Heslo")}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-            >
-              <KeyRound className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              aria-label={t("common.signOut", "Odhlásiť sa")}
-              title={t("common.signOut", "Odhlásiť sa")}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        {session?.user && isCollapsed && (
-          <div className="flex flex-col items-center gap-1.5 py-1">
-            <Link
-              href="/settings?tab=security"
-              aria-label={t("settings.tabs.security", "Zabezpečenie & Heslo")}
-              title={t("settings.tabs.security", "Zabezpečenie & Heslo")}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
-            >
-              {session.user.name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </Link>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              aria-label={t("common.signOut", "Odhlásiť sa")}
-              title={t("common.signOut", "Odhlásiť sa")}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+              </Link>
+            </TooltipHint>
+            <TooltipHint content={t("common.signOut", "Odhlásiť sa")}>
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                aria-label={t("common.signOut", "Odhlásiť sa")}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </TooltipHint>
           </div>
         )}
         {collapsible && (

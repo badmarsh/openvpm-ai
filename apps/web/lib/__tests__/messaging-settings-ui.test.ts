@@ -149,7 +149,10 @@ describe("messaging settings UI", () => {
     expect(tabSource).toContain("setAppointmentReminderSettings");
     expect(tabSource).toContain("Off by default");
     expect(tabSource).toContain("confirmReminderCatchUp");
-    expect(tabSource).toContain('!confirmReminderCatchUp("expand", leadHours)');
+    // Catch-up confirmation is the themed ConfirmDialog, not window.confirm.
+    expect(tabSource).toContain("useConfirmDialog");
+    expect(tabSource).toContain("confirmReminderCatchUp(");
+    expect(tabSource).not.toContain("window.confirm(");
     expect(tabSource).toContain(
       "Enabling reminders or increasing this window may send reminders for",
     );

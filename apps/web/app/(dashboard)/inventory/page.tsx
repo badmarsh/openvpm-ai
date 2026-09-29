@@ -28,6 +28,7 @@ import { useCurrencyFormatter } from "@/lib/locale/useCurrency";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipHint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -1118,25 +1119,29 @@ function EditSupplierRow({
       </td>
       <td className={tableCellClass}>
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            onClick={handleSave}
-            disabled={!canSave || updateMutation.isPending}
-            title={t("inventory.supplier.saveTitle", "Save supplier")}
-          >
-            <Check className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            onClick={onClose}
-            title={t("inventory.supplier.cancelTitle", "Cancel")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <TooltipHint content={t("inventory.supplier.saveTitle", "Save supplier")}>
+            <Button
+              aria-label={t("inventory.supplier.saveTitle", "Save supplier")}
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={handleSave}
+              disabled={!canSave || updateMutation.isPending}
+            >
+              <Check aria-hidden="true" className="h-4 w-4" />
+            </Button>
+          </TooltipHint>
+          <TooltipHint content={t("inventory.supplier.cancelTitle", "Cancel")}>
+            <Button
+              aria-label={t("inventory.supplier.cancelTitle", "Cancel")}
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={onClose}
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </Button>
+          </TooltipHint>
         </div>
         {updateMutation.error && (
           <p className="mt-1 text-xs text-destructive">
@@ -1720,15 +1725,17 @@ export default function InventoryPage() {
                         <td className={tableCellClass}>
                           {canManageInventory ? (
                             <div className="relative flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0"
-                                onClick={() => setEditingId(product.id)}
-                                title={t("inventory.table.btnEdit", "Edit")}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
+                              <TooltipHint content={t("inventory.table.btnEdit", "Edit")}>
+                                <Button
+                                  aria-label={t("inventory.table.btnEdit", "Edit")}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => setEditingId(product.id)}
+                                >
+                                  <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipHint>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1989,18 +1996,23 @@ export default function InventoryPage() {
                         </td>
                         <td className={tableCellClass}>
                           {canManageInventory ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() => setEditingSupplierId(supplier.id)}
-                              title={t(
+                            <TooltipHint content={t(
+                                "inventory.supplier.editTitle",
+                                "Edit supplier"
+                              )}>
+                              <Button
+                                aria-label={t(
                                 "inventory.supplier.editTitle",
                                 "Edit supplier"
                               )}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => setEditingSupplierId(supplier.id)}
+                              >
+                                <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipHint>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               {t("inventory.table.readOnly", "Read-only")}
