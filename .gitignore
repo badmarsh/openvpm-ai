@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# Local dev tunnel helper (machine-specific)
+tunnel.ps1
+
 # Marketing module prototype (reference only, not part of openvpm-ai)
 automated-veterinary-marketing-module/
 
