@@ -7,7 +7,7 @@ Instructions for Claude Code agents working in this repo.
 - **Reference Project (Vanilla / Upstream Inspiration):** `../OpenVPM` running on **port 3005** (`http://localhost:3005`). Use as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
 
 ## OpenVPM AI Architectural Skill & Guardrails
-All agents working in this repository MUST follow the skill defined in [`.claude/skills/openvpm-ai/SKILL.md`](.claude/skills/openvpm-ai/SKILL.md):
+All agents working in this repository MUST follow the skill defined in [`.agents/skills/openvpm-ai/SKILL.md`](.agents/skills/openvpm-ai/SKILL.md):
 - **Zero-Conflict Upstream Sync:** Never modify upstream schema files in `packages/db/schema/*.ts`. Add all new tables into `packages/db/schema/ext_*.ts`.
 - **Database Migrations:** Exclusively use `pnpm db:push` to keep `_journal.json` clean. For bringing a database to a complete, verified state (fresh installs and after schema changes), run `pnpm db:bootstrap` — it wraps `db:push` and additionally applies the journal object layer (clinical safety functions/triggers) that `db:push` cannot manage, then verifies. Never edit `packages/db/drizzle/*`; `db:bootstrap` only reads it.
 - **tRPC Extensions:** Mount extensions under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts`.
@@ -54,3 +54,7 @@ clinics it serves, not as an internal changelog:
   journals, launch checklists, call notes, and strategy write-ups live in the
   private tracker. The exception is community-facing material that materially
   betters the open-source project (ROADMAP.md, user docs, runbooks).
+
+## Session start / quota handoff
+- FIRST action in every new session, before anything else: invoke the `mem0-session-handoff` skill in RESTORE mode (reload the last checkpoint from mem0).
+- When the user mentions quota / usage limit / account switch, or after a major milestone: invoke it in SAVE mode (store context and findings in mem0).
