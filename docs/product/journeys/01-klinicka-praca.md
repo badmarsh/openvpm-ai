@@ -146,7 +146,7 @@ Zuzana má **8 sekúnd** na to, aby vedela, koho má na linke, inak sa rozhovor 
 1. **AI je nedostupná alebo limit vyčerpaný (R-01, R-07).** Systém **nesmie** blokovať klinickú prácu: prepne sa na manuálny rich-text editor s uloženým draftom, s viditeľným bannerom „AI nedostupné — pracujete manuálne“ a s garanciou, že nič z diktátu sa nestratilo (audio ostáva dostupné pre opätovné spracovanie).
 2. **Lekár diktuje mimo rozsahu SOAP** (napr. „zajtra mi zavolajte o tretej, pripomeňte mi, že má dostať Bravecto“). Systém musí rozpoznať **nedokumentačný zámer** a ponúknuť vytvorenie úlohy/reminderu (`care_reminders`) namiesto zapísania do Plan. Nesprávne zatriedenie je pre lekára horšie než neúplný záznam.
 3. **Diktuje technik, nie lekár.** `voice.*` je admin/vet only. Ak technik klikne na Scribe, systém musí povedať „diktovanie je dostupné lekárovi; vitálne a anamnézu zapíšte formulárom“ — nie skryť tlačidlo bez vysvetlenia (frustrácia P4).
-4. **Audio obsahuje identifikovateľné údaje tretích osôb** (klient rozpráva o rodine). Systém musí mať politiku retencie audio záznamov: predvolene nezachovávať zvuk, alebo 30 dní a potom nekompromisne zmazať (`voice_dictations`, `docs/data-retention-policy.md`).
+4. **Audio obsahuje identifikovateľné údaje tretích osôb** (klient rozpráva o rodine). Systém musí mať politiku retencie audio záznamov: predvolene nezachovávať zvuk, alebo 30 dní a potom nekompromisne zmazať (`voice_dictations`, `docs/reference/data-retention-policy.md`).
 
 ### Emočná mapa
 
@@ -210,7 +210,7 @@ Zuzana má **8 sekúnd** na to, aby vedela, koho má na linke, inak sa rozhovor 
 - Pri kontrolovaných látkach neexistuje AI prefill.
 
 **Business pravidlá:**
-- **HITL kontrakt:** AI nikdy nezapisuje do zdravotného záznamu bez potvrdenia lekára (`docs/confirmation-protocol.md`, `docs/ai-finalization-operations.md`).
+- **HITL kontrakt:** AI nikdy nezapisuje do zdravotného záznamu bez potvrdenia lekára (`docs/reference/confirmation-protocol.md`, `docs/guides/ai-finalization-operations.md`).
 - **Zákon 139/1998 Z. z.** (omamné a psychotropné látky): zero-prefill, povinná evidencia, svedok pri znehodnotení.
 - **GDPR čl. 9 + 28:** audio obsahuje zdravotné údaje → potreba DPA so sub-procesorom AI a jasnej retencie zvuku (R-07).
 - **Nariadenie EÚ 2019/6:** pri liekoch pre potravinové zvieratá sa v zázname nesmie stratiť informácia o ochrannej lehote.
@@ -354,7 +354,7 @@ Zuzana má **8 sekúnd** na to, aby vedela, koho má na linke, inak sa rozhovor 
 
 ### Alternatívne toky
 
-1. **História prichádza z migrácie.** Záznamy z konkurenčného systému majú označenie „Imported“ a zachovaný pôvodný dátum návštevy (`docs/migrating-to-openvpm.md`). Systém nesmie miešať importované a vlastné záznamy bez vizuálneho rozlíšenia — inak lekár verí dátam, ktoré nikdy nevideli validáciu.
+1. **História prichádza z migrácie.** Záznamy z konkurenčného systému majú označenie „Imported“ a zachovaný pôvodný dátum návštevy (`docs/migration/migrating-to-openvpm.md`). Systém nesmie miešať importované a vlastné záznamy bez vizuálneho rozlíšenia — inak lekár verí dátam, ktoré nikdy nevideli validáciu.
 2. **Chýbajúce laboratórne výsledky vs. „žiadne výsledky“.** Prázdny stav sa **nikdy** nesmie interpretovať ako „v poriadku“. UI musí rozlišovať: (a) nebolo vyšetrenie, (b) bolo, ale výsledok nie je v systéme, (c) bol výsledok odstránený (soft-delete s dôvodom).
 3. **Pacient s dvomi vlastníkmi (rozvod, spoločná domácnosť).** Karta musí umožniť `client_contacts` a explicitne označiť, kto je platiteľ a kto je informovaná osoba (GDPR minimalizácia: druhý kontakt nesmie vidieť faktúry).
 4. **Nesprávne priradený výsledok (cudzí pacient).** Pri náleze nesúladu (napr. čip v PDF patrí inému pacientovi) musí byť možnosť výsledok **odpojiť a previesť** s auditom — nie len vymazať.
@@ -555,7 +555,7 @@ Zuzana má **8 sekúnd** na to, aby vedela, koho má na linke, inak sa rozhovor 
 ### Alternatívne toky
 
 1. **Duplicitný pacient (dva záznamy toho istého zvieraťa).** Systém dnes kontroluje duplicitného **klienta** automaticky, ale ekvivalent pre pacienta neexistuje (audit F-01-2 — mikročip sa kontroluje len na samostatnej obrazovke `/patients/duplicates`). Riešenie: spustiť kontrolu čipu + mena + dátumu narodenia priamo vo formulári, a pri zhode blokovať „Vytvoriť“ s odkazom na zlúčenie.
-2. **Migrovaný klient s prázdnym e-mailom.** Migrácia povoľuje klienta bez e-mailu (`docs/migrating-to-openvpm.md`), ale pripomienky a portál potrebujú kanál. Systém musí pri takom klientovi zobraziť „kanál chýba“ a ponúknuť doplnenie pri najbližšej návšteve.
+2. **Migrovaný klient s prázdnym e-mailom.** Migrácia povoľuje klienta bez e-mailu (`docs/migration/migrating-to-openvpm.md`), ale pripomienky a portál potrebujú kanál. Systém musí pri takom klientovi zobraziť „kanál chýba“ a ponúknuť doplnenie pri najbližšej návšteve.
 3. **Zakázaná registrácia čipu (čip patrí inému majiteľovi, ale zviera je prevedené).** Systém potrebuje workflow „prevod vlastníctva“: nový záznam pacienta alebo prepis vlastníka so záznamom o pôvodnom majiteľovi a s dôvodom (kúpa, útulok, dedičstvo).
 4. **Onboarding hromadného zápisu (10+ pacientov pri kampani).** Systém musí umožniť rýchle zakladanie v režime „ďalší“ bez straty kontextu, s odloženým doplnením detailov. Inak recepcia prepíše len polovicu a zvyšok do systému nikdy nedôjde.
 

@@ -1,6 +1,6 @@
 # TASK: UI pre import dodacích listov od veľkoobchodníka (F-12-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, DOCS · Úsilie **L** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-12, register F-12-1
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-12, register F-12-1
 
 ## 1. Context / Why
 Parser (`apps/web/lib/inventory/wholesaler-import.ts`) aj tRPC procedúry (`server/routers/extensions/wholesaler-import.ts`) existujú, ale **UI neexistuje** — `ROADMAP.md` to priznáva v bode 9. Recepcia dnes nemá ako doplniť sklad z dodacieho listu inak než SQL, čo je pre používateľa slepá ulička a pre prax reálna strata času pri každej dodávke.

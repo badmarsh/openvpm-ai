@@ -18,7 +18,7 @@ documents that do exist cover different ground:
 
 | Document | Covers | Usable here? |
 | --- | --- | --- |
-| [`docs/migrating-to-openvpm.md`](migrating-to-openvpm.md) | Importing clients/patients/vaccines/medical history **from other PIMS vendors** by CSV | No — data migration, not code migration |
+| [`docs/migration/migrating-to-openvpm.md`](migrating-to-openvpm.md) | Importing clients/patients/vaccines/medical history **from other PIMS vendors** by CSV | No — data migration, not code migration |
 | [`DESIGN-SYSTEM-MIGRATION.md`](../../DESIGN-SYSTEM-MIGRATION.md) | Design-token unification (`--brand` vs `--primary`) | No — CSS tokens, not state |
 
 So §1 below states the protocol this plan follows, derived from the conventions

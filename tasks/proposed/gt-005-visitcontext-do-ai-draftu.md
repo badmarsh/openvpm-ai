@@ -1,6 +1,6 @@
 # TASK: Poslať `visitContext` do AI draftu SOAP (F-04-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie AI, UX · Úsilie **S** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-04, register F-04-3
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04, register F-04-3
 
 ## 1. Context / Why
 API `ai.draftSoapNote` prijíma `visitContext` (`server/routers/ai.ts:362`) — dnešné merania, poznámky, dôvod návštevy. UI ho pripravuje (`records/page.tsx:627`, `visitContextKey`), ale **nikto ho neposiela**. AI draft je preto „slepý“: text vyzerá úplne, ale neobsahuje to, čo sa dnes v ordinácii nameralo, čo zvyšuje riziko, že lekár prehliadne chýbajúci údaj.

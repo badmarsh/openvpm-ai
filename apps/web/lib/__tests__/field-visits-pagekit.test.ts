@@ -1,7 +1,7 @@
 /**
  * Field Visits — UI Kit Harmonization (Arena Sprint 14)
  * -----------------------------------------------------
- * Pins the /field-visits page to the dashboard UI kit (prompts/UIKIT.md):
+ * Pins the /field-visits page to the dashboard UI kit (docs/UIKIT.md):
  * pageShellClass, PageToolbar + SearchField, DataTableFrame, underline tabs,
  * EmptyState — plus the ambulatory hardening fixes:
  *   1. neutral-gray rendering of expired withdrawal rows (no active-warning red),

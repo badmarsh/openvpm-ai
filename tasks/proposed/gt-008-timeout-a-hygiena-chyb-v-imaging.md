@@ -1,6 +1,6 @@
 # TASK: Timeout a hygienu chýb pri AI analýze snímky (F-07-2, F-07-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie PERF, AI, UX · Úsilie **S** · Vlastník: API
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-07, §5.7, register F-07-2
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-07, §5.7, register F-07-2
 
 ## 1. Context / Why
 `imaging.analyze` (`server/routers/imaging.ts:225-305`) nemá žiadny timeout — ako jediná AI cesta v projekte (SOAP draft 30 s, agent 60 s, transkripcia 60 s). Ak provider neodpovedá, obrazovka visí, presne počas vyšetrenia. Navyše sa pri chybe zobrazí **surový text upstream providera** (`imaging.ts:307`), ktorý môže prezradiť interné detaily a rozhodne nie je pre veterinára zrozumiteľný.

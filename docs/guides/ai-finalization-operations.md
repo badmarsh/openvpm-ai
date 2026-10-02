@@ -65,14 +65,14 @@ the transaction.
 ## 4. Cutover (brownfield only)
 
 Fresh databases need no cutover. For databases with `LEGACY_ROW` findings,
-follow `docs/ai-audit-cutover.md` (backup → `--dry-run` review → owner
+follow `docs/guides/ai-audit-cutover.md` (backup → `--dry-run` review → owner
 `--apply` → independent verify → archive evidence).
 
 ## 5. Confirmation-protocol troubleshooting
 
 | Symptom | Likely cause | Action |
 |---|---|---|
-| `PRECONDITION_FAILED` "confirmation token is required" | Client finalized without prepare, or bare boolean | UI must call prepare → finalize; see `docs/confirmation-protocol.md` |
+| `PRECONDITION_FAILED` "confirmation token is required" | Client finalized without prepare, or bare boolean | UI must call prepare → finalize; see `docs/reference/confirmation-protocol.md` |
 | `CONFLICT` on finalize, "changed concurrently" | Stale `expectedRevision` | Reload record, re-prepare, retry |
 | `CONFLICT` "already been finalized" | Double-submit or replay | Do not retry; record state is authoritative |
 | `CONFLICT` after 15 min idle | Envelope TTL expired | Re-prepare (fresh clinician review) |
@@ -93,8 +93,8 @@ follow `docs/ai-audit-cutover.md` (backup → `--dry-run` review → owner
 
 ## 7. References
 
-- Confirmation protocol: `docs/confirmation-protocol.md`
-- Chain design + threat model: `docs/ai-audit-ledger.md`
-- Cutover: `docs/ai-audit-cutover.md`
-- Incidents: `docs/incident-response.md`
-- Backups: `docs/backup-restore-runbook.md`
+- Confirmation protocol: `docs/reference/confirmation-protocol.md`
+- Chain design + threat model: `docs/reference/ai-audit-ledger.md`
+- Cutover: `docs/guides/ai-audit-cutover.md`
+- Incidents: `docs/guides/incident-response.md`
+- Backups: `docs/guides/backup-restore-runbook.md`

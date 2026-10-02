@@ -56,7 +56,7 @@ Treat current e-Kasa as **non-certified**. If a clinic used it: stop sending, pr
 
 ## Restore
 
-Follow `docs/backup-restore-runbook.md` and `BACKUP_RESTORE_AND_DR.md`.
+Follow `docs/guides/backup-restore-runbook.md` and `BACKUP_RESTORE_AND_DR.md`.
 
 ## Support / emergency access
 

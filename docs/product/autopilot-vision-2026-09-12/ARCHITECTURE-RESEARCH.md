@@ -42,7 +42,7 @@ regions), `apps/web/server/routers/appointments.ts` (L1250–1440),
 ### 0.2 Three corrections to the brief — please read before §A
 
 **(1) The `feature-map-2026-09-12/` prior-art artifacts are not present in this checkout.**
-`artifacts/feature-map-2026-09-12/FEATURE-INDEX.md`,
+`docs/audits/feature-map-2026-09-12/FEATURE-INDEX.md`,
 `REORGANIZATION-FINDINGS.md`, and `domains/{marketing-communications,core-clinical,
 scheduling-front-desk,ai-agent}.md` do not exist on `main`, on this branch, or anywhere in
 git history (`git log --all --diff-filter=A -- '*FEATURE-INDEX*'` returns nothing). The
@@ -1716,7 +1716,7 @@ language → default → first [VERIFIED: messaging.ts:306-315], so the machiner
 question is whether per-client language routing is in scope.
 
 **Q10 — Retention for the event log.** The event bus is append-only and will grow
-indefinitely. The repo has a documented data-retention policy (`docs/data-retention-policy.md`)
+indefinitely. The repo has a documented data-retention policy (`docs/reference/data-retention-policy.md`)
 and a 24-hour voice-purge rule [SKILL.md §6]. What is the retention window for
 `ext_events` and `ext_event_reactions`? My default proposal: 24 months rolling, partitioned
 by month, with reactions cascaded on delete. Needs the owner's confirmation against GDPR

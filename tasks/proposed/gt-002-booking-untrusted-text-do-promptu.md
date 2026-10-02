@@ -1,6 +1,6 @@
 # TASK: Ohraničenie cudzieho textu z verejnej rezervácie pred vstupom do AI promptu (F-04-2)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY, AI · Úsilie **M** · Vlastník: AI + API
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-04/J-02, register F-04-2
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04/J-02, register F-04-2
 
 ## 1. Context / Why
 Verejná rezervácia prijíma od neprihláseného človeka text (najmä `petInput.name`, max. 128 znakov — `server/routers/booking.ts:297-299`) a ten sa následne dostáva do kontextu AI promptu (`visitContext`, klinický kontext návštevy). Je to jediné miesto v systéme, kde môže **cudzí človek zapísať text**, ktorý neskôr číta model. Ochrana proti injection existuje pre výstupy nástrojov agenta (`wrapUntrustedData`, `lib/agent/runner.ts:367-378`), ale nie pre tento vstup.

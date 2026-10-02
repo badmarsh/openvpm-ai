@@ -1,6 +1,6 @@
 # TASK: Agent `create_prescription` musí rešpektovať klinické brány a obálku potvrdenia (F-18-1)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY · Úsilie **M** · Vlastník: AI + API + DB
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-06/J-18, register F-18-1 (v J-06 uvedené ako F-06-1)
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-06/J-18, register F-18-1 (v J-06 uvedené ako F-06-1)
 
 ## 1. Context / Why
 Agent tool `create_prescription` (`lib/agent/tools.ts:2894`) zapisuje recept so `status = active`; obálka potvrdenia (`lib/ai/clinician-confirmation.ts`) sa vydáva až **po** INSERT a nikdy sa nespotrebuje. Chýba teda ekvivalent kontroly, akú má klasická cesta (`lib/controlled-substances/policy.ts` — zero-prefill a potvrdenie lekárom). Recept na kontrolovanú látku tak môže vzniknúť z agenta, prípadne cez `POST /api/v1/agent` s kľúčom nesúcim `records:write`, bez klinickej brány.
@@ -20,8 +20,8 @@ Agent tool `create_prescription` (`lib/agent/tools.ts:2894`) zapisuje recept so 
 ## 3. Acceptance Criteria (Definition of Done)
 - [ ] `pnpm --filter @openpims/web test -- lib/agent lib/ai server/__tests__/ai-clinical-finalization` zelené, s novými testami na 4 scenáre vyššie.
 - [ ] Kód neobsahuje žiadnu cestu, ktorá by vytvorila `prescriptions.status = "active"` bez spotrebovanej obálky — overené `grep` + test.
-- [ ] V `docs/authorization-matrix.md` je doplnený riadok pre agent write tools s odkazom na brány.
-- [ ] `docs/ai-audit-ledger.md` popisuje nový tok (obálka pred zápisom).
+- [ ] V `docs/reference/authorization-matrix.md` je doplnený riadok pre agent write tools s odkazom na brány.
+- [ ] `docs/reference/ai-audit-ledger.md` popisuje nový tok (obálka pred zápisom).
 
 ## 4. Technical Architecture & Constraints
 - **Balíčky:** `apps/web` (`lib/agent/tools.ts`, `lib/ai/clinician-confirmation.ts`, `server/routers/agent.ts`, `app/api/v1/agent/route.ts`).

@@ -52,7 +52,7 @@ The following are **DEPLOYMENT_REQUIREMENTs** — they must be configured by the
 | Metric | Target | Status | Verification |
 |---|---|---|---|
 | **RPO (Recovery Point Objective)** | < 1 hour | DEPLOYMENT_REQUIREMENT | Requires WAL archiving + automated backups configured by operator |
-| **RTO (Recovery Time Objective)** | < 30 minutes | DEPLOYMENT_REQUIREMENT | Requires tested restore procedure; see `docs/backup-restore-runbook.md` |
+| **RTO (Recovery Time Objective)** | < 30 minutes | DEPLOYMENT_REQUIREMENT | Requires tested restore procedure; see `docs/guides/backup-restore-runbook.md` |
 | **Uptime Availability** | 99.9% | DEPLOYMENT_REQUIREMENT | Requires redundant infrastructure configured by operator |
 
 **Verification command (DEPLOYMENT_REQUIREMENT):**
@@ -64,7 +64,7 @@ pnpm type-check
 psql $DATABASE_URL -c "\dt ext_ai_audit_log"
 ```
 
-The backup and restore procedure is documented in `docs/backup-restore-runbook.md`. That document must be reviewed and tested by the operator before going live.
+The backup and restore procedure is documented in `docs/guides/backup-restore-runbook.md`. That document must be reviewed and tested by the operator before going live.
 
 ---
 

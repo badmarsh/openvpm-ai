@@ -2,7 +2,7 @@
  * Secure Interop Bridge v1 → v2 — console & integration pins (Sprint 30).
  * -----------------------------------------------------------------------
  * Locks the delivery contract of the sprint:
- *   1. the operator console follows the Dashboard UI Kit (prompts/UIKIT.md),
+ *   1. the operator console follows the Dashboard UI Kit (docs/UIKIT.md),
  *   2. every string is bilingual (`interopBridge.*` leaf symmetry),
  *   3. navigation goes through `config/custom-nav.ts`,
  *   4. the tRPC router is mounted under `extensionsRouter`,

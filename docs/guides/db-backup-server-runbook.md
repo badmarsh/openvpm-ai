@@ -1,6 +1,6 @@
 # Database Backup — Prevádzkový runbook (Serverové PostgreSQL)
 
-> **Doplnok k:** `docs/backup-restore-runbook.md` (JSON application-level backup)  
+> **Doplnok k:** `docs/guides/backup-restore-runbook.md` (JSON application-level backup)  
 > Tento dokument pokrýva **pg_dump zálohy produkčného PostgreSQL** na `dev.significa.sk`.
 
 ---

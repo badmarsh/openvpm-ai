@@ -1,7 +1,7 @@
 /**
  * Appointment Scheduler & Calendar — UI Kit Harmonization (Arena Sprint 23)
  * -----------------------------------------------------------------------
- * Pins the /schedule page to the dashboard UI kit (prompts/UIKIT.md):
+ * Pins the /schedule page to the dashboard UI kit (docs/UIKIT.md):
  *   1. pageShellClass layout rhythm (no bare unstyled root div),
  *   2. PageHeader with CalendarDays icon and canonical title "Rozvrh",
  *   3. Underline tabs for the 4 views (Deň, Týždeň, Mesiac, Zoznam),

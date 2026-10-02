@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `/agent/voice` nav still lists all 5 roles (`config/custom-nav.ts:180`). `ScribeWidget` is still mounted for everyone (`app/(dashboard)/layout.tsx:119`) and has no role check.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Skryť/zablokovať hlasový AI vstup pre roly bez oprávnenia (F-18-2, aliasy F-X4-1, F-X4-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, SAFETY · Úsilie **S** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-18, §5.4, register F-18-2
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-18, §5.4, register F-18-2
 
 ## 1. Context / Why
 `/agent/voice` je v navigácii pre všetky roly (`config/custom-nav.ts:111-118`) a plávajúce `ScribeWidget` tlačidlo (`components/layout/scribe-widget.tsx:38-40`) je v dashboard layoute pre všetkých, hoci `voiceProcedure` vyžaduje `admin`/`veterinarian` (`voice.ts:45-47`). Technik teda stlačí mikrofón, **audio sa nahrá do S3** (`voice.ts:112-118`) a až potom dostane `FORBIDDEN` s anglickým textom v toaste.

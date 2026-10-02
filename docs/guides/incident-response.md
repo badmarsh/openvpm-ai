@@ -30,7 +30,7 @@
 ### Step 2: Investigation & Root-Cause Analysis
 - Inspect structured logs via correlation ID (`requestId`).
 - Verify database audit ledger integrity using `pnpm audit:verify-ai`.
-- Verify database backups and replica state in `docs/backup-restore-runbook.md`.
+- Verify database backups and replica state in `docs/guides/backup-restore-runbook.md`.
 
 ### Step 3: Post-Mortem & Reporting
 - Conduct blame-free technical post-mortem within 48 hours of resolution.

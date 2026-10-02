@@ -1,6 +1,6 @@
 # TASK: Odstrániť klamlivé označenie „AI“ a „istoty“ v laboratórnom importe (F-07-1)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie AI, SAFETY · Úsilie **S** · Vlastník: UI + API
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-07, register F-07-1
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-07, register F-07-1
 
 ## 1. Context / Why
 Import laboratórneho reportu (`lib/lab-import.ts`) je **deterministický heuristický parser** (regex), ale v kóde nesie číselné „istoty“ 0.65 / 0.72 / 0.84 / 0.94 (`lab-import.ts:81-89`) a v UI sa tvári ako „AI OCR“ zariadenie (`:121`, `:129`). Lekár tak vidí dôveryhodne vyzerajúce skóre pri hodnote prečítanej regexom — to je klinicky nebezpečné (a pri lab. hodnotách môže viesť k nesprávnemu rozhodnutiu).

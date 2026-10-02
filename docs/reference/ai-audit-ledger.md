@@ -171,7 +171,7 @@ The verifier (`scripts/verify-ai-audit-trail.ts`):
 | Cross-tenant event injection | ✅ | practiceId bound in hash |
 | Soft-deleted event (evidence deletion) | ✅ | `SOFT_DELETED_ROW`, excluded from linkage to avoid cascade noise |
 | Post-insert row mutation | ✅ | `MUTATED_ROW` via `updated_at`/`created_at` drift (5 s tolerance) |
-| Pre-chain legacy row | ✅ | `LEGACY_ROW` — integrate via `docs/ai-audit-cutover.md` |
+| Pre-chain legacy row | ✅ | `LEGACY_ROW` — integrate via `docs/guides/ai-audit-cutover.md` |
 | Modified `actorName` | ⚠️ | NOT detected — excluded from hash by design |
 | DBA alters rows + recomputes hashes | ❌ | Requires external anchoring |
 | Full DB restore to earlier state | ❌ | Requires external checkpointing |
@@ -223,7 +223,7 @@ export interface AuditAnchorProvider {
 | Requirement | Status |
 |---|---|
 | Run `pnpm db:migrate` (fresh DBs) so migration 0105 creates the ledger with chain columns | DEPLOYMENT_REQUIREMENT |
-| Integrate legacy (`sequence_number IS NULL`) rows before pilot sign-off | DONE — `scripts/backfill-ai-audit-chain.ts`, see `docs/ai-audit-cutover.md` |
-| Schedule `pnpm audit:verify-ai` in CI/CD (and daily in ops) | DEPLOYMENT_REQUIREMENT — see `docs/ai-finalization-operations.md` |
+| Integrate legacy (`sequence_number IS NULL`) rows before pilot sign-off | DONE — `scripts/backfill-ai-audit-chain.ts`, see `docs/guides/ai-audit-cutover.md` |
+| Schedule `pnpm audit:verify-ai` in CI/CD (and daily in ops) | DEPLOYMENT_REQUIREMENT — see `docs/guides/ai-finalization-operations.md` |
 | Configure external anchoring for regulatory strength | PILOT_TARGET |
 | Implement scheduled anchor checkpoint cron | PILOT_TARGET |

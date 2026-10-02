@@ -90,6 +90,6 @@ deliberate `SOFT_DELETED_ROW`), partial-chain refusal. 7/7 checks passed.
 
 ## 4. References
 
-- Chain design + threat model: `docs/ai-audit-ledger.md`
+- Chain design + threat model: `docs/reference/ai-audit-ledger.md`
 - Verifier: `scripts/verify-ai-audit-trail.ts`
-- Ops (scheduled verification, finding response): `docs/ai-finalization-operations.md`
+- Ops (scheduled verification, finding response): `docs/guides/ai-finalization-operations.md`

@@ -56,7 +56,7 @@ Entries marked with a dagger (†) are referenced by source code, tests or CI by
 - [Internationalization and Localization](reference/I18N.md)
 - [Repository governance and release policy](reference/repository-governance.md) †
 - [Repository recovery and cleanup ledger](repository-recovery-ledger.md) †
-- [OpenVPM UI kit — agent prompt](../prompts/UIKIT.md) †
+- [OpenVPM UI kit — agent prompt](UIKIT.md) †
 
 ## Folders
 

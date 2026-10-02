@@ -118,7 +118,7 @@ Additionally, imaging attachments (`attachment.linked`) must never carry
 4. Triage — filter `quarantined` / `rejected` messages, read the failure code
    and Zod issues, correct the peer, re-drive the message.
 5. Rotate keys before the 90-day hint turns red; revoke immediately on
-   suspected compromise and follow `docs/incident-response.md`.
+   suspected compromise and follow `docs/guides/incident-response.md`.
 
 ## 8. Incident response hooks
 

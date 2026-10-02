@@ -7,21 +7,21 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `controlledSubstances.list` (`server/routers/controlled-substances.ts:344`) is still `protectedProcedure` with only `assertActivePractice`, so any role can read it.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Doplniť kontrolu roly na `controlledSubstances.list` (F-06-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie SAFETY, DOCS · Úsilie **S** · Vlastník: API
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-06, §5.4, register F-06-2
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-06, §5.4, register F-06-2
 
 ## 1. Context / Why
-`docs/authorization-matrix.md:35` zakazuje technikovi a recepcii čítanie knihy kontrolovaných látok, ale procedúra `controlledSubstances.list` (`server/routers/controlled-substances.ts:344`) nemá **žiadnu** kontrolu roly — `protectedProcedure` znamená, že ju zavolá aj `viewer`. Kniha OPL je jedným z najcitlivejších registrov v praxi.
+`docs/reference/authorization-matrix.md:35` zakazuje technikovi a recepcii čítanie knihy kontrolovaných látok, ale procedúra `controlledSubstances.list` (`server/routers/controlled-substances.ts:344`) nemá **žiadnu** kontrolu roly — `protectedProcedure` znamená, že ju zavolá aj `viewer`. Kniha OPL je jedným z najcitlivejších registrov v praxi.
 
 ## 2. Scope
 ### In Scope
-- [x] Doplniť `requireRole` na všetky čítacie procedúry knihy OPL podľa `docs/authorization-matrix.md` (lekár + admin; prípadne asistent podľa matríc).
+- [x] Doplniť `requireRole` na všetky čítacie procedúry knihy OPL podľa `docs/reference/authorization-matrix.md` (lekár + admin; prípadne asistent podľa matríc).
 - [x] Zosúladiť maticu s kódom v oboch smeroch — ak má matica pravdu, opraví sa kód; ak kód, opraví sa matica (rozhodne vlastník klinických rolí).
 - [x] Doplniť test, ktorý pre každú chránenú procedúru overí `FORBIDDEN` pre rolu `viewer`/`technician`.
 - [x] Skontrolovať, či obmedzenie neblokuje legitímne toky (napr. výdaj lieku) — bez oslabenia klinických brán.
@@ -32,7 +32,7 @@ Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-06, §5.4, register F-06-2
 
 ## 3. Acceptance Criteria (Definition of Done)
 - [ ] Nový test v `server/__tests__/` (rolová matica) pokrýva minimálne 5 procedúr OPL.
-- [ ] `docs/authorization-matrix.md` bez rozporu s kódom v časti kontrolované látky.
+- [ ] `docs/reference/authorization-matrix.md` bez rozporu s kódom v časti kontrolované látky.
 - [ ] `pnpm --filter @openpims/web test -- server` zelené.
 
 ## 4. Technical Architecture & Constraints

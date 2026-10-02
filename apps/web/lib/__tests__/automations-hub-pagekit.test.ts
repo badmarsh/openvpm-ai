@@ -1,7 +1,7 @@
 /**
  * Automations Hub & CRM Journey Builder — UI Kit Harmonization (Arena Sprint 30)
  * -------------------------------------------------------------------------------
- * Pins `/automations` (the hub) to the dashboard UI kit (prompts/UIKIT.md):
+ * Pins `/automations` (the hub) to the dashboard UI kit (docs/UIKIT.md):
  *   1. pageShellClass layout rhythm (no unstyled root div),
  *   2. PageHeader with Zap icon and canonical title "Automatizácie",
  *   3. Underline tab strip (underlineTabsListClass / underlineTabsTriggerClass),

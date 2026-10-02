@@ -55,7 +55,7 @@ const TABS: ReadonlyArray<{ value: BridgeTab; labelKey: string }> = [
   { value: "events", labelKey: "interopBridge.tabs.events" },
 ];
 
-/** Status tokens follow prompts/UIKIT.md semantics — no raw Tailwind colours. */
+/** Status tokens follow docs/UIKIT.md semantics — no raw Tailwind colours. */
 const MESSAGE_STATUS_CLASS: Record<string, string> = {
   validated: "border-primary/40 bg-primary-muted text-primary-muted-foreground",
   processed: "border-primary/40 bg-primary-muted text-primary-muted-foreground",

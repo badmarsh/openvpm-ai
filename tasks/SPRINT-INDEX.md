@@ -55,7 +55,7 @@ Status legend: `merged (#PR)` = delivered and merged · `OPEN · READY` = premis
 | GT-012 | gt-012-feature-mapping-reálne-respektovaný.md | P1 | Feature mapping musí platiť pre všetky AI funkcie (F-17-3, aliasy F-14-1, F-X2-1) | OPEN · BACKLOG |
 | GT-013 | gt-013-data-residency-a-dpa-v-ui.md | P1 | Viditeľná data residency, DPA a automatický fallback v AI nastaveniach (F-17-4, F-17-6) | OPEN · BACKLOG |
 | GT-014 | gt-014-hlas-rola-gating-pred-nahranim.md | P1 | Skryť/zablokovať hlasový AI vstup pre roly bez oprávnenia (F-18-2, aliasy F-X4-1, F-X4-2) | OPEN · BACKLOG |
-| GT-015 | gt-015-zosuladenie-authorization-matrix.md | P1 | Zosúladiť docs/authorization-matrix.md s kódom (F-20-1, alias F-X4-8) | OPEN · BACKLOG |
+| GT-015 | gt-015-zosuladenie-authorization-matrix.md | P1 | Zosúladiť docs/reference/authorization-matrix.md s kódom (F-20-1, alias F-X4-8) | OPEN · BACKLOG |
 | GT-016 | gt-016-progres-zrusenie-timeout-ai-draftu.md | P1 | Progres, zrušenie a timeout pri čakaní na AI (F-X7-1) | OPEN · BACKLOG |
 | GT-017 | gt-017-jadro-prace-na-tablete.md | P1 | Použiteľnosť jadra práce na tablete (F-X8-1) | PARTIAL |
 

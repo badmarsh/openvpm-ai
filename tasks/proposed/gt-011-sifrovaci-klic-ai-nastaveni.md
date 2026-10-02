@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `lib/ai/ai-crypto.ts:28` still falls back to the public seed `openvpm-dev-ai-settings-default-secret-seed`.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Verzovaný a povinný šifrovací kľúč pre AI nastavenia (F-17-2)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie DATA, SAFETY · Úsilie **M** · Vlastník: API + DB
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17, register F-17-2
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-17, register F-17-2
 
 ## 1. Context / Why
 `lib/ai/ai-crypto.ts:19-30` odvodzuje šifrovací kľúč takto: `AI_SETTINGS_ENCRYPTION_KEY`, a ak chýba, `sha256(NEXTAUTH_SECRET || "openvpm-dev-ai-settings-default-secret-seed")`. Ak nie je nastavené ani jedno (alebo je použité verejné dev nasadenie), **všetky uložené provider kľúče sú dešifrovateľné kýmkoľvek**, kto pozná repozitár a má prístup k DB. Kľúč navyše nie je verzovaný: rotácia `AI_SETTINGS_ENCRYPTION_KEY` ticho znefunkční všetky uložené kľúče a používateľ to uvidí len ako „AI nefunguje“ (`ai-config-resolver.ts:108-116`).

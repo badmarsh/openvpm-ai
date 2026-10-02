@@ -126,7 +126,7 @@ pnpm audit:verify-ai --allow-empty
 - [ ] Run audit chain tests: `pnpm --filter @openpims/web exec vitest run lib/ai/__tests__/audit-chain.test.ts`
 - [ ] Verify S3 bucket is not publicly accessible (attempt anonymous GET on a known key — must return 403).
 - [ ] Verify RLS: `psql $DATABASE_URL -f packages/db/rls/enable-rls.sql`
-- [ ] Review `docs/authorization-enforcement-audit.md` for any residual gaps.
+- [ ] Review `docs/archive/authorization-enforcement-audit.md` for any residual gaps.
 
 ---
 

@@ -18,11 +18,11 @@ Každé tvrdenie o správaní systému je odvodené z kódu v tomto repozitári,
 
 | Zdroj | Čo z neho dokument čerpá |
 |---|---|
-| `docs/audit/2026-09-ai-ux-audit.md` | Inventár AI povrchov (A01–A20), journey karty J-01…J-21, zistenia F-xx-y s `súbor:riadok` |
+| `docs/audits/2026-09-ai-ux-audit.md` | Inventár AI povrchov (A01–A20), journey karty J-01…J-21, zistenia F-xx-y s `súbor:riadok` |
 | `apps/web/server/routers/**` | Skutočné procedúry, role (`requireRole`), feature gates (`requireFeature`) |
 | `packages/db/schema/**` | Reálne entity a enumy (napr. `visit_closeouts`, `dispense_charge_queue`, `ext_clinician_confirmations`) |
-| `docs/slovak-integration-catalog.md` | Integrácie (PetExpert, CYMEDICA/PHARMOS/SAMOHÝL, IDEXX/Fuji/Mindray, Laboklin/Synlab, FiskalPRO/VRP2) |
-| `docs/clinic-pilot-workflow.md` | End-to-end sekvencia dnešnej kliniky, lifecycle stavov záznamu, HITL kontrakt |
+| `docs/reference/slovak-integration-catalog.md` | Integrácie (PetExpert, CYMEDICA/PHARMOS/SAMOHÝL, IDEXX/Fuji/Mindray, Laboklin/Synlab, FiskalPRO/VRP2) |
+| `docs/reference/clinic-pilot-workflow.md` | End-to-end sekvencia dnešnej kliniky, lifecycle stavov záznamu, HITL kontrakt |
 | `docs/help/sk/*.md` | Reálne UI postupy, ktoré dnes existujú (nie hypotetické) |
 | `README.md`, `ROADMAP.md` | Pricing tiery, stav v0.6, plán v0.7 / v1.0, známy technický dlh |
 
@@ -272,8 +272,8 @@ Tieto body **nie sú** kritika kvality kódu — sú to rozhodnutia, ktoré mus�
 - [`09-portal-compliance-onboarding.md`](09-portal-compliance-onboarding.md) — J27–J30, J-NEW-1…3 + BC-9
 - [`10-ai-value-chain-a-multi-actor.md`](10-ai-value-chain-a-multi-actor.md) — AI value chain, multi-actor, KPI
 
-Nadväzujúce existujúce dokumenty: [`docs/audit/2026-09-ai-ux-audit.md`](../../audits/2026-09-ai-ux-audit.md),
-[`docs/clinic-pilot-workflow.md`](../../reference/clinic-pilot-workflow.md),
-[`docs/slovak-integration-catalog.md`](../../reference/slovak-integration-catalog.md),
-[`docs/authorization-matrix.md`](../../reference/authorization-matrix.md),
-[`docs/migrating-to-openvpm.md`](../../migration/migrating-to-openvpm.md).
+Nadväzujúce existujúce dokumenty: [`docs/audits/2026-09-ai-ux-audit.md`](../../audits/2026-09-ai-ux-audit.md),
+[`docs/reference/clinic-pilot-workflow.md`](../../reference/clinic-pilot-workflow.md),
+[`docs/reference/slovak-integration-catalog.md`](../../reference/slovak-integration-catalog.md),
+[`docs/reference/authorization-matrix.md`](../../reference/authorization-matrix.md),
+[`docs/migration/migrating-to-openvpm.md`](../../migration/migrating-to-openvpm.md).

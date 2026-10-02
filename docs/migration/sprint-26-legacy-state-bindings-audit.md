@@ -25,7 +25,7 @@ when this sprint started. Verified:
 | Claim in the ticket | What the repository actually contains |
 | --- | --- |
 | Deprecated state bindings live in `src/legacy/state/` | No `legacy` directory or file exists anywhere in the repo (`find … -iname '*legacy*'` returns nothing), and there is no root-level `src/` at all — the web app is `apps/web`. The bindings are real; the path in the ticket is not. |
-| "OpenVPM Migration Guide v3" | `grep -rn "Migration Guide"` across the repo returns no match. The closest artefacts are [`docs/migrating-to-openvpm.md`](migrating-to-openvpm.md) (CSV data migration from other PIMS vendors) and [`DESIGN-SYSTEM-MIGRATION.md`](../../DESIGN-SYSTEM-MIGRATION.md) (design-token migration). Neither is a code-migration protocol. |
+| "OpenVPM Migration Guide v3" | `grep -rn "Migration Guide"` across the repo returns no match. The closest artefacts are [`docs/migration/migrating-to-openvpm.md`](migrating-to-openvpm.md) (CSV data migration from other PIMS vendors) and [`DESIGN-SYSTEM-MIGRATION.md`](../../DESIGN-SYSTEM-MIGRATION.md) (design-token migration). Neither is a code-migration protocol. |
 
 Rather than stall, this sprint did two things: it **created** `src/legacy/state/`
 as the canonical home for the legacy-state auditor (the ticket lists the path as

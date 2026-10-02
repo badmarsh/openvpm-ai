@@ -9,7 +9,7 @@
 
 import type { ImagingModality } from "@/lib/imaging/modality";
 
-/** Typography token for clinical times and durations (prompts/UIKIT.md). */
+/** Typography token for clinical times and durations (docs/UIKIT.md). */
 export const CLINICAL_NUMERIC_CLASS = "font-mono tabular-nums text-xs";
 
 /** Care-unit departments shown in the whiteboard toolbar filter. */

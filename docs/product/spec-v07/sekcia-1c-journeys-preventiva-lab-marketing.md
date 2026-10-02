@@ -280,7 +280,7 @@ PDF/e-mail z Laboklin/Synlab; manuálny zápis po telefóne; oprava chybného v�
 | 4 | `labImport.saveReport` | Vzniknú `lab_results` so statusom `pending`, flagom `unknown`/`normal`/`abnormal`/`critical` a referenčným rozsahom; `requiresVetApproval: true` | Kritický flag → okamžitá notifikácia lekára (nie „počkaj na inbox“) |
 | 5 | Priradenie lekárovi | `records.assignLabFollowUp` / `labImport.assignReport` → `listLabReviewInbox`, `listLabAssignees` | Nikto nepriradený → fronta „nepriradené“ na dashboard |
 | 6 | Lekár review | `labImport.reviewReport` alebo `records.completeLabResult` → status `reviewed`/`completed`; `lab_result_events` uchová stopu; trend `getPatientAnalyteHistory` | Lekár nesúhlasí s hodnotou → krok 7 |
-| 7 | Oprava výsledku | `records.markLabResultEnteredInError` + nový záznam; `lab_result_replacements` uchová pôvodnú hodnotu, dôvod, autora, čas | Pôvodná hodnota **nikdy** nie je prepísaná in-place (bezpečnosť podľa `docs/lab-result-safety.md`) |
+| 7 | Oprava výsledku | `records.markLabResultEnteredInError` + nový záznam; `lab_result_replacements` uchová pôvodnú hodnotu, dôvod, autora, čas | Pôvodná hodnota **nikdy** nie je prepísaná in-place (bezpečnosť podľa `docs/guides/lab-result-safety.md`) |
 | 8 | Záver do dokumentácie | Lekár zapíše interpretáciu do `assessment` (J3); voliteľne follow-up (J12) | Zmena liečby podľa výsledku → Clinical Guardian re-check (J5) |
 
 **Výnimky**
