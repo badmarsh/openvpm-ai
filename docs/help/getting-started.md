@@ -63,7 +63,7 @@ connect by API when you are ready. See
 - [Billing & Finance](en/billing-finance.md)
 - [Statutory Compliance](en/statutory-compliance.md)
 - [Clinic Website Builder](en/website-builder.md)
-- [Review clinic pilot fit and launch limits](../reference/clinic-pilot-readiness.md)
+- [Review clinic pilot fit and launch limits](../clinic-pilot-readiness.md)
 
 Every guide here also runs inside the app with your own data: open
 **Settings** and click **Guides**.

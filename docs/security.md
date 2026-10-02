@@ -1,6 +1,6 @@
 # Security Overview
 
-How OpenVPM protects practice and patient data. This is a factual summary of controls that exist in the codebase today. For the vulnerability reporting process, see [SECURITY.md](../../SECURITY.md) at the repo root.
+How OpenVPM protects practice and patient data. This is a factual summary of controls that exist in the codebase today. For the vulnerability reporting process, see [SECURITY.md](../SECURITY.md) at the repo root.
 
 ## Tenant isolation
 
@@ -54,4 +54,4 @@ Passwords are hashed with bcrypt. All dashboard routes require an authenticated 
 
 ## Responsible disclosure
 
-Please do not report security issues through public GitHub issues. Email **bezpecnost@vasa-klinika.sk** with `[SECURITY]` in the subject line. We acknowledge reports within 48 hours and follow the 90-day coordinated disclosure process described in [SECURITY.md](../../SECURITY.md).
+Please do not report security issues through public GitHub issues. Email **bezpecnost@vasa-klinika.sk** with `[SECURITY]` in the subject line. We acknowledge reports within 48 hours and follow the 90-day coordinated disclosure process described in [SECURITY.md](../SECURITY.md).

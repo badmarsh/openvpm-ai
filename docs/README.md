@@ -30,13 +30,13 @@ Entries marked with a dagger (†) are referenced by source code, tests or CI by
 - [Clinician Confirmation Protocol (AI Finalization)](reference/confirmation-protocol.md) †
 - [OpenVPM AI — Data Retention & Privacy Policy](reference/data-retention-policy.md)
 - [Lab result safety workflow](guides/lab-result-safety.md)
-- [Security Overview](reference/security.md) †
+- [Security Overview](security.md) †
 
 ## Pilot, audits and readiness
 
 - [9.3 Security & Pilot Readiness Report](audits/9.3-security-and-pilot-readiness-report.md)
 - [Controlled clinic pilot operations](guides/clinic-pilot-operations.md)
-- [Clinic pilot readiness](reference/clinic-pilot-readiness.md) †
+- [Clinic pilot readiness](clinic-pilot-readiness.md) †
 - [OpenVPM AI — Clinic Pilot Workflow & State Machine](reference/clinic-pilot-workflow.md)
 - [Controlled Pilot Readiness Report — Clinical AI Finalization](audits/controlled-pilot-readiness-report.md)
 - [OpenVPM AI — 9.3 Correctness Closure Audit](archive/9.3-correctness-closure-audit.md)
@@ -55,7 +55,7 @@ Entries marked with a dagger (†) are referenced by source code, tests or CI by
 
 - [Internationalization and Localization](reference/I18N.md)
 - [Repository governance and release policy](reference/repository-governance.md) †
-- [Repository recovery and cleanup ledger](archive/repository-recovery-ledger.md) †
+- [Repository recovery and cleanup ledger](repository-recovery-ledger.md) †
 - [OpenVPM UI kit — agent prompt](../prompts/UIKIT.md) †
 
 ## Folders

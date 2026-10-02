@@ -244,7 +244,7 @@ independent review, tenant-safety checks, or release recording.
 
 Cleanup is an evidence-preservation exercise, not a bulk deletion event.
 The active item-by-item decisions are recorded in the
-[repository recovery and cleanup ledger](../archive/repository-recovery-ledger.md).
+[repository recovery and cleanup ledger](../repository-recovery-ledger.md).
 
 ### Phase 0: Stabilize
 

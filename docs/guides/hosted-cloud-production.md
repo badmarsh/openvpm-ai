@@ -2,7 +2,7 @@
 
 Clinic onboarding and graduation are governed by the
 [controlled clinic pilot operations runbook](clinic-pilot-operations.md) and
-the [clinic readiness boundary](../reference/clinic-pilot-readiness.md).
+the [clinic readiness boundary](../clinic-pilot-readiness.md).
 
 OpenVPM has two operating modes:
 

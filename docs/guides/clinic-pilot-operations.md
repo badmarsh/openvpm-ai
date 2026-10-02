@@ -1,6 +1,6 @@
 # Controlled clinic pilot operations
 
-This runbook turns the [clinic pilot readiness boundary](../reference/clinic-pilot-readiness.md)
+This runbook turns the [clinic pilot readiness boundary](../clinic-pilot-readiness.md)
 into a repeatable operating process. The first cohort is limited to connected,
 single-location United States general-practice and house-call pilots. It is not
 approval to market OpenVPM as a universal PIMS replacement.

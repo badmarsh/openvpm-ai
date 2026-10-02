@@ -1,7 +1,7 @@
 # Clinic pilot readiness
 
 Platform operators should use the
-[controlled clinic pilot operations runbook](../guides/clinic-pilot-operations.md) to
+[controlled clinic pilot operations runbook](guides/clinic-pilot-operations.md) to
 qualify, validate, support, and graduate each clinic consistently.
 
 OpenVPM is ready for a controlled, connected-mode clinic pilot. It should not
@@ -63,7 +63,7 @@ The following 10 conditions must be green before a real clinic goes live. Curren
 | G-09 | AI eval dataset approved by licensed veterinarian | Partial |
 | G-10 | Incident response playbook documented | Partial |
 
-Full details and issue tracking: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](../production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md)
+Full details and issue tracking: [`docs/production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md`](production-readiness/GAP_ANALYSIS_POST_PILOT_READY.md)
 
 ## Pilot launch path
 
