@@ -17,7 +17,7 @@ targets:
   - apps/web/server/routers/extensions/imaging.ts
   - apps/web/lib/ai/draft-safety.ts
   - apps/web/app/(dashboard)/records/new-soap/[patientId]/page.tsx
-  - docs/ai-audit-ledger.md
+  - docs/reference/ai-audit-ledger.md
 creates:
   - packages/db/schema/ext_soap_ai_provenance.ts
   - apps/web/lib/records/soap-ai-provenance.ts
@@ -39,7 +39,7 @@ note: "promoted from GT-001; delivered in #74 (migration 0114_regular_doctor_doo
 
 # Sprint 32: AI provenance ledger on SOAP finalization
 
-**Why now:** this is P0 clinical evidence, audit finding F-04-1 (`docs/audit/2026-09-ai-ux-audit.md` §4 J-04). A SOAP note that started as an AI draft (`ai.draftSoapNote`), or that had AI imaging findings injected (`imaging.injectFindingsIntoSoap`), is finalized through `records.finalizeSoapNote` → `finalizeAppointmentSoapDraft` **without any `ext_ai_audit_log` row**. Nobody can show later which sentences the model wrote. Voice, discharge, imaging-confirm and the external scribe (`ai.createSoapFromAI`) already append to the ledger; the in-app draft path is the gap.
+**Why now:** this is P0 clinical evidence, audit finding F-04-1 (`docs/audits/2026-09-ai-ux-audit.md` §4 J-04). A SOAP note that started as an AI draft (`ai.draftSoapNote`), or that had AI imaging findings injected (`imaging.injectFindingsIntoSoap`), is finalized through `records.finalizeSoapNote` → `finalizeAppointmentSoapDraft` **without any `ext_ai_audit_log` row**. Nobody can show later which sentences the model wrote. Voice, discharge, imaging-confirm and the external scribe (`ai.createSoapFromAI`) already append to the ledger; the in-app draft path is the gap.
 **Rules:** [`tasks/RULES.md`](../RULES.md) applies in full, in particular §1.2 (the migration must be committed) and §1.8 (ledger inside the transaction).
 
 ## 1. Current state (measured 2026-09-27 at `aeeb123b`)
@@ -80,7 +80,7 @@ note: "promoted from GT-001; delivered in #74 (migration 0114_regular_doctor_doo
 
 **2F. Client:** `new-soap/[patientId]/page.tsx` keeps `draft.provenanceReceiptId` in state after `draftWithAi` succeeds and sends it as `aiProvenanceReceiptId` on the next `saveSoapDraft`/autosave. It clears the value once the save succeeds. No visible UI change, so no i18n change is expected. Encounter page: see §1. Only wire it if the plan reaches `soap_notes`.
 
-**2G. Alignment:** `AiConfirmationAuditRecord.entityType` becomes `AppendAiAuditEventInput["entityType"]` (import the type). In `docs/ai-audit-ledger.md`, add a "Surfaces that write" table: surface · router procedure · `actionType` · entity type. Rows: voice, discharge, imaging confirm, `ai.createSoapFromAI`, `records.finalizeSoapNote` (new), marketing.
+**2G. Alignment:** `AiConfirmationAuditRecord.entityType` becomes `AppendAiAuditEventInput["entityType"]` (import the type). In `docs/reference/ai-audit-ledger.md`, add a "Surfaces that write" table: surface · router procedure · `actionType` · entity type. Rows: voice, discharge, imaging confirm, `ai.createSoapFromAI`, `records.finalizeSoapNote` (new), marketing.
 
 Presentation-only? **No.** This is a clinical-evidence write path.
 

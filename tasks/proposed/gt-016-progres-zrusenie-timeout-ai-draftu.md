@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** The AI draft on `new-soap/[patientId]` still has no progress indicator, cancel or client-side timeout.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Progres, zrušenie a timeout pri čakaní na AI (F-X7-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, PERF · Úsilie **M** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §5.7, register F-X7-1
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §5.7, register F-X7-1
 
 ## 1. Context / Why
 Pri AI odpovedi (5–20 s v režime `flash`, minúty v `pro`) používateľ vidí iba spinner a text „Drafting...“ (`records/new-soap/[patientId]/page.tsx:1029-1038`) — bez progresu, bez možnosti zrušiť a bez informácie o časovom limite. Presne počas vyšetrenia to vyzerá ako zamrznutá aplikácia. Pomalá sieť je v ambulancii realita (a §5.7 ukazuje, že niektoré AI cesty nemajú timeout vôbec — tie rieši GT-008).

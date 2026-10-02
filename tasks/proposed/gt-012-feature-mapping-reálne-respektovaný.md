@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `labParser` and `marketingCopy` appear only in the type union (`lib/ai/ai-config-resolver.ts:21,24`). No call site resolves them.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Feature mapping musí platiť pre všetky AI funkcie (F-17-3, aliasy F-14-1, F-X2-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie AI, DOCS · Úsilie **M** · Vlastník: AI + UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17/J-14, register F-17-3
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-17/J-14, register F-17-3
 
 ## 1. Context / Why
 `/settings?tab=ai` ponúka 8 kľúčov feature mappingu (`lib/ai/ai-presets.ts:24-33`, UI `ai-settings-tab.tsx:763-908`). Reálne sa čítajú len `assistant`, `deepThinking`, `voiceSoap`, `imagingRtg`, `imageGeneration`, `videoGeneration`. **`marketingCopy` a `labParser` kód nikdy nečíta** a viaceré cesty obchádzajú resolver cez `configuredModel()`: SOAP flash draft (`soap-draft.ts:153`), prepúšťacia správa (`discharge.ts:139`), transkripcia (`transcription.ts:127`), extrakcia liečby (`treatment-extractor.ts:241`), marketing copy (`composer.ts:106`), recenzie (`marketing.ts:1505`), FAQ (`:4590`), alt-texty (`:4646`). Klinika tak nemá kontrolu nad tým, ktorý poskytovateľ dostane jej texty — čo je pri GDPR podstatné (súvisí s GT-013).

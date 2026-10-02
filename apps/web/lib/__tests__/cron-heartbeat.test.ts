@@ -51,7 +51,7 @@ describe("cron heartbeat config", () => {
   });
 
   it("documents every job-specific heartbeat env for hosted operators", () => {
-    const runbook = readFileSync("../../docs/hosted-cloud-production.md", "utf8");
+    const runbook = readFileSync("../../docs/guides/hosted-cloud-production.md", "utf8");
     const envExample = readFileSync("../../.env.example", "utf8");
 
     for (const job of CRON_HEARTBEAT_JOBS) {

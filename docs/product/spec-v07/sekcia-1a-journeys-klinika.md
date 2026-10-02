@@ -325,7 +325,7 @@ behu (`migration_runs`, `lib/import/vetsoftware-v2-pipeline.ts`).
 | E2 | Pacient bol zlúčený (E1 v J1) | História zobrazí zlúčené záznamy s vyznačením pôvodného ID a dátumu merge (`patient_merge_events`) |
 | E3 | Záznam bol označený ako chybný | `markEnteredInError` záznamy sa zobrazujú preškrtnuté s dôvodom, **nie sú skryté** (právna stopa) |
 | E4 | Veľký objem (chronik s 8-ročnou históriou) | Stránkovanie (`routers/pagination.ts`), lazy load, p95 < 1,5 s |
-| E5 | Majiteľ žiada výstup dát (GDPR čl. 15) | Export cez `data`/`backup` routery; `docs/data-retention-policy.md` |
+| E5 | Majiteľ žiada výstup dát (GDPR čl. 15) | Export cez `data`/`backup` routery; `docs/reference/data-retention-policy.md` |
 
 ### 4. Interakcia s UI
 
@@ -347,7 +347,7 @@ behu (`migration_runs`, `lib/import/vetsoftware-v2-pipeline.ts`).
 
 - **Zákon 39/2007 Z. z.:** úplnosť a dohľadateľnosť dokumentácie; importované záznamy musia byť rozlíšiteľné od natívnych.
 - **GDPR čl. 15/20:** právo na prístup a prenositeľnosť — export musí obsahovať aj `historical_documents`.
-- **Retencia:** `docs/data-retention-policy.md` — zdravotná dokumentácia sa nemaže; chybné záznamy sa označujú.
+- **Retencia:** `docs/reference/data-retention-policy.md` — zdravotná dokumentácia sa nemaže; chybné záznamy sa označujú.
 - **RLS:** `tenant_isolation`; `reference_read` pre zdieľané číselníky.
 
 ### 7. Merateľná úspora času (ledger **L02**, čiastočne **L09**)
@@ -488,7 +488,7 @@ nezaregistrovaného klienta; import z iného systému (`migration_runs`).
 | E1 | Online vstup s neúplnými údajmi | `booking.book` je `publicProcedure` → rate limit per IP (`rate_limit_buckets`), validácia, **žiadne** predvyplnenie citlivých polí; po vytvorení rezervácie recepcia doplní |
 | E2 | Prevod vlastníctva (zvieratá z útulku, kúpa) | Nová väzba klient↔pacient s dátumom a dôvodom; pôvodný majiteľ zostáva v histórii; audit stopa |
 | E3 | Klient odmietne všetky súhlasy | Systém funguje ďalej; `consentGateCheck` utlmí marketing aj review request; transakčné správy (potvrdenie termínu, faktúra) sú legítimny záujem |
-| E4 | Klient chce byť vymazaný (GDPR čl. 17) | `settings.getAccountDeletionRequest` / `requestAccountDeletion`; zdravotná dokumentácia sa **nemaže** (zákonná povinnosť), marketingové dáta áno; `docs/data-retention-policy.md` |
+| E4 | Klient chce byť vymazaný (GDPR čl. 17) | `settings.getAccountDeletionRequest` / `requestAccountDeletion`; zdravotná dokumentácia sa **nemaže** (zákonná povinnosť), marketingové dáta áno; `docs/reference/data-retention-policy.md` |
 | E5 | Duplicita vznikla napriek Shieldu | `/patients/duplicates` → `previewMerge` → `merge` (serializable, `patient_merge_events`), reload otvorených záložiek |
 | E6 | Import z VetSoftware v2 s dupliciami | `migration_runs` + `importFingerprint`/`externalId` unikátne indexy zabraňujú dvojitému importu; `importIdentityCheck` validuje |
 

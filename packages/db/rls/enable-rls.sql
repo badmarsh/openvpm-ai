@@ -135,7 +135,7 @@ REVOKE ALL ON FUNCTION public.protect_consent_receipt_capability()
 -- app.ledger_maintenance='on' (e.g. a documented, reviewed retention or
 -- repair procedure) may bypass it. This does NOT constrain a superuser or a
 -- DBA who can disable triggers — that residual risk is documented in
--- docs/ai-audit-ledger.md.
+-- docs/reference/ai-audit-ledger.md.
 REVOKE ALL ON ext_ai_audit_log FROM PUBLIC;
 REVOKE ALL ON ext_ai_audit_log FROM openpims_app;
 GRANT SELECT, INSERT ON ext_ai_audit_log TO openpims_app;

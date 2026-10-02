@@ -523,7 +523,7 @@ Toto je najcitlivejší journey v celom systéme. Systém tu musí byť **tichý
 ### Persóna & Kontext
 
 **P7 Anna** má 800 klientov a 1 100 pacientov v starom PIMS (AVImark/Cornerstone/ezyVet/Shepherd/Vetis/Vet-On). Bojí sa, že príde o históriu, a vie, že jedna chyba v importe znamená týždeň opravovania.
-**Kód a dokumentácia:** self-serve CSV import podporuje **clients → patients → vaccinations → medical history**, s dry-run reportom, párovaním podľa source ID alebo e-mailu, ochranou proti duplicitám, označením `Imported` a **bez rollbacku** po commite (viď `docs/migrating-to-openvpm.md`).
+**Kód a dokumentácia:** self-serve CSV import podporuje **clients → patients → vaccinations → medical history**, s dry-run reportom, párovaním podľa source ID alebo e-mailu, ochranou proti duplicitám, označením `Imported` a **bez rollbacku** po commite (viď `docs/migration/migrating-to-openvpm.md`).
 
 ### Kroky (Step-by-Step)
 

@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `components/settings/ai-settings-tab.tsx` still has no residency / DPA / region wording.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Viditeľná data residency, DPA a automatický fallback v AI nastaveniach (F-17-4, F-17-6)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie SAFETY, DOCS, UX · Úsilie **M** · Vlastník: UI + DOCS
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17, register F-17-4
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-17, register F-17-4
 
 ## 1. Context / Why
 Panel „Klinická a legislatívna bezpečnosť“ v `ai-settings-tab.tsx:926-957` hovorí o HITL, kontrolovaných látkach a sympathy gate, ale **ani slovom o tom, kam dáta odchádzajú** — žiadny región, žiadna retencia, žiadny stav DPA. `docs/ai-evidence/MODEL_CARDS.md:15-22` pritom deklaruje „EU / US“ a odosielanie PHI „po súhlase kliniky“, pričom súhlas nie je nikde evidovaný (`grep consent` v karte vracia prázdno). Resolver navyše ticho prepne na iného poskytovateľa (`ai-config-resolver.ts:141-215`) — pri GDPR je tiché prepnutie sub-procesora neprijateľné.

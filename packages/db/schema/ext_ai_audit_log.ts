@@ -91,7 +91,7 @@ export const extAiAuditLog = pgTable(
 
     // ── Chain Integrity Columns (v2, added 2026-09-09) ───────────────────────
     // These columns implement the tamper-evident hash chain described in
-    // docs/ai-audit-ledger.md. All are nullable to allow safe migration of
+    // docs/reference/ai-audit-ledger.md. All are nullable to allow safe migration of
     // existing rows; new rows must always supply all chain fields.
 
     /**

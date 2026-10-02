@@ -30,7 +30,7 @@ import {
  * It detects in-database mutations of audit records. It does NOT prevent a
  * privileged DBA from altering records AND recomputing hashes. External
  * anchoring (WORM storage, TSA) is required for stronger forensic claims.
- * See docs/ai-audit-ledger.md for the full threat model.
+ * See docs/reference/ai-audit-ledger.md for the full threat model.
  *
  * Usage:
  *   pnpm audit:verify-ai                     # Standard chain verification

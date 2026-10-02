@@ -1,7 +1,7 @@
 # Clinic pilot readiness
 
 Platform operators should use the
-[controlled clinic pilot operations runbook](clinic-pilot-operations.md) to
+[controlled clinic pilot operations runbook](guides/clinic-pilot-operations.md) to
 qualify, validate, support, and graduate each clinic consistently.
 
 OpenVPM is ready for a controlled, connected-mode clinic pilot. It should not

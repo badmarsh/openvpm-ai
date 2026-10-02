@@ -105,7 +105,7 @@ Verified present in code:
 - **P1 — `/api/health` mixes liveness and readiness**; process-alive vs safe-to-serve not split.
 - **P1 — public `/api` prefix is fully unauthenticated at middleware**; each handler must self-protect (pattern is documented; coverage is not proven exhaustive in this audit).
 - **P2 — CLAUDE.md still references `pnpm db:push` for extensions**, conflicting with committed-migration CI.
-- Slovak i18n dictionaries exist (`en.json`/`sk.json`); symmetry is documented in `docs/I18N.md`, not re-verified here.
+- Slovak i18n dictionaries exist (`en.json`/`sk.json`); symmetry is documented in `docs/reference/I18N.md`, not re-verified here.
 
 ## Explicit unknowns
 

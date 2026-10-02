@@ -15,7 +15,7 @@ The former `audit-prompts/` library was verified and moved to [`../tasks/archive
 
 ## Feature & domain map — 2026-09-12 (commit `23f23a3`)
 
-**[`feature-map-2026-09-12/`](feature-map-2026-09-12/)** — Comprehensive feature inventory across 17 functional domains.
+**[`feature-map-2026-09-12/`](../docs/audits/feature-map-2026-09-12/)** — Comprehensive feature inventory across 17 functional domains.
 Key files:
 - `FEATURE-INDEX.md` — Top-level feature inventory and module breakdown
 - `DOCS-ACCURACY-INDEX.md` — Cross-check of documentation claims against code reality
@@ -27,7 +27,7 @@ Key files:
 
 ## Autopilot / Marketing automation vision — 2026-09-12 (commit `23f23a3`)
 
-**[`autopilot-vision-2026-09-12/`](autopilot-vision-2026-09-12/)** — Architecture research and technical design for the marketing automation module.
+**[`autopilot-vision-2026-09-12/`](../docs/product/autopilot-vision-2026-09-12/)** — Architecture research and technical design for the marketing automation module.
 Key files:
 - `CONSOLIDATED-SUMMARY.md` — Executive summary and entry point
 - `ARCHITECTURE-RESEARCH.md`, `SCHEMA-DESIGN.md` — Technical deep-dives
@@ -39,27 +39,27 @@ Key files:
 
 ## AI feature audit — 2026-09-11
 
-**[`ai-feature-audit.md`](ai-feature-audit.md)** — Deep audit of clinical AI feature implementations and safety guardrails.
+**[`ai-feature-audit.md`](../docs/audits/ai-feature-audit.md)** — Deep audit of clinical AI feature implementations and safety guardrails.
 
 ---
 
 ## UX codebase analysis — 2026-09-11
 
-**[`ux-codebase-analysis-2026-09-11.md`](ux-codebase-analysis-2026-09-11.md)** — UX patterns, accessibility, focus management, and component architecture analysis.
+**[`ux-codebase-analysis-2026-09-11.md`](../docs/audits/ux-codebase-analysis-2026-09-11.md)** — UX patterns, accessibility, focus management, and component architecture analysis.
 
 ---
 
 ## Bug hunts & Remediation
 
-- **[`bug-hunt-2026-09-14.md`](bug-hunt-2026-09-14.md)** — Recent bug hunt findings.
-- **[`bug-hunt-remediation-report.md`](bug-hunt-remediation-report.md)** — Detailed remediation report from the September 8, 2026 bug hunt.
+- **[`bug-hunt-2026-09-14.md`](../docs/archive/bug-hunt/bug-hunt-2026-09-14.md)** — Recent bug hunt findings.
+- **[`bug-hunt-remediation-report.md`](../docs/archive/bug-hunt/bug-hunt-remediation-report.md)** — Detailed remediation report from the September 8, 2026 bug hunt.
 
 ---
 
 ## Documentation hygiene audits — 2026-09-14
 
-- **[`docs-hygiene-report-2026-09-14.md`](docs-hygiene-report-2026-09-14.md)** — Full 143-file documentation hygiene audit report.
-- **[`docs-hygiene-fixlist-2026-09-14.md`](docs-hygiene-fixlist-2026-09-14.md)** — Prioritized P0/P1/P2 remediation checklist.
+- **[`docs-hygiene-report-2026-09-14.md`](../docs/audits/docs-hygiene-report-2026-09-14.md)** — Full 143-file documentation hygiene audit report.
+- **[`docs-hygiene-fixlist-2026-09-14.md`](../docs/audits/docs-hygiene-fixlist-2026-09-14.md)** — Prioritized P0/P1/P2 remediation checklist.
 
 ---
 

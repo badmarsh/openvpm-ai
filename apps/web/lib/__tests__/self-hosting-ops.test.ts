@@ -10,7 +10,7 @@ describe("self-hosting operations docs", () => {
     const readme = readFileSync("../../README.md", "utf8");
     const envExample = readFileSync("../../.env.example", "utf8");
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const rlsSecurityDoc = readFileSync(
@@ -60,7 +60,7 @@ describe("self-hosting operations docs", () => {
   it("documents Telnyx as the hosted SMS default with Twilio as fallback", () => {
     const readme = readFileSync("../../README.md", "utf8");
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const envExample = readFileSync("../../.env.example", "utf8");
@@ -110,7 +110,7 @@ describe("self-hosting operations docs", () => {
 
   it("documents hosted AI authentication alternatives", () => {
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const envExample = readFileSync("../../.env.example", "utf8");
@@ -151,7 +151,7 @@ describe("self-hosting operations docs", () => {
 
   it("documents Stripe Tax as a hosted production readiness gate", () => {
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const envExample = readFileSync("../../.env.example", "utf8");
@@ -180,7 +180,7 @@ describe("self-hosting operations docs", () => {
 
   it("documents the Resend webhook required for hosted email suppressions", () => {
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const envExample = readFileSync("../../.env.example", "utf8");
@@ -219,7 +219,7 @@ describe("self-hosting operations docs", () => {
 
   it("documents the Stripe webhook events required by hosted handlers", () => {
     const hostedRunbook = readFileSync(
-      "../../docs/hosted-cloud-production.md",
+      "../../docs/guides/hosted-cloud-production.md",
       "utf8",
     );
     const subscriptionWebhookRoute = readFileSync(

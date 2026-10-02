@@ -260,7 +260,7 @@ export async function consumeClinicianConfirmation(
  * pre-issued envelope to. It MUST pass a distinct `correlationId`
  * (`direct:<caller>`) so direct confirmations are auditable, and it MUST rely
  * on lifecycle-level guards (CONFLICT on duplicate) for whole-request replay
- * protection. See docs/confirmation-protocol.md for the deprecation plan.
+ * protection. See docs/reference/confirmation-protocol.md for the deprecation plan.
  */
 export async function assertAndConsumeDirectConfirmation(
   tx: Database,

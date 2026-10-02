@@ -39,7 +39,7 @@ describe("repository promotion controls", () => {
   });
 
   it("keeps backlog cleanup evidence-gated and migration collisions on hold", () => {
-    const policy = repoFile("docs/repository-governance.md");
+    const policy = repoFile("docs/reference/repository-governance.md");
     const ledger = repoFile("docs/repository-recovery-ledger.md");
 
     expect(policy).toContain("repository-recovery-ledger.md");
@@ -53,7 +53,7 @@ describe("repository promotion controls", () => {
   });
 
   it("requires non-production credential isolation before lifting preview quarantine", () => {
-    const policy = repoFile("docs/repository-governance.md");
+    const policy = repoFile("docs/reference/repository-governance.md");
 
     expect(policy).toContain("Preview and non-production credential isolation");
     expect(policy).toContain("must never receive a credential that can mutate Production");

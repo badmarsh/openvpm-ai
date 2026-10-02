@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `aiSettings.getSettings` is still `protectedProcedure` (`server/routers/extensions/ai-settings.ts:22`).  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Brána roly pre `aiSettings.getSettings` (F-17-1, alias F-X4-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie SAFETY, DATA · Úsilie **S** · Vlastník: API
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-17, §5.4, register F-17-1
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-17, §5.4, register F-17-1
 
 ## 1. Context / Why
 Celý router `extensions/ai-settings.ts` vyžaduje `admin` (`:132`, `:254`, `:361`) — **okrem** `getSettings` (`:22`). Každý prihlásený používateľ (vrátane `viewer` a `technician`) tak dostane `maskedKey` (posledné 4 znaky dešifrovaného kľúča pre OpenAI, Gemini aj Alibaba), base URL providera a históriu testov spojenia. `checkAliProxyHealth` (`:488`) nemá kontrolu roly vôbec. Test `ai-settings-router.test.ts:82` overuje len `updateSettings`, takže diera zostala nezachytená.

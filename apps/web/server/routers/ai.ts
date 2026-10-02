@@ -321,7 +321,7 @@ export const aiRouter = createRouter({
           // replay is refused by the SOAP lifecycle (a second POST for the
           // same encounter fails with CONFLICT). Deprecation plan: migrate
           // scribes to draft-first finalize; see
-          // docs/confirmation-protocol.md.
+          // docs/reference/confirmation-protocol.md.
           await assertAndConsumeDirectConfirmation(db, {
             practiceId: ctx.practiceId,
             actorId: ctx.user.id,

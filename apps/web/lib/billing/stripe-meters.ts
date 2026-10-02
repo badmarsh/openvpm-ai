@@ -9,7 +9,7 @@ import type { UsageKind } from "./usage";
  * of API version 2025-03-31.basil; meter events are the supported path.
  *
  * Meter event names must match the `event_name` configured on the Stripe meters
- * (see docs/hosted-cloud-production.md). Customer mapping is by `stripe_customer_id`.
+ * (see docs/guides/hosted-cloud-production.md). Customer mapping is by `stripe_customer_id`.
  */
 const METER_EVENT_NAMES: Record<UsageKind, string> = {
   ai_run: "openvpm_ai_run",

@@ -15,7 +15,7 @@ targets:
   - apps/web/app/(dashboard)/records/new-soap/[patientId]/page.tsx
   - apps/web/messages/en.json
   - apps/web/messages/sk.json
-  - docs/confirmation-protocol.md
+  - docs/reference/confirmation-protocol.md
 creates:
   - apps/web/components/records/ai-soap-finalize-dialog.tsx
 contract_test: apps/web/server/__tests__/soap-finalization-confirmation.contract.test.ts
@@ -32,7 +32,7 @@ note: "owner decision 2026-09-27: the vet makes the final click on AI content; b
 
 # Sprint 33: The vet's final confirmation click on AI-assisted SOAP notes
 
-**Why now:** this is the owner's decision of 2026-09-27. When a SOAP note contains AI-generated text, the responsible veterinarian must make an explicit, attributable final confirmation before it enters the medical record. The code base already treats this as law: `ai-swarm.ts` notes `humanInTheLoop: true // Zákon 39/2007 Z. z. §3`, and the encounter toast cites *Act 39/2007 Coll.* Voice, discharge and imaging already enforce it with the Option 1 envelope (`docs/confirmation-protocol.md`). The in-app SOAP editor is the last AI path finalized by a plain button.
+**Why now:** this is the owner's decision of 2026-09-27. When a SOAP note contains AI-generated text, the responsible veterinarian must make an explicit, attributable final confirmation before it enters the medical record. The code base already treats this as law: `ai-swarm.ts` notes `humanInTheLoop: true // Zákon 39/2007 Z. z. §3`, and the encounter toast cites *Act 39/2007 Coll.* Voice, discharge and imaging already enforce it with the Option 1 envelope (`docs/reference/confirmation-protocol.md`). The in-app SOAP editor is the last AI path finalized by a plain button.
 **Depends on:** Sprint 32. Its `ext_soap_ai_provenance` receipts are how the server knows a note is AI-assisted. The status reads `BLOCKED` until 32 is `done`.
 **Rules:** [`tasks/RULES.md`](../RULES.md), §1.1 in particular. `ClinicalDiffConfirmModal` and `lib/ai/clinician-confirmation.ts` are reused **unchanged**.
 
@@ -76,7 +76,7 @@ note: "owner decision 2026-09-27: the vet makes the final click on AI content; b
 
 **2F. i18n** (en + sk, nested): `soap.aiConfirm.{title, body, acknowledge, confirm, cancel, section_ai_verbatim, section_ai_edited, section_ai_removed, section_manual, expired}`.
 
-**2G. Docs:** in `docs/confirmation-protocol.md` §1 and the §4 implementation map, add the SOAP editor path (`records.prepareSoapFinalization` → `records.finalizeSoapNote`).
+**2G. Docs:** in `docs/reference/confirmation-protocol.md` §1 and the §4 implementation map, add the SOAP editor path (`records.prepareSoapFinalization` → `records.finalizeSoapNote`).
 
 Presentation-only? **No.** This adds a clinical-safety gate.
 

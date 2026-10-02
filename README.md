@@ -144,7 +144,7 @@ Hĺbková analýza používateľských ciest, use cases a business case-ov pre s
 
 ## Slovenské integrácie a partneri
 
-Detailné technické špecifikácie nájdete v dokumente [docs/slovak-integration-catalog.md](docs/slovak-integration-catalog.md).
+Detailné technické špecifikácie nájdete v dokumente [docs/reference/slovak-integration-catalog.md](docs/reference/slovak-integration-catalog.md).
 
 1. **Poisťovne zvierat:**
    - **PetExpert Slovensko** — automatické vytvorenie poistnej udalosti, validácia 15-miestneho mikročipu, výpočet spoluúčasti a generovanie tlačiva pre poisťovňu (`apps/web/lib/insurance/petexpert.ts`, `apps/web/server/routers/extensions/insurance.ts`).

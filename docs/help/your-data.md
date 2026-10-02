@@ -29,7 +29,7 @@ they only add.
 
 The full step-by-step playbook, including how to export from AVImark,
 Cornerstone, and ezyVet, is here:
-[Switching to OpenVPM](../migrating-to-openvpm.md).
+[Switching to OpenVPM](../migration/migrating-to-openvpm.md).
 
 ## Restore a database backup
 
@@ -40,7 +40,7 @@ attachment manifests, that empty target must be the original practice; a
 cross-practice restore fails before writing instead of creating broken links.
 
 If you ever need this, we run it with you. The technical runbook is
-[here](../backup-restore-runbook.md).
+[here](../guides/backup-restore-runbook.md).
 
 ## e-Kasa export & fiscal audit log
 

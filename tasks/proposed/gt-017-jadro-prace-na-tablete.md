@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **PARTIAL** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** Responsive markers are now present: `encounters/[appointmentId]` has 29, `new-soap` 3, `agent/voice` 5. No page uses `min-h-11` touch targets yet.  
-> **Notes:** Refresh the line numbers before dispatch; the encounter page grew from 5,409 to 5,938 lines. Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Refresh the line numbers before dispatch; the encounter page grew from 5,409 to 5,938 lines. Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Použiteľnosť jadra práce na tablete (F-X8-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, A11Y · Úsilie **L** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §5.8, register F-X8-1
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §5.8, register F-X8-1
 
 ## 1. Context / Why
 Najdôležitejšie obrazovky pre prácu v ordinácii — `encounters/[appointmentId]/page.tsx` (5 409 riadkov), `records/new-soap/[patientId]/page.tsx` (1 331 riadkov), `agent/voice/page.tsx` a `waitboard` — **neobsahujú ani jeden responzívny marker** (`sm:`, `md:`, `lg:`, `min-h-11`, `overflow-x-auto` sa v týchto súboroch nenachádzajú ani raz). Veterinár pracuje s tabletom na stole; editor SOAP je navyše postavený na `contentEditable`, čo je na dotyku najrizikovejšie UI v systéme.

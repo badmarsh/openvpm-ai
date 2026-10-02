@@ -39,9 +39,9 @@ stave (v0.7) sú označené `NÁVRH`. Neoveriteľné predpoklady sú označené 
 | `packages/db/schema/**` | 158+ tabuliek, enumy, indexy, unikátne obmedzenia |
 | `packages/db/rls/enable-rls.sql` | RLS politiky (`tenant_isolation`, `system_only`, `system_read/insert`, `reference_read`) |
 | `apps/web/lib/**` | biznis logika: `scheduling/location.ts`, `ai/clinical-guardian.ts`, `ai/draft-safety.ts`, `controlled-substances/policy.ts`, `autopilot/consent-gate.ts`, `ekasa/service.ts`, `inventory/*` |
-| `docs/confirmation-protocol.md` | HITL: dvojfázové `prepareConfirmation` → `confirm*` s envelope (TTL 900 s) |
-| `docs/audit/2026-09-ai-ux-audit.md` | inventár 20 AI povrchov A01–A20 s `súbor:riadok` |
-| `docs/slovak-integration-catalog.md`, `ROADMAP.md` | integrácie, známy technický dlh, cenník |
+| `docs/reference/confirmation-protocol.md` | HITL: dvojfázové `prepareConfirmation` → `confirm*` s envelope (TTL 900 s) |
+| `docs/audits/2026-09-ai-ux-audit.md` | inventár 20 AI povrchov A01–A20 s `súbor:riadok` |
+| `docs/reference/slovak-integration-catalog.md`, `ROADMAP.md` | integrácie, známy technický dlh, cenník |
 | `scripts/spec-v07-financial-model.py` | **jediný zdroj všetkých čísel** v Sekcii 1 (úspory času) a Sekcii 4 (ROI) |
 
 ### 1.1 Pravidlá pre čísla
@@ -211,7 +211,7 @@ Aby nedošlo ku kolízii medzi *implementovanými* a *chýbajúcimi* tokmi, tát
 
 | Predpis | Implementačná povinnosť | Kde je to v kóde | Kde sa to overuje v špecifikácii |
 |---|---|---|---|
-| **Zákon 39/2007 Z. z.** o veterinárnej starostlivosti | HITL: AI generuje **iba draft**; lekár explicitne autorizuje pred zápisom do trvalej dokumentácie. Kniha ošetrení vyžaduje podpis lekára | `docs/confirmation-protocol.md`; `lib/ai/draft-safety.ts` (`assertClinicianConfirmed`, `generateContentHash`); `ext_clinician_confirmations` (envelope PENDING → CONSUMED, TTL 900 s); `records.finalizeSoapNote`; `ext_ai_audit_log` (HMAC-SHA256 reťazec, `lib/ai/audit-ledger.ts:108`) | každý journey: pole 7; UC-03, UC-04, UC-05, UC-11, UC-12 |
+| **Zákon 39/2007 Z. z.** o veterinárnej starostlivosti | HITL: AI generuje **iba draft**; lekár explicitne autorizuje pred zápisom do trvalej dokumentácie. Kniha ošetrení vyžaduje podpis lekára | `docs/reference/confirmation-protocol.md`; `lib/ai/draft-safety.ts` (`assertClinicianConfirmed`, `generateContentHash`); `ext_clinician_confirmations` (envelope PENDING → CONSUMED, TTL 900 s); `records.finalizeSoapNote`; `ext_ai_audit_log` (HMAC-SHA256 reťazec, `lib/ai/audit-ledger.ts:108`) | každý journey: pole 7; UC-03, UC-04, UC-05, UC-11, UC-12 |
 | **Zákon 139/1998 Z. z.** o omamných a psychotropných látkach | **Zero AI prefill** pre opiáty a anestetiká; manuálny zápis lekára; **svedok** pri podaní a znehodnotení; trezorová bilancia | `lib/controlled-substances/policy.ts` — `CONTROLLED_SUBSTANCES_REGEX` (ketamín, fentanyl, buprenorfín, butorfanol, metadón, diazepam, fenobarbital, propofol, morfín), `controlledSubstanceWitnessError()`, `computeControlledSubstanceBalance()`; `ClinicalDiffConfirmModal` blokuje pole cez `isControlledSubstanceName`; `controlledSubstances.create` odmieta `administered`/`wasted` bez `witnessedBy` | J10, JG-C02, JG-C03; UC-22 |
 | **Zákon 289/2008 Z. z.** o e-Kase | Doklad z certifikovaného chráneného dátového úložiska (FiskalPRO ORP / VRP2), offline fronta, idempotencia, denná uzávierka, storno | `extensions.ekasa.*`; `lib/ekasa/service.ts:256` — `pg_advisory_xact_lock(hashtext(practiceId || '-ekasa-receipt-' || localDate))`; enum `ekasa_receipt_status` vrátane `OFFLINE_STORED`; cron `/api/cron/ekasa-retry`, `/api/cron/ekasa-daily-closure` | J11; UC-29, UC-30 |
 | **GDPR + Sympathy Gate** | Pri úhyne/eutanázii **atomické** zablokovanie všetkej automatickej komunikácie (SMS revakcinácie, žiadosti o recenzie) | `lib/autopilot/consent-gate.ts` — `consentGateCheck()`, `assertPatientNotDeceased()`; `patients.status='deceased'`; `ext_automation_suppression_log`; `/marketing/suppression` | J14, J19, J29; UC-17, UC-18; BC-08 |

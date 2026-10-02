@@ -2,7 +2,7 @@
 
 Code- and state-migration planning for OpenVPM AI. This directory was created
 by Sprint 26; it is distinct from
-[`../migrating-to-openvpm.md`](../migrating-to-openvpm.md), which covers
+[`../migrating-to-openvpm.md`](migrating-to-openvpm.md), which covers
 importing **clinic data** from other PIMS vendors by CSV.
 
 | Document | What it is |
@@ -28,9 +28,9 @@ the auditor itself.
 
 | Document | Covers |
 | --- | --- |
-| [`../migrating-to-openvpm.md`](../migrating-to-openvpm.md) | CSV data migration from other PIMS vendors (AVImark, Covetrus, …) |
+| [`../migrating-to-openvpm.md`](migrating-to-openvpm.md) | CSV data migration from other PIMS vendors (AVImark, Covetrus, …) |
 | [`../../DESIGN-SYSTEM-MIGRATION.md`](../../DESIGN-SYSTEM-MIGRATION.md) | Design-token unification (`--brand` vs `--primary`) |
-| [`../shepherd-migration-support-plan.md`](../shepherd-migration-support-plan.md) | Shepherd data-migration support |
+| [`../shepherd-migration-support-plan.md`](shepherd-migration-support-plan.md) | Shepherd data-migration support |
 
 No document named "OpenVPM Migration Guide v3" exists in this repository; see
 §0 of the Sprint 26 migration plan for what that means and which protocol the

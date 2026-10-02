@@ -1,1 +1,0 @@
-CREATE INDEX "cs_log_practice_date_idx" ON "controlled_substance_log" USING btree ("practice_id","deleted_at","performed_at");

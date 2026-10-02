@@ -7,14 +7,14 @@ priority: P1
 ---
 > **Verification 2026-09-27** · Status: **NOT DONE** · Verdict: **KEEP** · Ledger: `tasks/VERIFICATION-LOG.md`  
 > **Evidence:** `draftWithAi.onSuccess` (`new-soap/[patientId]/page.tsx:492-500`) still overwrites all four SOAP sections at once. Since then the page only added a replace-confirmation dialog. There's no per-section accept and no AI-text marker.  
-> **Notes:** Source: `docs/audit/2026-09-ai-ux-audit.md` (PR #23).  
+> **Notes:** Source: `docs/audits/2026-09-ai-ux-audit.md` (PR #23).  
 > **Origin:** unchanged · first committed 2026-09-21 (`b8ea08f7`)
 
 ---
 
 # TASK: Prijatie AI návrhu po sekciách + viditeľné označenie AI textu (F-04-4)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, SAFETY · Úsilie **M** · Vlastník: UI
-Audit: `docs/audit/2026-09-ai-ux-audit.md` §4 J-04, register F-04-4
+Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04, register F-04-4
 
 ## 1. Context / Why
 Jedno kliknutie „Draft“ v `records/new-soap/[patientId]/page.tsx:1029-1045` prepíše **všetky štyri** sekcie SOAP naraz, bez označenia AI textu a bez možnosti prijať len jednu sekciu. Lekár, ktorý chce AI pomoc len pre `assessment`, musí prijať aj prepísaný `subjective`. Zároveň po vložení nie je v karte viditeľné, ktoré vety navrhol model.
