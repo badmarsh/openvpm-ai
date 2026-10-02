@@ -1,3 +1,10 @@
+---
+id: GT-003
+kind: ticket
+title: Agent `create_prescription` musí rešpektovať klinické brány a obálku potvrdenia (F-18-1)
+state: open
+priority: P0
+---
 # TASK: Agent `create_prescription` musí rešpektovať klinické brány a obálku potvrdenia (F-18-1)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY · Úsilie **M** · Vlastník: AI + API + DB
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-06/J-18, register F-18-1 (v J-06 uvedené ako F-06-1)

@@ -1,3 +1,10 @@
+---
+id: GT-008
+kind: ticket
+title: Timeout a hygienu chýb pri AI analýze snímky (F-07-2, F-07-3)
+state: open
+priority: P1
+---
 # TASK: Timeout a hygienu chýb pri AI analýze snímky (F-07-2, F-07-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie PERF, AI, UX · Úsilie **S** · Vlastník: API
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-07, §5.7, register F-07-2

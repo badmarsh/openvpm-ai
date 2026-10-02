@@ -1,3 +1,10 @@
+---
+id: GT-001
+kind: ticket
+title: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
+state: open
+priority: P0
+---
 # TASK: Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY, DATA · Úsilie **M** · Vlastník: API + DB
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04, §5.6, register F-04-1

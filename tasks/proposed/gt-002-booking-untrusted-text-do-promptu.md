@@ -1,3 +1,10 @@
+---
+id: GT-002
+kind: ticket
+title: Ohraničenie cudzieho textu z verejnej rezervácie pred vstupom do AI promptu (F-04-2)
+state: open
+priority: P0
+---
 # TASK: Ohraničenie cudzieho textu z verejnej rezervácie pred vstupom do AI promptu (F-04-2)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie SAFETY, AI · Úsilie **M** · Vlastník: AI + API
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04/J-02, register F-04-2

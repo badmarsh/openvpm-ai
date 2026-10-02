@@ -1,3 +1,10 @@
+---
+id: GT-005
+kind: ticket
+title: Poslať `visitContext` do AI draftu SOAP (F-04-3)
+state: open
+priority: P1
+---
 # TASK: Poslať `visitContext` do AI draftu SOAP (F-04-3)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie AI, UX · Úsilie **S** · Vlastník: UI
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-04, register F-04-3

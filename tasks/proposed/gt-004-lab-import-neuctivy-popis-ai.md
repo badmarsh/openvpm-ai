@@ -1,3 +1,10 @@
+---
+id: GT-004
+kind: ticket
+title: Odstrániť klamlivé označenie „AI“ a „istoty“ v laboratórnom importe (F-07-1)
+state: open
+priority: P0
+---
 # TASK: Odstrániť klamlivé označenie „AI“ a „istoty“ v laboratórnom importe (F-07-1)
 **[STATUS: PROPOSED]** · Priorita **P0** · Kategórie AI, SAFETY · Úsilie **S** · Vlastník: UI + API
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-07, register F-07-1

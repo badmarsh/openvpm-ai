@@ -1,3 +1,10 @@
+---
+id: GT-009
+kind: ticket
+title: UI pre import dodacích listov od veľkoobchodníka (F-12-1)
+state: open
+priority: P1
+---
 # TASK: UI pre import dodacích listov od veľkoobchodníka (F-12-1)
 **[STATUS: PROPOSED]** · Priorita **P1** · Kategórie UX, DOCS · Úsilie **L** · Vlastník: UI
 Audit: `docs/audits/2026-09-ai-ux-audit.md` §4 J-12, register F-12-1

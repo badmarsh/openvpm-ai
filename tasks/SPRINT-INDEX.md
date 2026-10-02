@@ -48,8 +48,15 @@ Status legend: `merged (#PR)` = delivered and merged · `OPEN · READY` = premis
 
 | Id | File | Priority | Title | Status |
 |----|------|----------|-------|--------|
+| GT-001 | gt-001-ai-provenance-ledger-soap-finalization.md | P0 | Dôkazný záznam AI pôvodu pri finalizácii SOAP (F-04-1) | OPEN · BACKLOG |
+| GT-002 | gt-002-booking-untrusted-text-do-promptu.md | P0 | Ohraničenie cudzieho textu z verejnej rezervácie pred vstupom do AI promptu (F-04-2) | OPEN · BACKLOG |
+| GT-003 | gt-003-agent-create-prescription-bez-obalky.md | P0 | Agent `create_prescription` musí rešpektovať klinické brány a obálku potvrdenia (F-18-1) | OPEN · BACKLOG |
+| GT-004 | gt-004-lab-import-neuctivy-popis-ai.md | P0 | Odstrániť klamlivé označenie „AI“ a „istoty“ v laboratórnom importe (F-07-1) | OPEN · BACKLOG |
+| GT-005 | gt-005-visitcontext-do-ai-draftu.md | P1 | Poslať `visitContext` do AI draftu SOAP (F-04-3) | OPEN · BACKLOG |
 | GT-006 | gt-006-prijatie-ai-navrhu-po-sekciach.md | P1 | Prijatie AI návrhu po sekciách + viditeľné označenie AI textu (F-04-4) | OPEN · BACKLOG |
 | GT-007 | gt-007-kontrola-role-knihy-opl.md | P1 | Doplniť kontrolu roly na controlledSubstances.list (F-06-2) | OPEN · BACKLOG |
+| GT-008 | gt-008-timeout-a-hygiena-chyb-v-imaging.md | P1 | Timeout a hygienu chýb pri AI analýze snímky (F-07-2, F-07-3) | OPEN · BACKLOG |
+| GT-009 | gt-009-ui-pre-wholesaler-import.md | P1 | UI pre import dodacích listov od veľkoobchodníka (F-12-1) | OPEN · BACKLOG |
 | GT-010 | gt-010-ai-settings-getsettings-rola.md | P1 | Brána roly pre aiSettings.getSettings (F-17-1, alias F-X4-3) | OPEN · BACKLOG |
 | GT-011 | gt-011-sifrovaci-klic-ai-nastaveni.md | P1 | Verzovaný a povinný šifrovací kľúč pre AI nastavenia (F-17-2) | OPEN · BACKLOG |
 | GT-012 | gt-012-feature-mapping-reálne-respektovaný.md | P1 | Feature mapping musí platiť pre všetky AI funkcie (F-17-3, aliasy F-14-1, F-X2-1) | OPEN · BACKLOG |
