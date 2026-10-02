@@ -15,7 +15,7 @@ This document records the authorization enforcement audit for OpenVPM AI and the
 
 **Fail-open authorization in agent tool role checks.**
 
-Two agent tool role checks in [`apps/web/lib/agent/tools.ts`](../apps/web/lib/agent/tools.ts) used this pattern:
+Two agent tool role checks in [`apps/web/lib/agent/tools.ts`](../../apps/web/lib/agent/tools.ts) used this pattern:
 
 ```typescript
 // VULNERABLE — fail-open pattern
@@ -30,7 +30,7 @@ When `userRole` is `undefined` (which is structurally possible because `AgentToo
 - `create_prescription` — allowed anyone without a role to create active prescriptions
 - `get_controlled_substances_log` — allowed anyone without a role to read the OPL ledger
 
-**Fix applied:** Replaced with `assertAgentRole()` from [`apps/web/lib/authorization.ts`](../apps/web/lib/authorization.ts), which **defaults to DENY** for absent, null, empty, unknown, and disallowed roles.
+**Fix applied:** Replaced with `assertAgentRole()` from [`apps/web/lib/authorization.ts`](../../apps/web/lib/authorization.ts), which **defaults to DENY** for absent, null, empty, unknown, and disallowed roles.
 
 ---
 
@@ -48,9 +48,9 @@ When `userRole` is `undefined` (which is structurally possible because `AgentToo
 
 ### 2.2 Agent Tool Layer (All 26 Tools Fail-Closed)
 
-All 26 tools in the agent tool inventory ([`apps/web/lib/agent/tools.ts`](../apps/web/lib/agent/tools.ts)) now enforce fail-closed authorization via `assertAgentRole()` at the very first line of their `execute()` methods. Any caller with an absent, null, empty, unknown, or insufficient role (including `viewer`) is rejected immediately with a `FORBIDDEN` error before any database access occurs.
+All 26 tools in the agent tool inventory ([`apps/web/lib/agent/tools.ts`](../../apps/web/lib/agent/tools.ts)) now enforce fail-closed authorization via `assertAgentRole()` at the very first line of their `execute()` methods. Any caller with an absent, null, empty, unknown, or insufficient role (including `viewer`) is rejected immediately with a `FORBIDDEN` error before any database access occurs.
 
-See [`docs/agent-tool-security-matrix.md`](./agent-tool-security-matrix.md) for the complete tool-by-tool inventory.
+See [`docs/reference/agent-tool-security-matrix.md`](../reference/agent-tool-security-matrix.md) for the complete tool-by-tool inventory.
 
 | Tool Category | Tools | Permitted Roles | Test Coverage |
 |---|---|---|---|

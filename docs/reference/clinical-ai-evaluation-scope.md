@@ -14,7 +14,7 @@
 
 ## 1. What the Harness Proves
 
-The deterministic clinical evaluation harness at [`apps/web/lib/ai/__tests__/clinical-eval-harness.test.ts`](../apps/web/lib/ai/__tests__/clinical-eval-harness.test.ts) and [`apps/web/lib/ai/__tests__/audit-chain.test.ts`](../apps/web/lib/ai/__tests__/audit-chain.test.ts) proves the following **engineering properties**:
+The deterministic clinical evaluation harness at [`apps/web/lib/ai/__tests__/clinical-eval-harness.test.ts`](../../apps/web/lib/ai/__tests__/clinical-eval-harness.test.ts) and [`apps/web/lib/ai/__tests__/audit-chain.test.ts`](../../apps/web/lib/ai/__tests__/audit-chain.test.ts) proves the following **engineering properties**:
 
 ### 1.1 Parsing and Validation Behavior
 - SOAP formatter system prompts correctly differentiate between concise, standard, and detailed styles

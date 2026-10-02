@@ -138,7 +138,7 @@ Confirmed as local scratch artifacts from Qwen AI experiments (TTS/image generat
 
 ### 3.3 — `artifacts/` has no index [RESOLVED ✅]
 
-Created comprehensive [`artifacts/README.md`](../artifacts/README.md) indexing all prompt libraries, feature maps, vision documents, UX evaluations, bug hunts, and dated evaluation metrics (confirmed 2026-09-05 origin).
+Created comprehensive [`artifacts/README.md`](../../artifacts/README.md) indexing all prompt libraries, feature maps, vision documents, UX evaluations, bug hunts, and dated evaluation metrics (confirmed 2026-09-05 origin).
 
 ### 3.4 — `docs/help/getting-started.md` deduplication [RESOLVED ✅]
 
@@ -277,12 +277,12 @@ These root-level files have no Slovak counterparts and are not listed in the REA
 ## §8 Package/App README Gaps (All Created ✅)
 
 All 6 missing READMEs were created in the codebase:
-- [`packages/db/README.md`](../packages/db/README.md) — Drizzle ORM, zero-conflict upstream sync rules, RLS policies, migrations.
-- [`packages/api/README.md`](../packages/api/README.md) — Shared API types, client utilities, link to `docs/api/README.md`.
-- [`packages/config/README.md`](../packages/config/README.md) — Monorepo TypeScript and ESLint configurations.
-- [`packages/email/README.md`](../packages/email/README.md) — React Email templates and Resend dispatch.
-- [`apps/web/README.md`](../apps/web/README.md) — Main Next.js 15 application run instructions.
-- [`apps/docs/README.md`](../apps/docs/README.md) — Explanatory stub linking to the active Outline instance at [`outline.dev.significa.sk`](https://outline.dev.significa.sk).
+- [`packages/db/README.md`](../../packages/db/README.md) — Drizzle ORM, zero-conflict upstream sync rules, RLS policies, migrations.
+- [`packages/api/README.md`](../../packages/api/README.md) — Shared API types, client utilities, link to `docs/api/README.md`.
+- [`packages/config/README.md`](../../packages/config/README.md) — Monorepo TypeScript and ESLint configurations.
+- [`packages/email/README.md`](../../packages/email/README.md) — React Email templates and Resend dispatch.
+- [`apps/web/README.md`](../../apps/web/README.md) — Main Next.js 15 application run instructions.
+- [`apps/docs/README.md`](../../apps/docs/README.md) — Explanatory stub linking to the active Outline instance at [`outline.dev.significa.sk`](https://outline.dev.significa.sk).
 
 ---
 
@@ -290,7 +290,7 @@ All 6 missing READMEs were created in the codebase:
 
 ### Format & v0.6.0 entry [RESOLVED ✅]
 
-Added official entry **`[0.6.0] - 2026-09-13`** to [`CHANGELOG.md`](../CHANGELOG.md) capturing the PILOT-READY release:
+Added official entry **`[0.6.0] - 2026-09-13`** to [`CHANGELOG.md`](../../CHANGELOG.md) capturing the PILOT-READY release:
 - Slovak statutory integrations (KVEPIS B2G XML, CRSZ lookup, CEHZ export, ÚPVS, PetExpert payload).
 - Clinical AI trust & audit integrity (hash chain verifier, one-time confirmation envelopes, deterministic eval harness).
 - Mobile Client Portal PWA (`/portal/:token`).
@@ -317,14 +317,14 @@ Added official entry **`[0.6.0] - 2026-09-13`** to [`CHANGELOG.md`](../CHANGELOG
 
 ## §11 Artifacts Index (Created ✅)
 
-The comprehensive index was created at [`artifacts/README.md`](../artifacts/README.md). It organizes all artifact groups, links to active domain analyses and vision blueprints, documents prompt templates, and explicitly states generation dates (including the 2026-09-05 date for evaluation JSONs).
+The comprehensive index was created at [`artifacts/README.md`](../../artifacts/README.md). It organizes all artifact groups, links to active domain analyses and vision blueprints, documents prompt templates, and explicitly states generation dates (including the 2026-09-05 date for evaluation JSONs).
 
 ---
 
 ## §12 Root-Level Clutter (All Relocated ✅)
 
-Both non-standard root-level files were relocated into the dedicated [`docs/handoffs/`](../docs/handoffs/) directory via `git mv`:
-1. `HANDOFF-voice-dictation.md` → [`docs/handoffs/voice-dictation-migration.md`](../docs/handoffs/voice-dictation-migration.md)  
+Both non-standard root-level files were relocated into the dedicated [`docs/handoffs/`](../handoffs/) directory via `git mv`:
+1. `HANDOFF-voice-dictation.md` → [`docs/handoffs/voice-dictation-migration.md`](../handoffs/voice-dictation-migration.md)  
    Preserves architectural rationale for the `ext_voice.ts` zero-conflict extension pattern. Updated inbound link in `ux-codebase-analysis-2026-09-11.md`.
 2. `RICH_TEXT_IMPLEMENTATION.md` → [`docs/handoffs/rich-text-soap-notes-pr.md`](../archive/handoffs/rich-text-soap-notes-pr.md)  
    Archived historical implementation notes for TipTap editor integration.

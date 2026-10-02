@@ -6,7 +6,7 @@
 **Status:** Approved Roadmap for Clinical Pilot (Phase 0 Deliverable)  
 
 > **Status:** Implementation plan — 2026-09-09. All P0 and P1 items are completed.
-> Evidence: [controlled-pilot-readiness-report.md](controlled-pilot-readiness-report.md) §2–§3.
+> Evidence: [controlled-pilot-readiness-report.md](../audits/controlled-pilot-readiness-report.md) §2–§3.
 
 ---
 

@@ -67,7 +67,7 @@ practiceId, previousEventHash, sequenceNumber, wasEditedByClinician
 
 `confirmedAt` is serialized as ISO 8601 UTC string (`Date.toISOString()`).
 
-**Implementation:** [`apps/web/lib/ai/audit-chain.ts`](../apps/web/lib/ai/audit-chain.ts)
+**Implementation:** [`apps/web/lib/ai/audit-chain.ts`](../../apps/web/lib/ai/audit-chain.ts)
 
 ### 2.4 Genesis Event
 
@@ -75,7 +75,7 @@ The first event in each practice chain has `previousEventHash = null`. The verif
 
 ### 2.5 Transactional Integrity and Concurrency Locking
 
-The audit log append is managed centrally by `appendAiAuditEvent` ([`apps/web/lib/ai/audit-ledger.ts`](../apps/web/lib/ai/audit-ledger.ts)) and executed **inside the same database transaction** as the clinical record finalization.
+The audit log append is managed centrally by `appendAiAuditEvent` ([`apps/web/lib/ai/audit-ledger.ts`](../../apps/web/lib/ai/audit-ledger.ts)) and executed **inside the same database transaction** as the clinical record finalization.
 
 To guarantee zero race conditions and strictly monotonic `sequenceNumber` allocation during concurrent finalizations:
 1. **Transaction-Scoped Advisory Lock:** At the start of append, PostgreSQL acquires an exclusive transaction-scoped lock:
@@ -92,7 +92,7 @@ To guarantee zero race conditions and strictly monotonic `sequenceNumber` alloca
 - Discharge report saving & finalization (`apps/web/server/routers/extensions/discharge.ts`)
 - AI SOAP generation (`apps/web/server/routers/ai.ts`)
 
-**Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../apps/web/lib/ai/__tests__/audit-ledger.test.ts), the real-DB contract [`apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts`](../apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts) (16 tests, run in the CI RLS job), and the pilot smoke [`e2e/ai-finalization-pilot.spec.ts`](../e2e/ai-finalization-pilot.spec.ts).
+**Verified by tests:** [`apps/web/lib/ai/__tests__/audit-ledger.test.ts`](../../apps/web/lib/ai/__tests__/audit-ledger.test.ts), the real-DB contract [`apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts`](../../apps/web/server/__tests__/ai-clinical-finalization.integration.test.ts) (16 tests, run in the CI RLS job), and the pilot smoke [`e2e/ai-finalization-pilot.spec.ts`](../../e2e/ai-finalization-pilot.spec.ts).
 
 ### 2.6 Surfaces that write
 
