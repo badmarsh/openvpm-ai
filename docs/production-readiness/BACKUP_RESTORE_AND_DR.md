@@ -1,6 +1,6 @@
 # Backup, restore, and disaster recovery
 
-Canonical product procedure: [`docs/backup-restore-runbook.md`](../backup-restore-runbook.md) and [`docs/file-object-recovery-runbook.md`](../file-object-recovery-runbook.md). This page states assumptions and the evidence boundary.
+Canonical product procedure: [`docs/backup-restore-runbook.md`](../guides/backup-restore-runbook.md) and [`docs/file-object-recovery-runbook.md`](../guides/file-object-recovery-runbook.md). This page states assumptions and the evidence boundary.
 
 ## Assumptions (not accepted until an operator signs)
 

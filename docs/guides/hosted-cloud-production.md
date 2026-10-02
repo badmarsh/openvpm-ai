@@ -2,7 +2,7 @@
 
 Clinic onboarding and graduation are governed by the
 [controlled clinic pilot operations runbook](clinic-pilot-operations.md) and
-the [clinic readiness boundary](clinic-pilot-readiness.md).
+the [clinic readiness boundary](../reference/clinic-pilot-readiness.md).
 
 OpenVPM has two operating modes:
 
@@ -170,7 +170,7 @@ the gate evaluates it only in a newly created or redeployed build.
 
 The GitHub `Production` environment must have an independent required reviewer
 before this is treated as two-person approval. See
-[`repository-governance.md`](repository-governance.md) for the target promotion
+[`repository-governance.md`](../reference/repository-governance.md) for the target promotion
 model.
 
 `STRIPE_PRICE_CLOUD_USER` and `STRIPE_PRICE_CLOUD` are legacy-only. They must not be used for new checkout or required hosted readiness.

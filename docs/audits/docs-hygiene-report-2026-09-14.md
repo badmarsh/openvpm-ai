@@ -326,7 +326,7 @@ The comprehensive index was created at [`artifacts/README.md`](../artifacts/READ
 Both non-standard root-level files were relocated into the dedicated [`docs/handoffs/`](../docs/handoffs/) directory via `git mv`:
 1. `HANDOFF-voice-dictation.md` → [`docs/handoffs/voice-dictation-migration.md`](../docs/handoffs/voice-dictation-migration.md)  
    Preserves architectural rationale for the `ext_voice.ts` zero-conflict extension pattern. Updated inbound link in `ux-codebase-analysis-2026-09-11.md`.
-2. `RICH_TEXT_IMPLEMENTATION.md` → [`docs/handoffs/rich-text-soap-notes-pr.md`](../docs/handoffs/rich-text-soap-notes-pr.md)  
+2. `RICH_TEXT_IMPLEMENTATION.md` → [`docs/handoffs/rich-text-soap-notes-pr.md`](../archive/handoffs/rich-text-soap-notes-pr.md)  
    Archived historical implementation notes for TipTap editor integration.
 
 The repository root now contains strictly canonical project files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `LICENSE`).

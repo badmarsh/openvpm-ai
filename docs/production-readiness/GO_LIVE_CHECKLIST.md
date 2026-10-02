@@ -1,6 +1,6 @@
 # Go-live checklist
 
-Use with [`docs/clinic-pilot-readiness.md`](../clinic-pilot-readiness.md). Tick only with evidence.
+Use with [`docs/clinic-pilot-readiness.md`](../reference/clinic-pilot-readiness.md). Tick only with evidence.
 
 ## Software
 

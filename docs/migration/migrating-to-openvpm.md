@@ -85,5 +85,5 @@ The door swings both ways, always: **Settings → Data → Export** gives per-en
 - Imports are tenant scoped, protected by database row-level security, and admin only. The migration ledger stores hashes and aggregate counts, not raw CSV content or row-level patient data.
 - Never attach raw clinic exports to an ordinary email or public issue. Contact
   support first to arrange an approved secure transfer method.
-- Use the [clinic pilot readiness guide](clinic-pilot-readiness.md) before
+- Use the [clinic pilot readiness guide](../reference/clinic-pilot-readiness.md) before
   switching live clinic workflows.

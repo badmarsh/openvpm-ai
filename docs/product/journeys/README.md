@@ -272,8 +272,8 @@ Tieto body **nie sú** kritika kvality kódu — sú to rozhodnutia, ktoré mus�
 - [`09-portal-compliance-onboarding.md`](09-portal-compliance-onboarding.md) — J27–J30, J-NEW-1…3 + BC-9
 - [`10-ai-value-chain-a-multi-actor.md`](10-ai-value-chain-a-multi-actor.md) — AI value chain, multi-actor, KPI
 
-Nadväzujúce existujúce dokumenty: [`docs/audit/2026-09-ai-ux-audit.md`](../../audit/2026-09-ai-ux-audit.md),
-[`docs/clinic-pilot-workflow.md`](../../clinic-pilot-workflow.md),
-[`docs/slovak-integration-catalog.md`](../../slovak-integration-catalog.md),
-[`docs/authorization-matrix.md`](../../authorization-matrix.md),
-[`docs/migrating-to-openvpm.md`](../../migrating-to-openvpm.md).
+Nadväzujúce existujúce dokumenty: [`docs/audit/2026-09-ai-ux-audit.md`](../../audits/2026-09-ai-ux-audit.md),
+[`docs/clinic-pilot-workflow.md`](../../reference/clinic-pilot-workflow.md),
+[`docs/slovak-integration-catalog.md`](../../reference/slovak-integration-catalog.md),
+[`docs/authorization-matrix.md`](../../reference/authorization-matrix.md),
+[`docs/migrating-to-openvpm.md`](../../migration/migrating-to-openvpm.md).

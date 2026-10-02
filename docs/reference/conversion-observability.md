@@ -5,7 +5,7 @@ canonical repairable projection is `practice_conversion_milestones`; browser
 journey telemetry remains in `funnel_events` and is not a business-stage source
 of truth.
 
-The [controlled clinic pilot operations runbook](clinic-pilot-operations.md)
+The [controlled clinic pilot operations runbook](../guides/clinic-pilot-operations.md)
 adds a separate, audited operating layer for qualified clinics. Pilot stages
 and decisions never replace the canonical conversion evidence below.
 

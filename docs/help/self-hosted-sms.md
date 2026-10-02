@@ -59,4 +59,4 @@ A complete acceptance check includes a received message, delivery status, a corr
 
 - [Self-hosted Stripe payments](self-hosted-payments.md)
 - [A solo veterinarian's workflow](solo-vet-workflow.md)
-- [SMS concurrency and recovery drill](../sms-concurrency-drill.md)
+- [SMS concurrency and recovery drill](../guides/sms-concurrency-drill.md)
