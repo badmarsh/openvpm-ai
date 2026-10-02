@@ -73,7 +73,7 @@ Mobile
 
 Asymmetry is fine and often better — don't force center-everything.
 
-**Step 4 — State list.** Enumerate the states this screen must handle. Point at [references/state-design.md](../skills/ui-craft/references/state-design.md) for the contracts.
+**Step 4 — State list.** Enumerate the states this screen must handle. Point at [references/state-design.md](../ui-craft/references/state-design.md) for the contracts.
 
 - **idle** — default state, data present.
 - **loading** — skeletons that mirror final layout, 200ms delay before showing.

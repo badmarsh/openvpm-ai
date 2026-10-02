@@ -10,7 +10,7 @@ graph.
 > `apps/web`. The ticket lists the path as a *permitted target*, so it was
 > created here as the canonical home for the audit tooling. The bindings
 > themselves are in `apps/web/` and `packages/`; see the
-> [audit document](../../docs/migration/sprint-26-legacy-state-bindings-audit.md)
+> [audit document](../../../docs/migration/sprint-26-legacy-state-bindings-audit.md)
 > §0 for the full reconciliation.
 
 ## Files
