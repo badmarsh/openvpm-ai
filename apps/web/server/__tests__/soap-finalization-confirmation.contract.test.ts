@@ -90,7 +90,7 @@ describe("Sprint 33 · vet confirmation gate for AI-assisted SOAP", () => {
   });
 
   it("8 · the protocol doc lists the SOAP path under Option 1", () => {
-    const doc = readFileSync(join(WEB, "..", "..", "docs/confirmation-protocol.md"), "utf8");
+    const doc = readFileSync(join(WEB, "..", "..", "docs/reference/confirmation-protocol.md"), "utf8");
     expect(doc).toContain("records.prepareSoapFinalization");
   });
 });

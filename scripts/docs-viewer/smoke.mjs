@@ -60,7 +60,7 @@ function check(label, ok, detail = "") {
     doc.querySelector("#stat").textContent);
 
   console.log("\n— open a document (hash routing) —");
-  window.location.hash = "#/docs/authorization-matrix.md";
+  window.location.hash = "#/docs/reference/authorization-matrix.md";
   await new Promise((r) => setTimeout(r, 900));
   const h1 = doc.querySelector("#page h1");
   check("document body rendered", !!h1, h1?.textContent);
@@ -72,7 +72,7 @@ function check(label, ok, detail = "") {
   check("role table rendered as a real table", doc.querySelectorAll("#page table").length > 0,
     doc.querySelectorAll("#page table").length + " tables");
   check("active link marked in sidebar",
-    doc.querySelector('.doc-link[aria-current="true"]')?.dataset.id === "docs/authorization-matrix.md");
+    doc.querySelector('.doc-link[aria-current="true"]')?.dataset.id === "docs/reference/authorization-matrix.md");
   check("document title updated", window.document.title.includes("Authorization"),
     window.document.title);
 
@@ -125,7 +125,7 @@ function check(label, ok, detail = "") {
     && doc.querySelectorAll(".doc-link").length > 100);
 
   console.log("\n— heading anchor + theme —");
-  window.location.hash = "#/docs/authorization-matrix.md";
+  window.location.hash = "#/docs/reference/authorization-matrix.md";
   await new Promise((r) => setTimeout(r, 900));
   const tocLink = doc.querySelector("#toc a");
   if (tocLink) {

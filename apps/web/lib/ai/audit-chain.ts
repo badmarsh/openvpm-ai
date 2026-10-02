@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
  * the same practice chain, so any alteration, deletion, insertion, or
  * reordering of audit records is detectable by verification.
  *
- * IMPORTANT LIMITATIONS (see docs/ai-audit-ledger.md):
+ * IMPORTANT LIMITATIONS (see docs/reference/ai-audit-ledger.md):
  *   - This is NOT WORM storage — a DBA with write access to the database
  *     AND knowledge of this algorithm could recompute hashes after altering
  *     records without detection.
@@ -438,7 +438,7 @@ export function verifyAiAuditChain(
 /**
  * External anchor provider interface.
  * Implement this for stronger forensic claims (WORM storage, TSA, transparency log).
- * See docs/ai-audit-ledger.md §5 for details.
+ * See docs/reference/ai-audit-ledger.md §5 for details.
  */
 export interface AuditAnchorProvider {
   /** Anchors a batch of event hashes to an external verifiable system. Idempotent. */

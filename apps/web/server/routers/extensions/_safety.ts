@@ -17,7 +17,7 @@ import type { Database } from "@openpims/db/client";
  * (`ai.createSoapFromAI`, create-only), which records a direct confirmation
  * distinctly; whole-request replay there is refused by the SOAP lifecycle
  * (existing draft/finalized note for the encounter yields CONFLICT).
- * See docs/confirmation-protocol.md (Option 2 transitional path).
+ * See docs/reference/confirmation-protocol.md (Option 2 transitional path).
  *
  * Server error messages stay in English per Skill §2; all user-facing
  * localization happens on the client via useI18n().

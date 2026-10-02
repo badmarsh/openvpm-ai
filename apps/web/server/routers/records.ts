@@ -1794,7 +1794,7 @@ export const recordsRouter = createRouter({
 
   /**
    * Sprint 33: issue the vet's one-time confirmation envelope for an
-   * AI-assisted SOAP draft (Option 1, docs/confirmation-protocol.md). The
+   * AI-assisted SOAP draft (Option 1, docs/reference/confirmation-protocol.md). The
    * editor calls this after flushing the autosave and, when `required`,
    * opens the confirmation dialog; `finalizeSoapNote` consumes the envelope
    * in the finalize transaction. Manual notes return `{ required: false }`

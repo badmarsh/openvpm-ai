@@ -4,7 +4,7 @@
  *
  * One vocabulary for every surface that tags an imaging attachment:
  *  - `files.category` MUST stay `"imaging"` (never `"patient-photos"`), which
- *    is what keeps `patients.photoUrl` untouched (see docs/UIKIT.md and
+ *    is what keeps `patients.photoUrl` untouched (see prompts/UIKIT.md and
  *    AGENTS.md §5 "Medical Imaging").
  *  - the modality itself lives in the existing `files.document_type` column,
  *    so no vanilla schema change is required.

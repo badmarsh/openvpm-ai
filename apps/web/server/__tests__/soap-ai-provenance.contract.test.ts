@@ -132,7 +132,7 @@ describe("Sprint 32 · SOAP AI provenance ledger", () => {
   });
 
   it("11 · docs list which surfaces write to the ledger", () => {
-    const doc = join(REPO, "docs/ai-audit-ledger.md");
+    const doc = join(REPO, "docs/reference/ai-audit-ledger.md");
     expect(existsSync(doc)).toBe(true);
     const text = readFileSync(doc, "utf8");
     expect(text).toMatch(/Surfaces that write/i);

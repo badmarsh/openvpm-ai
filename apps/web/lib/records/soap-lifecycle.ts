@@ -617,7 +617,7 @@ export async function loadSoapAiFinalizationEvent(
 
 /**
  * Map an envelope failure onto the lifecycle error contract, following
- * docs/confirmation-protocol.md §2.5 (same mapping as the discharge router).
+ * docs/reference/confirmation-protocol.md §2.5 (same mapping as the discharge router).
  */
 function rethrowConfirmationError(error: ClinicianConfirmationError): never {
   const code =

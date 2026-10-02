@@ -1152,7 +1152,7 @@ OpenVPM AI je enterprise veterinárny nemocničný informačný systém. Modul "
 ## 2. Scope
 ### In Scope
 - Implementácia a harmonizácia modulu: {title}
-- Použitie Dashboard UI Kit štandardu (docs/UIKIT.md): PageHeader, PageToolbar, DataTableFrame, KpiGrid z `@/components/layout/page-kit`.
+- Použitie Dashboard UI Kit štandardu (prompts/UIKIT.md): PageHeader, PageToolbar, DataTableFrame, KpiGrid z `@/components/layout/page-kit`.
 - Povolené cieľové cesty: {paths_val}
 - 100% leaf symetria kľúčov medzi `apps/web/messages/sk.json` a `apps/web/messages/en.json`.
 
@@ -1521,7 +1521,7 @@ Predchádzajúca implementácia úlohy {task_id} vygenerovala nasledujúce chyby
 
 <poziadavka_na_opravu>
 1. Presne oprav identifikované TypeScript chyby, chýbajúce importy alebo nesymetrické i18n preklady (sk.json / en.json).
-2. Dodrž zero-conflict pravidlá a PageKit komponenty (docs/UIKIT.md).
+2. Dodrž zero-conflict pravidlá a PageKit komponenty (prompts/UIKIT.md).
 3. Vráť opravený čistý unifikovaný git diff/patch.
 </poziadavka_na_opravu>
 </system_prompt>"""

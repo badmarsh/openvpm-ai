@@ -2,7 +2,7 @@
  * Platform Admin & AI Swarm Hub — UI Kit Harmonization (Arena Sprint 24)
  * ---------------------------------------------------------------------
  * Pins /admin (platform admin) and /admin/ai-swarm (AI swarm hub) to the
- * dashboard UI kit (docs/UIKIT.md):
+ * dashboard UI kit (prompts/UIKIT.md):
  *   1. pageShellClass layout rhythm (no bare unstyled root),
  *   2. PageHeader with the ShieldCheck icon and the ADMIN badge on /admin,
  *   3. KpiGrid / KpiCard for the business KPIs and the AI swarm system

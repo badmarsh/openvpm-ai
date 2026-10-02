@@ -14,7 +14,7 @@ import { appendAiAuditEvent } from "@/lib/ai/audit-ledger";
 /**
  * Two-phase prescription flow for AI/agent surfaces.
  *
- * Clinical safety contract (see docs/confirmation-protocol.md):
+ * Clinical safety contract (see docs/reference/confirmation-protocol.md):
  *  1. The AI (agent tool `create_prescription`) may only PREPARE a proposal.
  *     It never writes to `prescriptions` — not even as a draft.
  *  2. Preparing binds a one-time confirmation envelope to a pre-generated

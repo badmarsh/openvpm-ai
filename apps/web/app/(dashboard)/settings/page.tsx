@@ -474,7 +474,7 @@ function SettingsLoadError({
 /**
  * Section header for a settings list panel: title, one-line description and
  * the panel's primary action. Keeps every tab on the same card rhythm
- * (docs/UIKIT.md — sections are `rounded-lg border border-border bg-card`).
+ * (prompts/UIKIT.md — sections are `rounded-lg border border-border bg-card`).
  */
 function SettingsPanelHeader({
   title,

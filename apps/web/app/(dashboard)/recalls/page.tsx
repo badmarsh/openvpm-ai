@@ -127,7 +127,7 @@ function overdueDays(value: string, today: Date): number | null {
 }
 
 /**
- * UI-kit table tokens (docs/UIKIT.md). Recall rows carry multi-line vaccine
+ * UI-kit table tokens (prompts/UIKIT.md). Recall rows carry multi-line vaccine
  * and eligibility detail, so cells use the dense operator padding
  * `px-4 py-2.5`; headers share the same horizontal inset to stay aligned.
  */

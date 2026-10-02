@@ -46,7 +46,7 @@ export const ALL_AGENT_ROLES: readonly AgentUserRole[] = [
 
 /**
  * Canonical role groups for the permission/action matrix.
- * See docs/authorization-matrix.md and docs/agent-tool-security-matrix.md.
+ * See docs/reference/authorization-matrix.md and docs/reference/agent-tool-security-matrix.md.
  *
  * - CLINICAL_ROLES: may issue/consume clinical confirmation envelopes,
  *   finalize AI-derived clinical content, and append AI audit events.

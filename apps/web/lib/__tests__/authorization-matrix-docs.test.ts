@@ -12,7 +12,7 @@ import { ALL_AGENT_ROLES } from "../authorization";
  * (neither exists as a `UserRole`) and omitted `viewer` entirely.
  */
 
-const MATRIX_PATH = "../../docs/authorization-matrix.md";
+const MATRIX_PATH = "../../docs/reference/authorization-matrix.md";
 
 function readMatrix(): string {
   return readFileSync(MATRIX_PATH, "utf8");
@@ -45,7 +45,7 @@ function documentedRoles(matrix: string): string[] {
   return [...roles].sort();
 }
 
-describe("docs/authorization-matrix.md matches the code", () => {
+describe("docs/reference/authorization-matrix.md matches the code", () => {
   it("documents exactly the roles that exist in AgentUserRole", () => {
     expect(documentedRoles(readMatrix())).toEqual([...ALL_AGENT_ROLES].sort());
   });

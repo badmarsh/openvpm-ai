@@ -7,7 +7,7 @@
  * vypočítať SHA-256 odtlačok pre integritu (payloadHash v ext_kvepis_submissions).
  *
  * POZNÁMKA KU XSD: Oficiálne XSD ŠVPS SR / ÚPVS sa verzuje. Tento modul generuje
- * štruktúru zdokumentovanú v `docs/slovak-integration-catalog.md` a v
+ * štruktúru zdokumentovanú v `docs/reference/slovak-integration-catalog.md` a v
  * `docs/enterprise-trust/*`. Pred produkčným spustením je potrebné pripnúť
  * konkrétnu verziu XSD a prípadne prispôsobiť menný priestor. Metódy tu NEVOLAJÚ
  * sieť a nikdy nepodpisujú — podpis zabezpečuje samostatný krok (D.Signer /

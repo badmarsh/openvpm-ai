@@ -1,7 +1,7 @@
 /**
  * Practice Settings Master Hub — UI Kit harmonization (Arena Sprint 21)
  * ---------------------------------------------------------------------
- * Pins `/settings` (the master hub) to the dashboard UI kit (docs/UIKIT.md):
+ * Pins `/settings` (the master hub) to the dashboard UI kit (prompts/UIKIT.md):
  *   pageShellClass, PageHeader icon=Settings title=Nastavenia, underline tab
  *   strip (underlineTabsListClass / underlineTabsTriggerClass), one
  *   DataTableFrame + dense table tokens per list panel, shared
