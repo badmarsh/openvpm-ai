@@ -34,15 +34,15 @@ describe("CRM canonical segments — seed/spec/engine drift guard", () => {
     }
   });
 
-  it("documents only engine-known segment keys in SKILL.md", () => {
+  it("documents only engine-known segment keys in openvpm-ai skill references/domain.md", () => {
     const skill = readFileSync(
-      repoFile(".agents/skills/openvpm-ai/SKILL.md"),
+      repoFile(".agents/skills/openvpm-ai/references/domain.md"),
       "utf8"
     );
     const line = skill
       .split("\n")
       .find((l) => l.includes("Deterministic segmentation"));
-    expect(line, "SKILL.md must document the canonical segment set").toBeDefined();
+    expect(line, "references/domain.md must document the canonical segment set").toBeDefined();
     const documentedKeys = [...line!.matchAll(/`([a-z0-9_]+)`/g)].map(
       (m) => m[1]
     );
@@ -51,7 +51,7 @@ describe("CRM canonical segments — seed/spec/engine drift guard", () => {
     for (const key of documentedKeys) {
       expect(
         [...CRM_SEGMENT_KEYS],
-        `SKILL.md documents unknown segment "${key}" — sync with CRM_SEGMENT_DEFINITIONS`
+        `references/domain.md documents unknown segment "${key}" — sync with CRM_SEGMENT_DEFINITIONS`
       ).toContain(key);
     }
   });
