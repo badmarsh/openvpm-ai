@@ -1,6 +1,6 @@
 # Tasks
 
-Specs, backlog tickets and their history. **How work flows through this folder is described in [`WORKFLOW.md`](WORKFLOW.md)**, and the rules every spec inherits are in [`RULES.md`](RULES.md). The Agno swarm that used to manage this folder is deprecated ([`.agents/agno/DEPRECATED.md`](../.agents/agno/DEPRECATED.md)).
+Specs, backlog tickets and their history. **How work flows through this folder is described in [`WORKFLOW.md`](WORKFLOW.md)**, and the rules every spec inherits are in [`RULES.md`](RULES.md). The legacy Agno dev swarm has been deprecated and removed.
 
 ## Layout
 

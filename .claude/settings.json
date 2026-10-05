@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/partial-claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(git add .env*)",
+      "Bash(git add *AGENTS.local.md*)",
+      "Bash(git add *.mcp.json*)",
+      "Bash(docker exec -i openvpm-postgres-1 psql -U openpims -d openpims)",
+      "FileEdit(packages/db/drizzle/**)",
+      "FileWrite(packages/db/drizzle/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": "node scripts/agents/claude-hook-guard.mjs"
+      }
+    ]
+  }
+}

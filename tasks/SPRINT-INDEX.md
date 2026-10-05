@@ -81,6 +81,6 @@ The Agno swarm emitted a batch of generic tickets on 2026-09-25 (`arena-17903254
 | G-29 | 2026-09-25-arena-1790325424-sprint-29-generate-openapi-com.md | OpenAPI Compliance Report | landed f055ddc (#67), unreviewed |
 | G-30 | 2026-09-25-arena-1790325424-sprint-30-secure-interop-bridg.md | Secure Interop Bridge v1→v2 | landed dcb15c2 (#67), unreviewed |
 
-The four unnumbered Agno meta specs (`arena-sprint-agno-*`, `arena-sprint-prompt-engineering-audit`) moved to `archive/` when Agno was deprecated (see `.agents/agno/DEPRECATED.md`).
+The four unnumbered Agno meta specs (`arena-sprint-agno-*`, `arena-sprint-prompt-engineering-audit`) moved to `archive/` when Agno was deprecated and removed.
 
 Legacy prompts from before numbering (`arena-consolidation-sprint`, `arena-next-sprint`, `ui-consolidation-prompt`, `ui-phase2-headings`) are in `archive/`.

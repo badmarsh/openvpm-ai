@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mem0": {
+      "command": "python",
+      "args": ["-m", "mem0.server"],
+      "env": {
+        "MEM0_PORT": "8888"
+      }
+    }
+  }
+}

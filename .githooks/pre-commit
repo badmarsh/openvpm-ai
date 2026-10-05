@@ -1,0 +1,25 @@
+#!/bin/sh
+# Git pre-commit hook: secret scan, agent guard, and i18n symmetry
+
+echo "==> Running pre-commit secret scan..."
+node scripts/agents/secret-scan.mjs
+if [ $? -ne 0 ]; then
+  echo "Pre-commit aborted: secret pattern detected."
+  exit 1
+fi
+
+echo "==> Running pre-commit agent guard..."
+node scripts/agents/guard.mjs
+if [ $? -ne 0 ]; then
+  echo "Pre-commit aborted: agent guard failure."
+  exit 1
+fi
+
+echo "==> Running i18n scan..."
+pnpm --filter @openpims/web i18n:scan
+if [ $? -ne 0 ]; then
+  echo "Pre-commit aborted: i18n scan failed."
+  exit 1
+fi
+
+exit 0

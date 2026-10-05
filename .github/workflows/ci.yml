@@ -34,6 +34,15 @@ jobs:
       - name: Verify public release contents
         run: pnpm verify:oss-release
 
+      - name: Verify agent guard
+        run: pnpm guard
+
+      - name: Scan for secrets
+        run: pnpm secret-scan --all
+
+      - name: Scan hardcoded i18n strings
+        run: pnpm --filter @openpims/web i18n:scan
+
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level high
 

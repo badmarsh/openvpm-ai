@@ -7,7 +7,7 @@ This folder holds only **reusable, currently valid** prompt templates (target: â
 | [`arena-sprint-writer-prompt.md`](arena-sprint-writer-prompt.md) | v2: one session plans, writes, gates (`tasks.mjs check`) and implements one sprint | **Current.** Built on option B below plus the executable workflow in `tasks/WORKFLOW.md`. v1 is archived as `tasks/archive/2026-09-24-arena-sprint-writer-prompt-v1.md`. |
 
 Candidates to bring back here (currently archived):
-- `tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md`: verdict REWRITE. Workstreams A and B are now covered by the verification log; Agno is now deprecated (`.agents/agno/DEPRECATED.md`), so only its D (`:7777` tunnel) part could still matter.
+- `tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md`: verdict REWRITE. Workstreams A and B are now covered by the verification log; Agno is now deprecated and removed, so only its D (`:7777` tunnel) part could still matter.
 - `tasks/archive/2026-09-14-bug-and-implementation-audit-prompt.md` / `2026-09-17-docs-update-prompt.md`: reusable audit templates. Bring one back only when you schedule a recurring pass, and replace the Windows paths first.
 
 ---

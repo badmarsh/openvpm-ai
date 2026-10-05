@@ -32,7 +32,6 @@
     "test:e2e:ui": "playwright test --ui",
     "verify:oss-release": "node scripts/verify-oss-release.mjs",
     "audit:verify-ai": "pnpm --filter @openpims/db audit:verify-ai",
-    "agent-ui": "pnpm --dir .agents/agno/agent-ui dev",
     "tasks": "node scripts/tasks/tasks.mjs",
     "test:tasks": "node --test scripts/tasks/tasks.test.mjs scripts/tasks/outline.test.mjs",
     "tasks:outline": "node scripts/tasks/outline.mjs",
@@ -41,7 +40,12 @@
     "docs:check": "node scripts/docs-viewer/code-check.mjs",
     "docs:links": "node scripts/docs-viewer/link-audit.mjs",
     "docs:smoke": "node scripts/docs-viewer/smoke.mjs",
-    "ui:check": "node scripts/ui/uniformity.mjs --boundary apps/web/app/portal --boundary apps/web/components/portal --rules saturated"
+    "ui:check": "node scripts/ui/uniformity.mjs --boundary apps/web/app/portal --boundary apps/web/components/portal --rules saturated",
+    "guard": "node scripts/agents/guard.mjs",
+    "secret-scan": "node scripts/agents/secret-scan.mjs",
+    "skills:sync": "node scripts/agents/sync-skills.mjs",
+    "hooks:install": "node scripts/agents/install-hooks.mjs",
+    "verify": "pnpm guard && pnpm secret-scan && pnpm lint && pnpm type-check && pnpm --filter @openpims/web i18n:scan && pnpm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

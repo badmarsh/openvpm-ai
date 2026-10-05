@@ -24,7 +24,7 @@ up, DNS resolves, and every request returns `502`.
 | `AgentOS.serve(host=...)` | `0.0.0.0` | The server must accept connections on every interface, so Windows/cloudflared can reach into WSL. |
 | `cloudflared` ingress `service:` | `http://127.0.0.1:7777` | The tunnel is a **client** — it must dial a routable address. `0.0.0.0` is not routable as a destination and the connection fails. |
 
-The bind value lives in `.agents/agno/pipeline_team_os.py` and defaults correctly:
+The legacy AgentOS bind value was `127.0.0.1:7777` and defaults correctly:
 
 ```python
 agent_os.serve(

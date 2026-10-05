@@ -16,7 +16,6 @@ targets:
   - apps/web/messages/en.json
   - apps/web/messages/sk.json
   - apps/web/lib/__tests__/admin-panel-pagekit.test.ts
-  - .agents/agno/DEPRECATED.md
 creates:
   - apps/web/app/(dashboard)/admin/ai-team/page.tsx
   - apps/web/lib/ai/ai-team.ts
@@ -82,7 +81,7 @@ note: "owner decision 2026-09-27: rename to AI team (multiple models and endpoin
 **2H. Tests and docs:**
 - Rewrite `admin-panel-pagekit.test.ts` so it pins `/admin` against the new card and link, and drop the swarm-specific cases (the new contract covers the page).
 - Add a router test: a `front_desk` user gets `FORBIDDEN`, and the payload has no `apiKey`.
-- In `.agents/agno/DEPRECATED.md`, mark the admin-page row resolved (Sprint 34).
+- Note: The legacy Agno dev swarm has already been deprecated and deleted.
 
 Presentation-only? No: this removes a router and changes access control. Clinical logic is untouched.
 
@@ -90,7 +89,7 @@ Presentation-only? No: this removes a router and changes access control. Clinica
 
 - `server/routers/extensions/ai-settings.ts`, the `/settings/ai` page, `lib/ai/ai-crypto.ts`, and `resolveFeatureConfig` / `resolvePracticeLanguageModel` behaviour. The page reads them and never writes.
 - Everything else on `admin/page.tsx`: the hosted SMS diagnostics, messaging queue and platform-admin panels, plus their pinned literals in `admin-panel-pagekit.test.ts` (keep every non-swarm assertion).
-- `.agents/agno/` code. Deleting it is a separate PR (see DEPRECATED.md).
+- `.agents/agno/` code: already deleted in repository cleanup.
 
 ## 4. Contract
 

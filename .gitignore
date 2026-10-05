@@ -69,7 +69,7 @@ package-lock.json
 .qwen/
 _wip/
 
-# One-time ops / migration scripts — contain production UUIDs and PII (GDPR)
+# One-time ops / migration scripts â contain production UUIDs and PII (GDPR)
 # These run locally against the DB and must never be committed to a public repo.
 apps/web/scripts/audit-all-tables.cjs
 apps/web/scripts/check-all-indexes.cjs
@@ -77,6 +77,7 @@ apps/web/scripts/check-attachments.cjs
 apps/web/scripts/check-ciselniki.ts
 apps/web/scripts/check-ciselniki2.ts
 apps/web/scripts/check-ciselníky.ts
+apps/web/scripts/*.ts
 apps/web/scripts/check-fb-tables.ts
 apps/web/scripts/check-fb-tables2.ts
 apps/web/scripts/check-indexes.cjs
@@ -129,23 +130,15 @@ apps/web/scripts/verify-migration.ts
 apps/web/scripts/import-services-and-diagnoses.ts
 packages/db/seed-comprehensive-sk.sql
 
-# Agno Local State & Telemetry
-.agents/agno/.env
-.agents/agno/.pytest_cache/
-.agents/agno/.venv/
-.agents/agno/tmp/
-.agents/agno/tmp/worktrees/
-.agents/agno/tmp/logs/
-.agents/agno/agent-ui/
 __pycache__/
 *.pyc
 .pytest_cache/
 
-# ─── tasks/ runtime churn (see tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md §5.1) ───
+# âââ tasks/ runtime churn (see tasks/archive/2026-09-25-arena-final-pass-agno-consolidation.md Â§5.1) âââ
 # Ground truth stays versioned: tasks/SPRINT-INDEX.md, tasks/VERIFICATION-LOG.md, tasks/sprints/*.md,
 # tasks/proposed/*.md, tasks/archive/*.
 # Runtime artifacts the Agno swarm writes/dispatches are NOT ground truth and must
-# never be committed — this is what produced the 300-file commit (dab4d05).
+# never be committed â this is what produced the 300-file commit (dab4d05).
 tasks/run-*.json
 tasks/repair-*.md
 tasks/**/*.patch
@@ -158,8 +151,12 @@ tasks-ARCHIVED-*.tgz
 arena_sessions.json
 tasks/**/files/**
 
-# ─── docs-viewer build output ───
+# âââ docs-viewer build output âââ
 # artifacts/ itself is tracked (hand-written reports are ground truth), but the
 # viewer's HTML/JSON is machine-generated and fully reproducible with
-# `pnpm docs:build` — same policy as .next/, dist/, out/.
+# `pnpm docs:build` â same policy as .next/, dist/, out/.
 artifacts/docs-viewer/
+
+# Local agent configs & overrides
+AGENTS.local.md
+.claude/settings.local.json

@@ -1,60 +1,11 @@
 # CLAUDE.md
 
-Instructions for Claude Code agents working in this repo.
+Instructions for Claude Code agents working in this repository.
 
-## Development Environment & Ports
-- **Primary Project (Active Development):** `./openvpm-ai` running on **port 3001** (`http://localhost:3001`). All customizations, Slovak features, e-Kasa, and AI modules are built and committed here.
-- **Reference Project (Vanilla / Upstream Inspiration):** `../OpenVPM` running on **port 3005** (`http://localhost:3005`). Use as a live baseline to inspect original workflows, component patterns, and upstream behavior before introducing custom extensions.
+See [@AGENTS.md](./AGENTS.md) for master architecture, database targeting, migration rules, i18n, clinical gates, and environment details.
 
-## OpenVPM AI Architectural Skill & Guardrails
-All agents working in this repository MUST follow the skill defined in [`.agents/skills/openvpm-ai/SKILL.md`](.agents/skills/openvpm-ai/SKILL.md):
-- **Zero-Conflict Upstream Sync:** Never modify upstream schema files in `packages/db/schema/*.ts`. Add all new tables into `packages/db/schema/ext_*.ts`.
-- **Database Migrations:** Exclusively use `pnpm db:push` to keep `_journal.json` clean. For bringing a database to a complete, verified state (fresh installs and after schema changes), run `pnpm db:bootstrap` — it wraps `db:push` and additionally applies the journal object layer (clinical safety functions/triggers) that `db:push` cannot manage, then verifies. Never edit `packages/db/drizzle/*`; `db:bootstrap` only reads it.
-- **tRPC Extensions:** Mount extensions under `extensions: extensionsRouter` in `apps/web/server/routers/_app.ts`.
-- **Navigation:** Extend navigation via `apps/web/config/custom-nav.ts`.
-- **i18n:** No `app/[locale]/...` URL route prefixes. Maintain 100% dictionary symmetry between `en.json` and `sk.json`.
-- **Clinical Sympathy Flow:** Hard-block all SMS reminders and review asks for deceased/euthanized patients.
-
-## Project management — Jira (OpenVPM)
-
-We run the OpenVPM build lifecycle on Jira. **Agents coordinate through the board:
-read your queue there, and record your work there.**
-
-- **Board:** Jira project **`OPENVPM`** via the Atlassian MCP (the site host + cloud id resolve at runtime and are kept out of this public repo).
-- **Before working the board or picking up a ticket, read
-  [`docs/agents/jira-operating-manual.md`](docs/agents/jira-operating-manual.md)** —
-  it defines the workflow states, the label vocabulary, the Golden Ticket template,
-  the comment protocol, and the guardrails.
-
-Quick rules (full detail in the manual):
-
-- **Your queue:** `project = OPENVPM AND status = "To Do" AND labels = agent-ready ORDER BY priority DESC`
-- **Pick up** → move to *In Progress*, comment `[agent:<role>] plan: …`. WIP = 1 per agent.
-- **Finish** → move to *In Review*, flip the acceptance-criteria ☐ to ✅, comment
-  `[agent:<role>] done: … · PR: <url> · tests: <evidence>`.
-- **Stuck** → move to *Blocked*, comment `[blocked] waiting on: … · @Marek`.
-- Sign every comment with your role: `[agent:eng|qa|gtm|ops|design]`.
-- **Never** delete issues, bulk-transition, or move a `risk:*` ticket to *Done* —
-  those need a human.
-
-## Public voice — PRs, commits, and issues
-
-This is a public open-source repo. Pull request descriptions, commit messages,
-and GitHub issues are community-facing. Write them for the project and the
-clinics it serves, not as an internal changelog:
-
-- Frame every change by the problem it solves for people using OpenVPM.
-- No customer, prospect, or partner names. No team-member names or first-person
-  founder references ("X promised", "X asked for").
-- No internal specifics: deals, conversations and their dates, production log
-  or request ids, dashboard links, account identifiers.
-- Who asked, why now, and other context with names belongs in the private
-  tracker (Jira) — link the ticket key instead.
-- Product roadmap and decision records stay out of the repo. Internal
-  journals, launch checklists, call notes, and strategy write-ups live in the
-  private tracker. The exception is community-facing material that materially
-  betters the open-source project (ROADMAP.md, user docs, runbooks).
-
-## Session start / quota handoff
-- FIRST action in every new session, before anything else: invoke the `mem0-session-handoff` skill in RESTORE mode (reload the last checkpoint from mem0).
-- When the user mentions quota / usage limit / account switch, or after a major milestone: invoke it in SAVE mode (store context and findings in mem0).
+## Claude Code Specifics
+- **Settings & Tool Hooks:** Configured in `.claude/settings.json` (pre-tool safety hooks guard against destructive production actions, unauthorized schema edits, and sensitive file staging).
+- **Subagents:** Specialized reviewer subagents reside in `.claude/agents/` (e.g. `clinical-reviewer.md` for clinical, billing, and sympathy gate changes).
+- **Skills Mirroring:** First-party skills are maintained in `.agents/skills/` and synchronized to `.claude/skills/` via `pnpm skills:sync`.
+- **Session Continuity (Optional):** When quota limits or account switches occur, use the `mem0-session-handoff` skill if mem0 MCP is configured.

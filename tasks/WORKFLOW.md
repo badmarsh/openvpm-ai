@@ -1,6 +1,6 @@
 # Task workflow (since 2026-09-27)
 
-One agent session plays three roles in order: **writer → dispatcher → implementer**. The owner reviews and merges PRs. The Agno swarm that used to write and dispatch specs is **deprecated** (see [`.agents/agno/DEPRECATED.md`](../.agents/agno/DEPRECATED.md)). This file replaces its lifecycle.
+One agent session plays three roles in order: **writer → dispatcher → implementer**. The owner reviews and merges PRs. The legacy Agno swarm has been deprecated and removed; this file defines the canonical workflow.
 
 Three things make the system trustworthy, so none of them can be skipped:
 
