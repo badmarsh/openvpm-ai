@@ -81,7 +81,21 @@ Package manager `pnpm@9.15.0`, Node >= 20.
 
 ## 9. Skills, memory, MCP
 
-- Task skills in `.agents/skills/` (mirrored to `.claude/skills/` by `pnpm skills:sync`): `openvpm-ai` (architecture index), `add-ext-schema`, `add-trpc-extension`, `i18n-pair`, `clinical-safety-review`, `deploy`, `prelozit`, `new-task`, `make-screenshot`, `mem0-session-handoff` (optional). `impeccable` and `web-design-guidelines` are third-party and pinned in `skills-lock.json`.
+- Task skills in `.agents/skills/` (mirrored to `.claude/skills/` by `pnpm skills:sync`): `openvpm-ai` (architecture index), `add-ext-schema`, `add-trpc-extension`, `i18n-pair`, `clinical-safety-review`, `deploy`, `prelozit`, `new-task`, `make-screenshot`. `impeccable` and `web-design-guidelines` are third-party and pinned in `skills-lock.json`.
 - Reviewer subagent: `.claude/agents/clinical-reviewer.md`, for changes that touch clinical, billing or messaging paths.
-- MCP servers are configured per developer in the gitignored `.mcp.json`; `.mcp.json.example` lists the ones this repo expects. mem0 handoff is optional: use it when the user mentions a quota limit or account switch, or when the `mem0` MCP is available.
+- MCP servers are configured per developer in the gitignored `.mcp.json`; `.mcp.json.example` lists the ones this repo expects. Shared memory rules (mem0 MCP) are in section 10.
 - Claude Code permissions and safety hooks live in `.claude/settings.json` (they block production `psql`, `git add` of `.env*`, and edits to `packages/db/drizzle/`).
+
+## 10. Shared memory (mem0 MCP)
+
+mem0 is the shared memory of all agents (Claude, Codex, Antigravity, Qwen) and the continuity layer across quota cutoffs and account switches.
+
+- Scope: `app_id` = `openvpm-ai`, `user_id` = `marek` (pass both explicitly in mem0 tool calls).
+- Start of every session/task: call `mem0_get_context` (query = the task, `app_id=openvpm-ai`). It returns this project's memories plus global ones. Use `mem0_search` for specifics before re-researching or re-deciding something.
+- Save as you go, not only at the end, with `mem0_remember`: user rules/preferences/constraints, decisions with the reason, non-obvious solutions, verified findings. One atomic, dated fact per record; mark VERIFIED / UNVERIFIED where relevant. Set `app_id=openvpm-ai` for project-specific facts; omit `app_id` for global rules. Leave `agent_id` empty (the MCP fills it from `MEM0_AGENT_ID`).
+- Never ask the user whether to write to mem0 - the answer is always yes (the account quota can run out at any moment). Write ahead: before a long or risky step save a short `STARTING: ...` record, then a `PROGRESS` record after each verified step; keep ONE moving `[HANDOFF]` record per project and update it in place with `mem0_update_memory`. A client timeout on `mem0_update_memory` with long text may still have been applied: check `mem0_history` before retrying. If mem0 is unreachable, also save the same text to `C:\Users\marek\.mem0\handoff_queue\<app_id>-<date time>.md` and ingest it into mem0 at the next session start.
+- `agent_id` records who wrote a memory (provenance: claude, codex, antigravity, qwen), not whom it belongs to. Global rules, preferences and Dream-synthesized patterns are stored without `agent_id`, so every agent sees them when reading; filter by provenance via `metadata`, not `agent_id`.
+- Fix stale facts with `mem0_update_memory` instead of adding contradicting duplicates. Never delete memories without explicit user approval.
+- Never store secrets: API keys, passwords, tokens, webhook URLs, `.env*` contents.
+- Handoff: before a quota cutoff or account switch, and after a major milestone, save one `[HANDOFF][openvpm-ai][YYYY-MM-DD HH:MM]` record with GOAL / DONE / DECISIONS / FINDINGS / STATE (branch, git status) / OPEN / NEXT. When resuming, call `mem0_get_context` with query `[HANDOFF][openvpm-ai]` and compare STATE with `git status` before continuing.
+- If mem0 is unreachable (`mem0_status` fails), continue the task and print the summary in chat instead.

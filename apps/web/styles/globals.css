@@ -14,12 +14,12 @@
     --surface: 0 0% 98%;
     --radius: 0.5rem;
 
-    /* ── Brand accent (STARK MONOCHROME - user configurable via settings) ── */
-    --brand: 0 0% 0%;
+    /* ── Brand accent (default #218356 green - user configurable via settings) ── */
+    --brand: 152.5 60% 32.2%;
     --brand-foreground: 0 0% 100%;
 
-    /* ── Primary (monochrome default, clinic-overridable via BrandTheme) ───────────────── */
-    --primary: 0 0% 0%;
+    /* ── Primary (#218356 default, clinic-overridable via BrandTheme) ───────────────── */
+    --primary: 152.5 60% 32.2%;
     --primary-foreground: 0 0% 100%;
 
     /* ── Neutrals ──────────────────────────────────────────────────── */
@@ -33,7 +33,7 @@
     /* ── Borders ───────────────────────────────────────────────────── */
     --border: 0 0% 92%;
     --input: 0 0% 92%;
-    --ring: 0 0% 0%;
+    --ring: 152.5 60% 32.2%;
 
     /* ── Status (minimal color for critical info only) ─────────────────── */
     --success: 0 0% 12%;
@@ -62,7 +62,7 @@
     --sidebar-accent: 0 0% 96%;
     --sidebar-accent-foreground: 0 0% 12%;
     --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 0 0% 0%;
+    --sidebar-ring: 152.5 60% 32.2%;
   }
 
   .dark {
@@ -75,12 +75,12 @@
     --popover-foreground: 0 0% 98%;
     --surface: 0 0% 6%;
 
-    /* ── Brand accent (STARK MONOCHROME - user configurable via settings) ── */
-    --brand: 0 0% 98%;
+    /* ── Brand accent (default #218356 green - user configurable via settings) ── */
+    --brand: 152.5 60% 42%;
     --brand-foreground: 0 0% 6%;
 
     /* ── Primary ───────────────────────────────────────────────────── */
-    --primary: 0 0% 98%;
+    --primary: 152.5 60% 42%;
     --primary-foreground: 0 0% 6%;
 
     /* ── Neutrals ──────────────────────────────────────────────────── */
@@ -94,7 +94,7 @@
     /* ── Borders (subtle hairline) ─────────────────────────────────── */
     --border: 0 0% 16%;
     --input: 0 0% 16%;
-    --ring: 0 0% 98%;
+    --ring: 152.5 60% 42%;
 
     /* ── Status ────────────────────────────────────────────────────── */
     --success: 0 0% 92%;
@@ -123,7 +123,7 @@
     --sidebar-accent: 0 0% 16%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 0 0% 98%;
+    --sidebar-ring: 152.5 60% 42%;
   }
 }
 
