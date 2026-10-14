@@ -99,3 +99,18 @@ mem0 is the shared memory of all agents (Claude, Codex, Antigravity, Qwen) and t
 - Never store secrets: API keys, passwords, tokens, webhook URLs, `.env*` contents.
 - Handoff: before a quota cutoff or account switch, and after a major milestone, save one `[HANDOFF][openvpm-ai][YYYY-MM-DD HH:MM]` record with GOAL / DONE / DECISIONS / FINDINGS / STATE (branch, git status) / OPEN / NEXT. When resuming, call `mem0_get_context` with query `[HANDOFF][openvpm-ai]` and compare STATE with `git status` before continuing.
 - If mem0 is unreachable (`mem0_status` fails), continue the task and print the summary in chat instead.
+
+### Codex code-mode (`exec`): calling mem0
+
+Applies when your only tool is `exec` (a JavaScript sandbox) and mem0 tools are not listed as separate tools:
+
+- mem0 tools live on the `tools` object as `tools.mcp__mem0__mem0_<name>` (for example `tools.mcp__mem0__mem0_get_context`), NOT as `tools.mem0_*`. List them first: `text(ALL_TOOLS.filter(t => t.name.includes('mem0')).map(t => t.name).join(', '))`.
+- There is no `console` in `exec`; print with `text(...)`.
+- The call returns an MCP CallToolResult: read the reply with `r.content[0].text` (`r.result` is `undefined`).
+
+```js
+const r = await tools.mcp__mem0__mem0_get_context({ query: "<task>", user_id: "marek", app_id: "openvpm-ai" });
+text(r.content[0].text);
+```
+
+- Never say that mem0 was read, written or is unavailable unless a mem0 call really completed (or threw) in this session; on an error print `e.message`. Printing a summary with `text()` is not a write to mem0.
